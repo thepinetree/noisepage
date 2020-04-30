@@ -319,7 +319,7 @@ class DataTable {
    *
    * @param txn the calling transaction
    * @param redo after-image of the inserted tuple. Should not reference col_id 0
-   * @param optional thread pool context to context switching
+   * @param ctx optional thread pool context to context switching
    * @return the TupleSlot allocated for this insert, used to identify this tuple's physical location for indexes and
    * such.
    */

@@ -20,7 +20,7 @@ class SharedLatch {
  public:
   /**
    * Acquire exclusive lock on mutex.
-   * @param optional thread pool context to allow context switching
+   * @param ctx optional thread pool context to allow context switching
    */
   void LockExclusive(common::PoolContext *ctx = nullptr) {
     if (ctx != nullptr) {
@@ -32,7 +32,7 @@ class SharedLatch {
 
   /**
    * Acquire shared lock on mutex.
-   * @param optional thread pool context to allow context switching
+   * @param ctx optional thread pool context to allow context switching
    */
   void LockShared(common::PoolContext *ctx = nullptr) {
     if (ctx != nullptr) {
@@ -67,7 +67,7 @@ class SharedLatch {
     /**
      * Acquire write lock on ReaderWriterLatch.
      * @param rw_latch pointer to ReaderWriterLatch to acquire
-     * @param optional thread pool context to allow context switching
+     * @param ctx optional thread pool context to allow context switching
      */
     explicit ScopedSharedLatch(SharedLatch *const rw_latch, common::PoolContext *ctx = nullptr) : rw_latch_(rw_latch) {
       rw_latch_->LockShared(ctx);
@@ -90,7 +90,7 @@ class SharedLatch {
     /**
      * Acquire read lock on ReaderWriterLatch.
      * @param rw_latch pointer to ReaderWriterLatch to acquire
-     * @param optional thread pool context to allow context switching
+     * @param ctx optional thread pool context to allow context switching
      */
     explicit ScopedExclusiveLatch(SharedLatch *const rw_latch, common::PoolContext *ctx = nullptr)
         : rw_latch_(rw_latch) {
