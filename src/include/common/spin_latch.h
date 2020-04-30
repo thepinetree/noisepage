@@ -20,6 +20,7 @@ namespace terrier::common {
 class SpinLatch {
  public:
   /**
+   * @param optional thread pool context to allow context switching
    * @brief Locks the spin latch.
    *
    * If another thread has already locked the spin latch, a call to lock will
@@ -53,6 +54,7 @@ class SpinLatch {
     /**
      * Acquire lock on SpinLatch.
      * @param latch pointer to SpinLatch to acquire
+     * @param optional thread pool context to allow context switching
      */
     explicit ScopedSpinLatch(SpinLatch *const latch, common::PoolContext *ctx = nullptr) : spin_latch_(latch) {
       spin_latch_->Lock(ctx);
