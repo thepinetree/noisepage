@@ -197,9 +197,6 @@ string(REPLACE "-std=c++17" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
 # Add C++-only flags, like -std=c++17
 set(CMAKE_CXX_FLAGS "${CXX_ONLY_FLAGS} ${CMAKE_CXX_FLAGS}")
 
-# Add fsanitize blacklist
-set(CMAKE_CXX_FLAGS "${CXX_ONLY_FLAGS} -fsanitize-blacklist=${CMAKE_CURRENT_SOURCE_DIR}/asan.supp")
-
 if (NOT APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lnuma -ldl -Wno-unused-command-line-argument")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -lnuma -ldl -Wno-unused-command-line-argument")

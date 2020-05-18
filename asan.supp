@@ -1,1 +1,1 @@
-interceptor_via_fun:libclang_rt.asan_osx_dynamic.dylib
+interceptor_via_lib:libclang_rt.asan_osx_dynamic.dylib
