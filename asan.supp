@@ -1,1 +1,1 @@
-src/include/common/coroutine_defs.h
+interceptor_via_fun:libclang_rt.asan_osx_dynamic.dylib
