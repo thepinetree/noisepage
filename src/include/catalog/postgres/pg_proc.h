@@ -11,7 +11,7 @@
 #include "transaction/transaction_context.h"
 #include "type/type_id.h"
 
-#define HIGHEST_BUILTIN_PROC_ID catalog::postgres::UPPER_PRO_OID
+#define HIGHEST_BUILTIN_PROC_ID (catalog::postgres::TRUNCATE_PRO_OID + 1)
 #define IS_BUILTIN_PROC(x) (x < HIGHEST_BUILTIN_PROC_ID)
 
 namespace terrier::catalog::postgres {
@@ -79,5 +79,6 @@ constexpr proc_oid_t TAN_PRO_OID = proc_oid_t(90);
 constexpr proc_oid_t COT_PRO_OID = proc_oid_t(91);
 constexpr proc_oid_t LOWER_PRO_OID = proc_oid_t(92);
 constexpr proc_oid_t UPPER_PRO_OID = proc_oid_t(93);
+constexpr proc_oid_t TRUNCATE_PRO_OID = proc_oid_t(125);
 
 }  // namespace terrier::catalog::postgres

@@ -151,6 +151,7 @@ namespace terrier::execution::ast {
   F(Cot, cot)                                                           \
   F(Sin, sin)                                                           \
   F(Tan, tan)                                                           \
+  F(Truncate, truncate)                                                 \
                                                                         \
   /* Generic */                                                         \
   F(SizeOf, sizeOf)                                                     \
