@@ -1772,21 +1772,39 @@ void DatabaseCatalog::BootstrapProcs(const common::ManagedPointer<transaction::T
   // tan
   BOOTSTRAP_TRIG_FN("tan", postgres::TAN_PRO_OID, execution::ast::Builtin::Tan)
 
+  // cosh
+  BOOTSTRAP_TRIG_FN("cosh", postgres::COSH_PRO_OID, execution::ast::Builtin::Cosh)
+
+  // sinh
+  BOOTSTRAP_TRIG_FN("sinh", postgres::SINH_PRO_OID, execution::ast::Builtin::Sinh)
+
+  // tanh
+  BOOTSTRAP_TRIG_FN("tanh", postgres::TANH_PRO_OID, execution::ast::Builtin::Tanh)
+
   // cot
   BOOTSTRAP_TRIG_FN("cot", postgres::COT_PRO_OID, execution::ast::Builtin::Cot)
 
   // truncate
   BOOTSTRAP_TRIG_FN("truncate", postgres::TRUNCATE_PRO_OID, execution::ast::Builtin::Truncate)
 
+  // log2
+  BOOTSTRAP_TRIG_FN("log2", postgres::LOG2_PRO_OID, execution::ast::Builtin::Log2)
+
 #undef BOOTSTRAP_TRIG_FN
 
   auto str_type = GetTypeOidForType(type::TypeId::VARCHAR);
+  auto int_type = GetTypeOidForType(type::TypeId::INTEGER);
 
   // lower
   CreateProcedure(txn, postgres::LOWER_PRO_OID, "lower", postgres::INTERNAL_LANGUAGE_OID,
                   postgres::NAMESPACE_DEFAULT_NAMESPACE_OID, {"str"}, {str_type}, {str_type}, {}, str_type, "", true);
 
   // TODO(tanujnay112): no op codes for lower and upper yet
+
+  // position
+  CreateProcedure(txn, postgres::POSITION_PRO_OID, "position", postgres::INTERNAL_LANGUAGE_OID,
+                  postgres::NAMESPACE_DEFAULT_NAMESPACE_OID, {"str1", "str2"}, {str_type, str_type},
+                  {str_type, str_type}, {}, int_type, "", true);
 
   BootstrapProcContexts(txn);
 }
@@ -1821,16 +1839,35 @@ void DatabaseCatalog::BootstrapProcContexts(const common::ManagedPointer<transac
   // tan
   BOOTSTRAP_TRIG_FN("tan", postgres::TAN_PRO_OID, execution::ast::Builtin::Tan)
 
+  // cosh
+  BOOTSTRAP_TRIG_FN("cosh", postgres::COSH_PRO_OID, execution::ast::Builtin::Cosh)
+
+  // sinh
+  BOOTSTRAP_TRIG_FN("sinh", postgres::SINH_PRO_OID, execution::ast::Builtin::Sinh)
+
+  // tanh
+  BOOTSTRAP_TRIG_FN("tanh", postgres::TANH_PRO_OID, execution::ast::Builtin::Tanh)
+
   // cot
   BOOTSTRAP_TRIG_FN("cot", postgres::COT_PRO_OID, execution::ast::Builtin::Cot)
 
   // truncate
   BOOTSTRAP_TRIG_FN("truncate", postgres::TRUNCATE_PRO_OID, execution::ast::Builtin::Truncate)
+
+  // log2
+  BOOTSTRAP_TRIG_FN("log2", postgres::LOG2_PRO_OID, execution::ast::Builtin::Log2)
+
 #undef BOOTSTRAP_TRIG_FN
 
   func_context = new execution::functions::FunctionContext("lower", type::TypeId::VARCHAR, {type::TypeId::VARCHAR},
                                                            execution::ast::Builtin::Lower, true);
   SetProcCtxPtr(txn, postgres::LOWER_PRO_OID, func_context);
+
+  func_context = new execution::functions::FunctionContext("position", type::TypeId::INTEGER,
+                                                           {type::TypeId::VARCHAR, type::TypeId::VARCHAR},
+                                                           execution::ast::Builtin::Position, true);
+  SetProcCtxPtr(txn, postgres::POSITION_PRO_OID, func_context);
+
   txn->RegisterAbortAction([=]() { delete func_context; });
 }
 

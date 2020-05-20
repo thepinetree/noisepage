@@ -97,6 +97,22 @@ public class FunctionsTest extends TestUtility {
      * UDF statement tests
      * ---------------------------------------------
      */
+     
+     private void checkIntegerFunc(String func_name, String col_name, boolean is_null, Integer expected) throws SQLException {
+         String sql = String.format("SELECT %s(%s) AS result FROM data WHERE is_null = %s",
+                                    func_name, col_name, (is_null ? 1 : 0));
+         
+         Statement stmt = conn.createStatement();
+         ResultSet rs = stmt.executeQuery(sql);
+         boolean exists = rs.next();
+         assert(exists);
+         if (is_null) {
+             checkIntRow(rs, new String[]{"result"}, new Integer[]{null});
+         } else {
+             checkIntRow(rs, new String[]{"result"}, new Integer[]{expected});
+         }
+         assertNoMoreRows(rs);
+    }
 
     private void checkDoubleFunc(String func_name, String col_name, boolean is_null, Double expected) throws SQLException {
         String sql = String.format("SELECT %s(%s) AS result FROM data WHERE is_null = %s",
@@ -117,7 +133,7 @@ public class FunctionsTest extends TestUtility {
     private void checkStringFunc(String func_name, String col_name, boolean is_null, String expected) throws SQLException {
         String sql = String.format("SELECT %s(%s) AS result FROM data WHERE is_null = %s",
                                    func_name, col_name, (is_null ? 1 : 0));
-        
+
         Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery(sql);
         boolean exists = rs.next();
@@ -126,6 +142,21 @@ public class FunctionsTest extends TestUtility {
             checkStringRow(rs, new String[]{"result"}, new String[]{null});
         } else {
             checkStringRow(rs, new String[]{"result"}, new String[]{expected});
+        }
+        assertNoMoreRows(rs);
+    }
+
+    private void checkStringPositionFunc(String func_name, String substring, String col_name, boolean is_null, Integer expected) throws SQLException {
+        String sql = String.format("SELECT %s(\'%s\' IN %s) AS result FROM data WHERE is_null = %s", func_name, substring, col_name, (is_null ? 1 : 0));
+
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql);
+        boolean exists = rs.next();
+        assert(exists);
+        if (is_null) {
+            checkIntRow(rs, new String[]{"result"}, new Integer[1]);
+        } else {
+            checkIntRow(rs, new String[]{"result"}, new Integer[]{expected});
         }
         assertNoMoreRows(rs);
     }
@@ -149,12 +180,37 @@ public class FunctionsTest extends TestUtility {
         checkDoubleFunc("tan", "double_val", false, -0.230318);
         checkDoubleFunc("tan", "double_val", true, null);
     }
+
+    @Test
+    public void testCosh() throws SQLException {
+        checkDoubleFunc("cosh", "double_val", false, 114330.976031);
+        checkDoubleFunc("cosh", "double_val", true, null);
+    }
+
+    @Test
+    public void testSinh() throws SQLException {
+        checkDoubleFunc("sinh", "double_val", false, 114330.976026);
+        checkDoubleFunc("sinh", "double_val", true, null);
+    }
+
+    @Test
+    public void testTanh() throws SQLException {
+        checkDoubleFunc("tanh", "double_val", false, 1.000000);
+        checkDoubleFunc("tanh", "double_val", true, null);
+    }
+
     @Test
     public void testTruncate() throws SQLException {
         checkDoubleFunc("truncate", "double_val", false, 12.0);
         checkDoubleFunc("truncate", "double_val", true, null);
     }
-    
+  
+    @Test
+    public void testLog2() throws SQLException {
+        checkDoubleFunc("log2", "double_val", false, 3.625270);
+        checkDoubleFunc("log2", "double_val", true, null);
+    }
+
     /**
      * String Functions
      */
@@ -163,5 +219,11 @@ public class FunctionsTest extends TestUtility {
         checkStringFunc("lower", "str_a_val", false, "abcdef");
         checkStringFunc("lower", "str_a_val", true, null);
     }
-
+    @Test
+    public void testPosition() throws SQLException {
+        checkStringPositionFunc("position", "bC", "str_a_val", false, 2);
+        checkStringPositionFunc("position", "bc", "str_a_val", false, 2);
+        checkStringPositionFunc("position", "aa", "str_a_val", false, 0);
+        checkStringPositionFunc("position", "bC", "str_a_val", true, null);
+    }
 }
