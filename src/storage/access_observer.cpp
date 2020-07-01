@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #include "storage/access_observer.h"
 #include "storage/block_compactor.h"
 

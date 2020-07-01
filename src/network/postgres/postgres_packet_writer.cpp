@@ -115,14 +115,14 @@ void PostgresPacketWriter::WriteCommandComplete(const std::string_view tag) {
   BeginPacket(NetworkMessageType::PG_COMMAND_COMPLETE).AppendStringView(tag, true).EndPacket();
 }
 
-void PostgresPacketWriter::WriteCommandComplete(const std::string_view tag, const uint32_t num_rows) {
+void PostgresPacketWriter::WriteCommandComplete(const std::string_view tag, const uint64_t num_rows) {
   BeginPacket(NetworkMessageType::PG_COMMAND_COMPLETE)
       .AppendStringView(tag, false)
       .AppendString(std::to_string(num_rows), true)
       .EndPacket();
 }
 
-void PostgresPacketWriter::WriteCommandComplete(const QueryType query_type, const uint32_t num_rows) {
+void PostgresPacketWriter::WriteCommandComplete(const QueryType query_type, const uint64_t num_rows) {
   switch (query_type) {
     case QueryType::QUERY_BEGIN:
       WriteCommandComplete("BEGIN");

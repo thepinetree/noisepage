@@ -88,14 +88,14 @@ class PostgresPacketWriter : public PacketWriter {
    * @param tag records the which kind of query it is
    * @param num_rows number of rows affected by DML query
    */
-  void WriteCommandComplete(std::string_view tag, uint32_t num_rows);
+  void WriteCommandComplete(std::string_view tag, uint64_t num_rows);
 
   /**
    * Writes Postgres command complete
    * @param query_type what type of query this was
    * @param num_rows number of rows for the queries that need it in their output
    */
-  void WriteCommandComplete(QueryType query_type, uint32_t num_rows);
+  void WriteCommandComplete(QueryType query_type, uint64_t num_rows);
 
   /**
    * Writes a parse message packet
