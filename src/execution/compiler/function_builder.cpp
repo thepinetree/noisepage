@@ -23,9 +23,9 @@ void FunctionBuilder::StartForStmt(ast::Stmt *init, ast::Expr *cond, ast::Stmt *
   blocks_.emplace_back(forblock);
 }
 
-void FunctionBuilder::StartIfStmt(ast::Expr *condition) {
+void FunctionBuilder::StartIfStmt(ast::Expr *condition, ast::Stmt* else_stmt) {
   auto ifblock = codegen_->EmptyBlock();
-  Append(codegen_->Factory()->NewIfStmt(DUMMY_POS, condition, ifblock, nullptr));
+  Append(codegen_->Factory()->NewIfStmt(DUMMY_POS, condition, ifblock, else_stmt));
   blocks_.emplace_back(ifblock);
 }
 

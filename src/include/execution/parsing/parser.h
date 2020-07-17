@@ -103,6 +103,8 @@ class Parser {
 
   ast::Stmt *ParseSimpleStmt();
 
+  ast::Stmt *ParseBreakStmt();
+
   ast::Stmt *ParseBlockStmt();
 
   class ForHeader;

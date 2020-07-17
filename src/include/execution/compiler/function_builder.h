@@ -39,7 +39,7 @@ class FunctionBuilder {
    * Begins an IfStmt
    * @param condition if condition
    */
-  void StartIfStmt(ast::Expr *condition);
+  void StartIfStmt(ast::Expr *condition, ast::Stmt* else_stmt = nullptr);
 
   /**
    * Begins a ForStmt

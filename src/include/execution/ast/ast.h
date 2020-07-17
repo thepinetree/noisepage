@@ -41,6 +41,7 @@ namespace ast {
  */
 #define STATEMENT_NODES(T) \
   T(AssignmentStmt)        \
+  T(BreakStmt)             \
   T(BlockStmt)             \
   T(DeclStmt)              \
   T(ExpressionStmt)        \
@@ -508,6 +509,28 @@ class AssignmentStmt : public Stmt {
  private:
   Expr *dest_;
   Expr *src_;
+};
+
+/**
+  * A break statement
+  */
+class BreakStmt : public Stmt {
+ public:
+  /**
+   * Constructor
+   * @param pos source position
+   */
+  BreakStmt(const SourcePosition &pos)
+      : Stmt(Kind::BreakStmt, pos) {}
+
+  /**
+  * Checks whether the given node is an IfStmt.
+  * @param node node to check
+  * @return true iff given node is an IfStmt.
+  */
+  static bool classof(const AstNode *node) {  // NOLINT
+    return node->GetKind() == Kind::BreakStmt;
+  }
 };
 
 /**

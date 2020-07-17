@@ -16,6 +16,7 @@ void LimitTranslator::Consume(FunctionBuilder *builder) {
   auto limit_comp = codegen_->Compare(parsing::Token::Type::LESS, codegen_->MakeExpr(num_tuples_),
                                       codegen_->IntLiteral(op_->GetLimit() + op_->GetOffset()));
   auto if_cond = codegen_->BinaryOp(parsing::Token::Type::AND, offset_comp, limit_comp);
+  // TODO(Deepayan): define + add break in if stmt here
   builder->StartIfStmt(if_cond);
   parent_translator_->Consume(builder);
   // Close if stmt

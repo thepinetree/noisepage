@@ -286,6 +286,8 @@ Token::Type Scanner::ScanIdentifierOrKeyword() {
 #define KEYWORDS()                          \
   GROUP_START('a')                          \
   GROUP_ELEM("and", Token::Type::AND)       \
+  GROUP_START('b')                          \
+  GROUP_ELEM("break", Token::Type::BREAK)   \
   GROUP_START('e')                          \
   GROUP_ELEM("else", Token::Type::ELSE)     \
   GROUP_START('f')                          \

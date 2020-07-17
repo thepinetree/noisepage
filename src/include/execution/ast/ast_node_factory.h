@@ -68,6 +68,14 @@ class AstNodeFactory {
 
   /**
    * @param start_pos beginning source position
+   * @return created BlockStmt node.
+   */
+  BreakStmt *NewBreakStmt(const SourcePosition &start_pos) {
+    return new (region_) BreakStmt(start_pos);
+  }
+
+  /**
+   * @param start_pos beginning source position
    * @param end_pos end source position
    * @param statements list of statements within the block
    * @return created BlockStmt node.

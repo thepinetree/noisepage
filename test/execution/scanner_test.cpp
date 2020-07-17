@@ -137,6 +137,12 @@ TEST_F(ScannerTest, ForSyntaxTest) {
         Token::Type::RIGHT_BRACE},
        nullptr},
 
+      // Simple for with break
+      {"for () {break}",
+       {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::RIGHT_PAREN, Token::Type::LEFT_BRACE,
+        Token::Type::BREAK, Token::Type::RIGHT_BRACE},
+       nullptr},
+
       // For as a while loop
       {"for (i < 10) {}",
        {Token::Type::FOR, Token::Type::LEFT_PAREN, Token::Type::IDENTIFIER, Token::Type::LESS, Token::Type::INTEGER,
