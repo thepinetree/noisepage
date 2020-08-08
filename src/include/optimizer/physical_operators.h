@@ -153,7 +153,7 @@ class IndexScan : public OperatorNodeContents<IndexScan> {
                        std::vector<AnnotatedExpression> &&predicates, bool is_for_update,
                        planner::IndexScanType scan_type,
                        std::unordered_map<catalog::indexkeycol_oid_t, std::vector<planner::IndexExpression>> bounds,
-                       bool limit_exists, uint32_t limit, Property *opt_sort_prop = nullptr);
+                       bool limit_exists, uint32_t limit, Property *satisfied_sort_prop = nullptr);
 
   /**
    * Copy
@@ -215,7 +215,7 @@ class IndexScan : public OperatorNodeContents<IndexScan> {
   /**
    * @return optional sort property
    */
-  Property *GetOptSortProp() const { return opt_sort_prop_; }
+  Property *GetSatisfiedSortProp() const { return satisfied_sort_prop_; }
 
  private:
   /**
@@ -266,7 +266,7 @@ class IndexScan : public OperatorNodeContents<IndexScan> {
   /**
    * Optional sort property
    */
-  Property *opt_sort_prop_{};
+  Property *satisfied_sort_prop_{};
 };
 
 /**

@@ -7,6 +7,7 @@
 #include "optimizer/optimizer_defs.h"
 #include "optimizer/property_set.h"
 #include "parser/expression/abstract_expression.h"
+#include "planner/plannodes/abstract_plan_node.h"
 
 namespace terrier {
 namespace parser {
@@ -39,7 +40,8 @@ enum class OptimizerTaskType {
   REWRITE_EXPR,
   APPLY_REWIRE_RULE,
   TOP_DOWN_REWRITE,
-  BOTTOM_UP_REWRITE
+  BOTTOM_UP_REWRITE,
+  BOTTOM_UP_PRUNE
 };
 
 /**
@@ -446,6 +448,47 @@ class BottomUpRewrite : public OptimizerTask {
    */
   group_id_t group_id_;
 
+  /**
+   * Set of rules to apply
+   */
+  RuleSetName rule_set_name_;
+
+  /**
+   * Flag indicating whether children have been optimized
+   */
+  bool has_optimized_child_;
+};
+
+/**
+ * BottomUpPrune performs a bottom-up pruning mark pass. The task accepts a RuleSet
+ * which requires that upper level markings in the operator tree WILL NOT enable
+ * lower level rewrites.
+ */
+class BottomUpPrune : public OptimizerTask {
+ public:
+  /**
+   * Constructor for BottomUpRewrite task
+   * @param plan_node Node to perform marking against
+   * @param context Current optimize context (UNUSED)
+   * @param rule_set_name RuleSet to execute
+   * @param has_optimized_child Flag indicating whether children have been optimized
+   */
+  BottomUpPrune(std::unique_ptr<planner::AbstractPlanNode> &plan_node, OptimizationContext *context, RuleSetName rule_set_name, bool has_optimized_child)
+      : OptimizerTask(context, OptimizerTaskType::BOTTOM_UP_PRUNE),
+        plan_node_(plan_node),
+        rule_set_name_(rule_set_name),
+        has_optimized_child_(has_optimized_child) {}
+
+  /**
+   * Function to execute the task
+   */
+  void Execute() override;
+
+ private:
+  /**
+   *
+   */
+  std::unique_ptr<planner::AbstractPlanNode> &plan_node_;
   /**
    * Set of rules to apply
    */

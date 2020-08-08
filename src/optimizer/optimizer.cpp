@@ -63,6 +63,27 @@ std::unique_ptr<planner::AbstractPlanNode> Optimizer::BuildPlanTree(transaction:
   }
 }
 
+
+void Optimizer::PruneLoop(std::unique_ptr<planner::AbstractPlanNode> best_plan) {
+  auto prune_context = new OptimizationContext(context_.get(),new PropertySet());
+  auto task_stack = new OptimizerTaskStack();
+  context_->SetTaskPool(task_stack);
+  context_->AddOptimizationContext(prune_context);
+
+  // Perform prune from root of plan
+  task_stack->Push(new BottomUpPrune(best_plan, prune_context, RuleSetName::PHYSICAL_PRUNE, false));
+
+  // Iterate through the task stack
+  while (!task_stack->Empty()) {
+    auto task = task_stack->Pop();
+    {
+      task->Execute();
+    }
+    delete task;
+  }
+
+}
+
 std::unique_ptr<planner::AbstractPlanNode> Optimizer::ChooseBestPlan(
     transaction::TransactionContext *txn, catalog::CatalogAccessor *accessor, group_id_t id,
     PropertySet *required_props, const std::vector<common::ManagedPointer<parser::AbstractExpression>> &required_cols) {

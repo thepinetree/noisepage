@@ -150,7 +150,7 @@ void LogicalGetToPhysicalIndexScan::Transform(common::ManagedPointer<AbstractOpt
             preds = get->GetPredicates();
             auto op = std::make_unique<OperatorNode>(
                 IndexScan::Make(db_oid, get->GetTableOid(), index, std::move(preds), is_update, scan_type,
-                                std::move(bounds), limit_exists, limit, set_optional ? sort : nullptr)
+                                std::move(bounds), limit_exists, limit, sort)
                     .RegisterWithTxnContext(context->GetOptimizerContext()->GetTxn()),
                 std::vector<std::unique_ptr<AbstractOptimizerNode>>(), context->GetOptimizerContext()->GetTxn());
             transformed->emplace_back(std::move(op));

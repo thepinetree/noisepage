@@ -71,6 +71,9 @@ enum class RuleType : uint32_t {
   PULL_FILTER_THROUGH_MARK_JOIN,
   PULL_FILTER_THROUGH_AGGREGATION,
 
+  // Prune rules (physical plan marking)
+  MARK_ORDERBY_WITH_IDX_SCAN,
+
   // Place holder to generate number of rules compile time
   NUM_RULES
 };
@@ -82,7 +85,8 @@ enum class RuleSetName : uint32_t {
   PREDICATE_PUSH_DOWN = 0,
   UNNEST_SUBQUERY,
   LOGICAL_TRANSFORMATION,
-  PHYSICAL_IMPLEMENTATION
+  PHYSICAL_IMPLEMENTATION,
+  PHYSICAL_PRUNE
 };
 
 /**

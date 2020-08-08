@@ -67,6 +67,8 @@ class Optimizer : public AbstractOptimizer {
   void Reset() override;
 
  private:
+
+
   /**
    * Invoke a single optimization pass through the entire query.
    * The optimization pass includes rewriting and optimization logic.

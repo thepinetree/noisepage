@@ -40,6 +40,28 @@ void OptimizerTask::ConstructValidRules(GroupExpression *group_expr, const std::
   }
 }
 
+void OptimizerTask::ConstructValidPruneRules(const std::vector<Rule *> &rules,
+                                             std::vector<RuleWithPromise> *valid_rules) {
+  for (auto &rule : rules) {
+    // Check if we can apply the rule
+    bool root_pattern_mismatch = group_expr->Contents()->GetOpType() != rule->GetMatchPattern()->Type();
+    bool already_explored = group_expr->HasRuleExplored(rule);
+
+    // This check exists only as an "early" reject. As is evident, we do not check
+    // the full patern here. Checking the full pattern happens when actually trying to
+    // apply the rule (via a GroupExprBindingIterator).
+    bool child_pattern_mismatch =
+        group_expr->GetChildrenGroupsSize() != rule->GetMatchPattern()->GetChildPatternsSize();
+
+    if (root_pattern_mismatch || already_explored || child_pattern_mismatch) {
+      continue;
+    }
+
+    auto promise = rule->Promise(group_expr);
+    if (promise != RulePromise::NO_PROMISE) valid_rules->emplace_back(rule, promise);
+  }
+}
+
 void OptimizerTask::PushTask(OptimizerTask *task) { context_->GetOptimizerContext()->PushTask(task); }
 
 Memo &OptimizerTask::GetMemo() const { return context_->GetOptimizerContext()->GetMemo(); }
@@ -457,6 +479,54 @@ void BottomUpRewrite::Execute() {
       // Need to rewrite all sub trees first
       auto id = cur_group_expr->GetChildGroupId(static_cast<int>(child_group_idx));
       auto task = new BottomUpRewrite(id, context_, rule_set_name_, false);
+      PushTask(task);
+    }
+    return;
+  }
+
+  // Construct valid transformation rules from rule set
+  std::vector<Rule *> set = GetRuleSet().GetRulesByName(rule_set_name_);
+  ConstructValidRules(cur_group_expr, set, &valid_rules);
+
+  // Sort so that we apply rewrite rules with higher promise first
+  std::sort(valid_rules.begin(), valid_rules.end(), std::greater<>());
+
+  for (auto &r : valid_rules) {
+    Rule *rule = r.GetRule();
+    GroupExprBindingIterator iterator(GetMemo(), cur_group_expr, rule->GetMatchPattern(),
+                                      context_->GetOptimizerContext()->GetTxn());
+    if (iterator.HasNext()) {
+      auto before = iterator.Next();
+      TERRIER_ASSERT(!iterator.HasNext(), "should only bind to 1");
+      std::vector<std::unique_ptr<AbstractOptimizerNode>> after;
+      rule->Transform(common::ManagedPointer(before.get()), &after, context_);
+
+      // Rewrite rule should provide at most 1 expression
+      TERRIER_ASSERT(after.size() <= 1, "rule generated too many transformations");
+      // If a rule is applied, we replace the old expression and optimize this
+      // group again, this will ensure that we apply rule for this level until
+      // saturated, also children are already been rewritten
+      if (!after.empty()) {
+        auto &new_expr = after[0];
+        context_->GetOptimizerContext()->ReplaceRewriteExpression(common::ManagedPointer(new_expr.get()), group_id_);
+        PushTask(new BottomUpRewrite(group_id_, context_, rule_set_name_, false));
+        return;
+      }
+    }
+
+    cur_group_expr->SetRuleExplored(rule);
+  }
+}
+
+void BottomUpPrune::Execute() {
+  std::vector<RuleWithPromise> valid_rules;
+
+  if (!has_optimized_child_) {
+    PushTask(new BottomUpPrune(plan_node_, context_, rule_set_name_, true));
+
+    for (auto child : plan_node_->GetChildren()) {
+      // Need to mark all sub trees first
+      auto task = new BottomUpPrune(child, context_, rule_set_name_, false);
       PushTask(task);
     }
     return;
