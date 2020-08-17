@@ -14,6 +14,7 @@
 #include "planner/plannodes/order_by_plan_node.h"
 #include "planner/plannodes/seq_scan_plan_node.h"
 #include "test_util/tpch/tpch_query.h"
+#include "common/scoped_timer.h"
 
 namespace terrier::tpch {
 
@@ -59,7 +60,7 @@ void Workload::GenerateTPCHTables(execution::exec::ExecutionContext *exec_ctx, c
 
 void Workload::LoadTPCHQueries(const std::unique_ptr<catalog::CatalogAccessor> &accessor) {
   // TODO(Wuwen): add q16 after LIKE fix and 19 after VARCHAR fix
-  // Executable query and plan node are stored as a tuple as the entry of vector
+  // Executable Qand plan node are stored as a tuple as the entry of vector
 
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ1(accessor, exec_settings_));
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ4(accessor, exec_settings_));
@@ -72,12 +73,15 @@ void Workload::LoadTPCHQueries(const std::unique_ptr<catalog::CatalogAccessor> &
 
 void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint64_t avg_interval_us, uint32_t query_num,
                        execution::vm::ExecutionMode mode) {
+  // Worker id generator
+  std::mt19937 worker_generator{};
+  std::uniform_int_distribution<uint64_t> worker_dist(0, 8);
   // Shuffle the queries randomly for each thread
   auto total_query_num = query_and_plan_.size();
   std::vector<uint32_t> index;
   index.resize(total_query_num);
   for (uint32_t i = 0; i < total_query_num; ++i) index[i] = i;
-  std::shuffle(index.begin(), index.end(), std::mt19937(time(nullptr) + worker_id));
+  std::shuffle(index.begin(), index.end(), std::mt19937(time(nullptr) + worker_dist(worker_generator)));
 
   // Get the sleep time range distribution
   std::mt19937 generator{};
@@ -96,14 +100,21 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
 
     auto output_schema = std::get<1>(query_and_plan_[index[counter]])->GetOutputSchema().Get();
     // Uncomment this line and change output.cpp:90 to EXECUTION_LOG_INFO to print output
-    // execution::exec::OutputPrinter printer(output_schema);
+//    execution::exec::OutputPrinter printer(output_schema);
     execution::exec::NoOpResultConsumer printer;
     auto exec_ctx = execution::exec::ExecutionContext(
         db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), printer, output_schema,
         common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_);
 
-    std::get<0>(query_and_plan_[index[counter]])
-        ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
+    std::vector<std::string> query_names{"Q1", "Q4", "Q5", "Q6", "Q7", "Q11", "Q18"};
+
+    uint64_t elapsed_ms = 0;
+    {
+      common::ScopedTimer<std::chrono::milliseconds> timer(&elapsed_ms);
+      std::get<0>(query_and_plan_[index[counter]])
+          ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
+    }
+    std::cout << query_names[index[counter]] << "," << elapsed_ms << std::endl;
 
     // Only execute up to query_num number of queries for this thread in round-robin
     counter = counter == query_num - 1 ? 0 : counter + 1;

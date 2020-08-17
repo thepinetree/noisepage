@@ -85,6 +85,18 @@ ExecutableQuery::ExecutableQuery(const planner::AbstractPlanNode &plan, const ex
       pipeline_operating_units_(nullptr),
       query_id_(query_identifier++) {}
 
+ExecutableQuery::ExecutableQuery(const planner::AbstractPlanNode &plan, const exec::ExecutionSettings &exec_settings, std::string query_name)
+    : plan_(plan),
+      exec_settings_(exec_settings),
+      errors_region_(std::make_unique<util::Region>("errors_region")),
+      context_region_(std::make_unique<util::Region>("context_region")),
+      errors_(std::make_unique<sema::ErrorReporter>(errors_region_.get())),
+      ast_context_(std::make_unique<ast::Context>(context_region_.get(), errors_.get())),
+      query_state_size_(0),
+      pipeline_operating_units_(nullptr),
+      query_name_(query_name),
+      query_id_(query_identifier++) {}
+
 ExecutableQuery::ExecutableQuery(const std::string &contents,
                                  const common::ManagedPointer<exec::ExecutionContext> exec_ctx, bool is_file,
                                  size_t query_state_size, const exec::ExecutionSettings &exec_settings)

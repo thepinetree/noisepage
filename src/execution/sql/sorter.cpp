@@ -211,7 +211,7 @@ void Sorter::SortParallel(const ThreadStateContainer *thread_state_container, co
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Parallel Sort Thread-Local Instances");
 
-  tbb::task_scheduler_init sched;
+  tbb::task_scheduler_init sched(1);
   tbb::parallel_for_each(tl_sorters, [](Sorter *sorter) { sorter->Sort(); });
 
   timer.ExitStage();

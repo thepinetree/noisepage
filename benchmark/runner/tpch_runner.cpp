@@ -9,9 +9,7 @@
 namespace terrier::runner {
 class TPCHRunner : public benchmark::Fixture {
  public:
-  const int8_t total_num_threads_ = 4;                // defines the number of terminals (workers threads)
-  const uint64_t execution_us_per_worker_ = 1000000;  // Time (us) to run per terminal (worker thread)
-  std::vector<uint64_t> avg_interval_us_ = {10, 20, 50, 100, 200, 500, 1000};
+  const uint64_t execution_us_per_worker_ = 100000000000;  // Time (us) to run per terminal (worker thread)
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
 
   std::unique_ptr<DBMain> db_main_;
@@ -52,25 +50,11 @@ BENCHMARK_DEFINE_F(TPCHRunner, Runner)(benchmark::State &state) {
   // Load the TPCH tables and compile the queries
   tpch_workload_ =
       std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_, tpch_table_root_);
-  auto total_query_num = tpch_workload_->GetQueryNum() + 1;
-  for (uint32_t query_num = 1; query_num < total_query_num; ++query_num)
-    for (auto num_threads = 1; num_threads <= total_num_threads_; num_threads += 2)
-      for (uint32_t repeat = 0; repeat < 3; ++repeat)
-        for (auto avg_interval_us : avg_interval_us_) {
-          std::this_thread::sleep_for(std::chrono::seconds(2));  // Let GC clean up
-          common::WorkerPool thread_pool{static_cast<uint32_t>(num_threads), {}};
-          thread_pool.Startup();
+  for (uint32_t repeat = 0; repeat < 3; ++repeat) {
+      std::this_thread::sleep_for(std::chrono::seconds(2));  // Let GC clean up
 
-          for (int8_t i = 0; i < num_threads; i++) {
-            thread_pool.SubmitTask([this, i, avg_interval_us, query_num] {
-              tpch_workload_->Execute(i, execution_us_per_worker_, avg_interval_us, query_num, mode_);
-            });
-          }
-
-          thread_pool.WaitUntilAllFinished();
-          thread_pool.Shutdown();
-        }
-
+    tpch_workload_->Execute(0, execution_us_per_worker_, 1000, tpch_workload_->GetQueryNum(), mode_);
+  }
   // free the workload here so we don't need to use the loggers anymore
   tpch_workload_.reset();
 }

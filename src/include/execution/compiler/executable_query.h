@@ -102,6 +102,7 @@ class ExecutableQuery {
    * @param exec_settings The execution settings used for this query.
    */
   ExecutableQuery(const planner::AbstractPlanNode &plan, const exec::ExecutionSettings &exec_settings);
+  ExecutableQuery(const planner::AbstractPlanNode &plan, const exec::ExecutionSettings &exec_settings, std::string query_name);
 
   /**
    * This class cannot be copied or moved.
