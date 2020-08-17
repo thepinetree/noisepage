@@ -5,6 +5,9 @@
 #include "execution/vm/module.h"
 #include "main/db_main.h"
 #include "test_util/tpch/workload.h"
+#include <tbb/task_scheduler_init.h>
+
+tbb::task_scheduler_init s(1);
 
 namespace terrier::runner {
 class TPCHRunner : public benchmark::Fixture {
