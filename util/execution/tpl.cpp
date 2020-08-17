@@ -58,7 +58,7 @@ llvm::cl::opt<std::string> OUTPUT_NAME("output-name", llvm::cl::desc("Print the 
 llvm::cl::opt<bool> IS_MINI_RUNNER("mini-runner", llvm::cl::desc("Is this used for the mini runner?"), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
 // clang-format on
 
-tbb::task_scheduler_init scheduler(1);
+tbb::task_scheduler_init scheduler(2);
 
 namespace terrier::execution {
 

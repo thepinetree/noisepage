@@ -51,8 +51,7 @@ BENCHMARK_DEFINE_F(TPCHRunner, Runner)(benchmark::State &state) {
   tpch_workload_ =
       std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_, tpch_table_root_);
   for (uint32_t repeat = 0; repeat < 3; ++repeat) {
-      std::this_thread::sleep_for(std::chrono::seconds(2));  // Let GC clean up
-
+    std::this_thread::sleep_for(std::chrono::seconds(2));  // Let GC clean up
     tpch_workload_->Execute(0, execution_us_per_worker_, 1000, tpch_workload_->GetQueryNum(), mode_);
   }
   // free the workload here so we don't need to use the loggers anymore
