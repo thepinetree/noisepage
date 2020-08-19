@@ -70,6 +70,7 @@ BENCHMARK_DEFINE_F(TPCHRunner, Runner)(benchmark::State &state) {
           thread_pool.WaitUntilAllFinished();
           thread_pool.Shutdown();
         }
+
   // free the workload here so we don't need to use the loggers anymore
   tpch_workload_.reset();
 }
