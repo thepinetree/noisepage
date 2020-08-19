@@ -33,7 +33,7 @@ class DBMain;
 namespace terrier::tpch {
 
 /**
- * Class that can load the TPCH tables, compile the TPCH queries, and execute the TPCH workload
+ * Class that can load the TPCH tables, compile the TPCH queries, and execute TPCH workloads
  */
 class Workload {
  public:
@@ -42,10 +42,28 @@ class Workload {
   /**
    * Function to invoke for a single worker thread to invoke the TPCH queries
    * @param worker_id 1-indexed thread id
+   * @param execution_us_per_worker max execution time for single worker
+   * @param avg_interval_us interval timing
+   * @param query_num number of queries to run
+   * @param mode execution mode
    */
   void Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint64_t avg_interval_us, uint32_t query_num,
                execution::vm::ExecutionMode mode);
-  uint32_t GetQueryNum() { return query_and_plan_.size(); }
+
+  /**
+   * Function to invoke a single TPCH query and collect runtime
+   * @param query_ind index of query into query_and_plan_
+   * @param avg_interval_us interval timing
+   * @param mode execution mode
+   * @return time taken to run query
+   */
+  uint64_t ExecuteQuery(int32_t query_ind, execution::vm::ExecutionMode mode);
+
+  /**
+   * Function to get number of queries in plan
+   * @return size of query plan vector
+   */
+  uint32_t GetQueryNum() const { return query_and_plan_.size(); }
 
  private:
   void GenerateTPCHTables(execution::exec::ExecutionContext *exec_ctx, const std::string &dir_name);
@@ -64,6 +82,7 @@ class Workload {
   std::vector<
       std::tuple<std::unique_ptr<execution::compiler::ExecutableQuery>, std::unique_ptr<planner::AbstractPlanNode>>>
       query_and_plan_;
+  std::vector<std::string> query_names_;
 };
 
 }  // namespace terrier::tpch

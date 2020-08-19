@@ -60,28 +60,32 @@ void Workload::GenerateTPCHTables(execution::exec::ExecutionContext *exec_ctx, c
 
 void Workload::LoadTPCHQueries(const std::unique_ptr<catalog::CatalogAccessor> &accessor) {
   // TODO(Wuwen): add q16 after LIKE fix and 19 after VARCHAR fix
-  // Executable Qand plan node are stored as a tuple as the entry of vector
+  // Executable query and plan node are stored as a tuple as the entry of vector
 
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ1(accessor, exec_settings_));
+  query_names_.emplace_back("Q1");
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ4(accessor, exec_settings_));
+  query_names_.emplace_back("Q4");
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ5(accessor, exec_settings_));
+  query_names_.emplace_back("Q5");
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ6(accessor, exec_settings_));
+  query_names_.emplace_back("Q6");
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ7(accessor, exec_settings_));
+  query_names_.emplace_back("Q7");
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ11(accessor, exec_settings_));
+  query_names_.emplace_back("Q11");
   query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ18(accessor, exec_settings_));
+  query_names_.emplace_back("Q18");
 }
 
 void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint64_t avg_interval_us, uint32_t query_num,
                        execution::vm::ExecutionMode mode) {
-  // Worker id generator
-  std::mt19937 worker_generator{};
-  std::uniform_int_distribution<uint64_t> worker_dist(0, 8);
   // Shuffle the queries randomly for each thread
   auto total_query_num = query_and_plan_.size();
   std::vector<uint32_t> index;
   index.resize(total_query_num);
   for (uint32_t i = 0; i < total_query_num; ++i) index[i] = i;
-  std::shuffle(index.begin(), index.end(), std::mt19937(time(nullptr) + worker_dist(worker_generator)));
+  std::shuffle(index.begin(), index.end(), std::mt19937(time(nullptr) + worker_id));
 
   // Get the sleep time range distribution
   std::mt19937 generator{};
@@ -106,15 +110,8 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
         db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), printer, output_schema,
         common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_);
 
-    std::vector<std::string> query_names{"Q1", "Q4", "Q5", "Q6", "Q7", "Q11", "Q18"};
-
-    uint64_t elapsed_ms = 0;
-    {
-      common::ScopedTimer<std::chrono::milliseconds> timer(&elapsed_ms);
-      std::get<0>(query_and_plan_[index[counter]])
-          ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
-    }
-    std::cout << query_names[index[counter]] << "," << elapsed_ms << std::endl;
+    std::get<0>(query_and_plan_[index[counter]])
+        ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
 
     // Only execute up to query_num number of queries for this thread in round-robin
     counter = counter == query_num - 1 ? 0 : counter + 1;
@@ -127,6 +124,39 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
 
   // Unregister from the metrics manager
   db_main_->GetMetricsManager()->UnregisterThread();
+}
+
+uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode) {
+  // Register to the metrics manager
+  db_main_->GetMetricsManager()->RegisterThread();
+  auto txn = txn_manager_->BeginTransaction();
+  auto accessor =
+      catalog_->GetAccessor(common::ManagedPointer<transaction::TransactionContext>(txn), db_oid_, DISABLED);
+
+  auto output_schema = std::get<1>(query_and_plan_[query_ind])->GetOutputSchema().Get();
+
+  // Uncomment this line and change output.cpp:90 to EXECUTION_LOG_INFO to print output
+  // execution::exec::OutputPrinter printer(output_schema);
+  execution::exec::NoOpResultConsumer printer;
+  auto exec_ctx = execution::exec::ExecutionContext(
+      db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), printer, output_schema,
+      common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_);
+
+  uint64_t elapsed_ms = 0;
+  {
+    common::ScopedTimer<std::chrono::milliseconds> timer(&elapsed_ms);
+    std::get<0>(query_and_plan_[query_ind])
+        ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
+  }
+  std::cout << query_names_[ind] << "," << elapsed_ms << std::endl;
+
+  // Commit transaction
+  txn_manager_->Commit(txn, transaction::TransactionUtil::EmptyCallback, nullptr);
+
+  // Unregister from the metrics manager
+  db_main_->GetMetricsManager()->UnregisterThread();
+
+  return elapsed_ms;
 }
 
 }  // namespace terrier::tpch
