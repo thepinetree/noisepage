@@ -12,7 +12,7 @@ tbb::task_scheduler_init s(1);
 namespace terrier::tpch {
 class TPCHBenchmark : public benchmark::Fixture {
  public:
-  const double threshold_ = 0.1;
+  const double threshold_ = 0.01;
   const uint64_t min_iterations_per_query_ = 100;
   const uint64_t max_iterations_per_query_ = 1200;
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
@@ -73,7 +73,7 @@ BENCHMARK_DEFINE_F(TPCHBenchmark, StabilizeBenchmark)(benchmark::State &state) {
       // Iterate at least until min_iterations_per_query and at most until max_iterations_per_query and until average
       // stabilizes
       while ((iterations < min_iterations_per_query_) ||
-          ((abs(avg - old_avg) < threshold_) && (iterations < max_iterations_per_query_))) {
+          ((abs(avg - old_avg) > threshold_) && (iterations < max_iterations_per_query_))) {
         old_avg = avg;
         total += tpch_workload_->TimeQuery(i, mode_, true);
         iterations++;
