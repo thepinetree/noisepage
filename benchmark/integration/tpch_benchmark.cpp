@@ -79,6 +79,7 @@ BENCHMARK_DEFINE_F(TPCHBenchmark, StabilizeBenchmark)(benchmark::State &state) {
         iterations++;
         avg = total/iterations;
       }
+      std::cout << tpch_workload_->GetQueryName(i) << " iterations: " << iterations;
       queries_run += iterations;
       total_time += total;
     }

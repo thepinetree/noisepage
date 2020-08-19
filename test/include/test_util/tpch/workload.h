@@ -66,6 +66,13 @@ class Workload {
    */
   uint32_t GetQueryNum() const { return query_and_plan_.size(); }
 
+
+  /**
+   * Function to get number of queries in plan
+   * @return size of query plan vector
+   */
+  std::string GetQueryName(int32_t query_ind) const { return query_names_[query_ind]; }
+
  private:
   void GenerateTPCHTables(execution::exec::ExecutionContext *exec_ctx, const std::string &dir_name);
 
