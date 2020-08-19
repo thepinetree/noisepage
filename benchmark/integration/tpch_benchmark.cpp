@@ -67,7 +67,7 @@ BENCHMARK_DEFINE_F(TPCHBenchmark, StabilizeBenchmark)(benchmark::State &state) {
     uint64_t queries_run = 0, total_time = 0;
     for (uint32_t i = 0; i < num_queries; i++) {
       // Single query running totals
-      double old_avg, avg = 0;
+      double old_avg = 0, avg = 0;
       double total = 0;
       uint64_t iterations = 0;
       // Iterate at least until min_iterations_per_query and at most until max_iterations_per_query and until average
