@@ -55,9 +55,10 @@ class Workload {
    * @param query_ind index of query into query_and_plan_
    * @param avg_interval_us interval timing
    * @param mode execution mode
+   * @param print_output boolean flag to determine whether timing output should be printed
    * @return time taken to run query
    */
-  uint64_t ExecuteQuery(int32_t query_ind, execution::vm::ExecutionMode mode);
+  uint64_t TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, bool print_output = false);
 
   /**
    * Function to get number of queries in plan

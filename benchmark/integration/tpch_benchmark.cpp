@@ -13,8 +13,8 @@ namespace terrier::tpch {
 class TPCHBenchmark : public benchmark::Fixture {
  public:
   const double threshold_ = 0.1;
-  const uint64_t min_iterations_ = 100;
-  const uint64_t max_iterations_ = 5000;
+  const uint64_t min_iterations_per_query_ = 100;
+  const uint64_t max_iterations_per_query_ = 1200;
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
 
   std::unique_ptr<DBMain> db_main_;
@@ -61,55 +61,35 @@ class TPCHBenchmark : public benchmark::Fixture {
 BENCHMARK_DEFINE_F(TPCHBenchmark, StabilizeBenchmark)(benchmark::State &state) {
   // Run benchmark for each query independently
   auto num_queries = tpch_workload_->GetQueryNum();
-  auto max_iters_per_query = max_iterations_/num_queries;
-  // Register to the metrics manager
-  db_main_->GetMetricsManager()->RegisterThread();
 
-  for (uint32_t i = 0; i < num_queries; i++) {
-    double avg, new_avg;
-    uint64_t iterations = 0;
-    auto &query = tpch_workload_->GetQueryPlan(i);
-    while ((iterations < min_iterations_) || ((new_avg - avg < threshold_) && (iterations < max_iters_per_query))) {
-      // Executing all the queries on by one in round robin
-      auto txn = txn_manager_->BeginTransaction();
-      auto accessor =
-          catalog_->GetAccessor(common::ManagedPointer<transaction::TransactionContext>(txn), db_oid_, DISABLED);
-
-      auto output_schema = std::get<1>(query_and_plan_[i])->GetOutputSchema().Get();
-      // Uncomment this line and change output.cpp:90 to EXECUTION_LOG_INFO to print output
-//    execution::exec::OutputPrinter printer(output_schema);
-      execution::exec::NoOpResultConsumer printer;
-      auto exec_ctx = execution::exec::ExecutionContext(
-          db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), printer, output_schema,
-          common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_);
-
-      std::vector<std::string> query_names{"Q1", "Q4", "Q5", "Q6", "Q7", "Q11", "Q18"};
-
-      uint64_t elapsed_ms = 0;
-      {
-        common::ScopedTimer<std::chrono::milliseconds> timer(&elapsed_ms);
-        std::get<0>(query_and_plan_[index[counter]])
-            ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
+  for (auto _ : state) {
+    // Overall totals
+    uint64_t queries_run = 0, total_time = 0;
+    for (uint32_t i = 0; i < num_queries; i++) {
+      // Single query running totals
+      double old_avg, avg = 0;
+      double total = 0;
+      uint64_t iterations = 0;
+      // Iterate at least until min_iterations_per_query and at most until max_iterations_per_query and until average
+      // stabilizes
+      while ((iterations < min_iterations_per_query_) ||
+          ((abs(avg - old_avg) < threshold_) && (iterations < max_iterations_per_query_))) {
+        old_avg = avg;
+        total += tpch_workload_->TimeQuery(i, mode_, true);
+        iterations++;
+        avg = total/iterations;
       }
-      std::cout << query_names[index[counter]] << "," << elapsed_ms << std::endl;
-
-      // Only execute up to query_num number of queries for this thread in round-robin
-      counter = counter == query_num - 1 ? 0 : counter + 1;
-      txn_manager_->Commit(txn, transaction::TransactionUtil::EmptyCallback, nullptr);
-
-      // Sleep to create different execution frequency patterns
-      auto random_sleep_time = distribution(generator);
-      std::this_thread::sleep_for(std::chrono::microseconds(random_sleep_time));
-
-      iterations++;
+      queries_run += iterations;
+      total_time += total;
     }
+    state.SetIterationTime(total_time);
+    state.SetItemsProcessed(queries_run);
   }
 
-  db_main_->GetMetricsManager()->UnregisterThread();
-  // free the workload here so we don't need to use the loggers anymore
+  // Free the workload here so we don't need to use the loggers anymore
   tpch_workload_.reset();
 }
 
-BENCHMARK_REGISTER_F(TPCHBenchmark, Q1)->Unit(benchmark::kMillisecond)->UseManualTime()->Iterations(1);
+BENCHMARK_REGISTER_F(TPCHBenchmark, StabilizeBenchmark)->Unit(benchmark::kMillisecond)->UseManualTime()->Iterations(1);
 }  // namespace terrier::runner
 
