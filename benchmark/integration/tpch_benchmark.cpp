@@ -83,7 +83,7 @@ BENCHMARK_DEFINE_F(TPCHBenchmark, StabilizeBenchmark)(benchmark::State &state) {
 
       if (print_exec_info_) {
         std::cout << tpch_workload_->GetQueryName(i) << " took " << iterations
-                  << " iterations with an average execution time of " << avg;
+                  << " iterations with an average execution time of " << avg << std::endl;
       }
 
       queries_run += iterations;
