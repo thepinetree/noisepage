@@ -66,6 +66,8 @@ class BytecodeEmitter {
    */
   void EmitAssign(Bytecode bytecode, LocalVar dest, LocalVar src);
 
+  void EmitAssignN(LocalVar dest, LocalVar src, uint32_t len);
+
   /**
    * Emit assignment code for 1 byte values.
    * @param dest destination variable

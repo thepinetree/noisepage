@@ -506,7 +506,7 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
   TERRIER_ASSERT(call->GetType() != nullptr, "No return type set for call!");
 
   LocalVar dest = GetExecutionResult()->GetOrCreateDestination(call->GetType());
-
+  GetExecutionResult()->SetDestination(dest.ValueOf());
   switch (builtin) {
     case ast::Builtin::BoolToSql: {
       auto input = VisitExpressionForRValue(call->Arguments()[0]);
@@ -2943,7 +2943,9 @@ void BytecodeGenerator::VisitPrimitiveArithmeticExpr(ast::BinaryOpExpr *node) {
 void BytecodeGenerator::VisitSqlArithmeticExpr(ast::BinaryOpExpr *node) {
   LocalVar dest = GetExecutionResult()->GetOrCreateDestination(node->GetType());
   LocalVar left = VisitExpressionForLValue(node->Left());
+  left = left.AddressOf();
   LocalVar right = VisitExpressionForLValue(node->Right());
+  right = right.AddressOf();
 
   const bool is_integer_math = node->GetType()->IsSpecificBuiltin(ast::BuiltinType::Integer);
 
@@ -3173,8 +3175,10 @@ void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest
     GetEmitter()->EmitAssign(Bytecode::Assign2, dest, val);
   } else if (size == 4) {
     GetEmitter()->EmitAssign(Bytecode::Assign4, dest, val);
-  } else {
+  } else if (size == 8) {
     GetEmitter()->EmitAssign(Bytecode::Assign8, dest, val);
+  } else {
+    GetEmitter()->EmitAssignN(dest, val, size);
   }
 }
 

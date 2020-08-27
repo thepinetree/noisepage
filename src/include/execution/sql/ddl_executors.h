@@ -7,6 +7,7 @@
 namespace terrier::planner {
 class CreateDatabasePlanNode;
 class CreateNamespacePlanNode;
+class CreateFunctionPlanNode;
 class CreateTablePlanNode;
 class CreateIndexPlanNode;
 class DropDatabasePlanNode;
@@ -48,6 +49,9 @@ class DDLExecutors {
    */
   static bool CreateNamespaceExecutor(common::ManagedPointer<planner::CreateNamespacePlanNode> node,
                                       common::ManagedPointer<catalog::CatalogAccessor> accessor);
+
+  static bool CreateFunctionExecutor(common::ManagedPointer<planner::CreateFunctionPlanNode> node,
+                                     common::ManagedPointer<catalog::CatalogAccessor> exec_ctx);
 
   /**
    * @param node node to executed

@@ -7,6 +7,9 @@
 #include "catalog/catalog_defs.h"
 #include "common/managed_pointer.h"
 #include "execution/ast/builtins.h"
+#include "execution/ast/ast.h"
+#include "execution/ast/context.h"
+#include "execution/util/region.h"
 #include "type/type_id.h"
 
 namespace terrier::execution::functions {
@@ -44,6 +47,17 @@ class FunctionContext {
         is_builtin_{true},
         builtin_{builtin},
         is_exec_ctx_required_{is_exec_ctx_required} {}
+
+  FunctionContext(std::string func_name, type::TypeId func_ret_type, std::vector<type::TypeId> &&args_type,
+  std::unique_ptr<util::Region> ast_region, std::unique_ptr<ast::Context> ast_context, ast::File *file)
+        : func_name_(std::move(func_name)),
+          func_ret_type_(func_ret_type),
+          args_type_(std::move(args_type)),
+          is_builtin_{false},
+          is_exec_ctx_required_{false},
+          ast_region_{std::move(ast_region)},
+          ast_context_{std::move(ast_context)},
+          file_{file} {}
   /**
    * @return The name of the function represented by this context object
    */
@@ -81,6 +95,28 @@ class FunctionContext {
     return is_exec_ctx_required_;
   }
 
+  /**
+  * @return returns the main functiondecl of this udf (to be used only if not builtin)
+  */
+  common::ManagedPointer<ast::FunctionDecl> GetMainFunctionDecl() const {
+    TERRIER_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
+    return common::ManagedPointer<ast::FunctionDecl>(
+        reinterpret_cast<ast::FunctionDecl*>(file_->Declarations().back()));
+  }
+
+  /**
+   * @return returns the file with the functiondecl and supporting decls (to be used only if not builtin)
+   */
+  ast::File *GetFile() const {
+    TERRIER_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
+    return file_;
+  }
+
+  ast::Context *GetASTContext() const {
+    TERRIER_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
+    return ast_context_.get();
+  }
+
  private:
   std::string func_name_;
   type::TypeId func_ret_type_;
@@ -88,6 +124,10 @@ class FunctionContext {
   bool is_builtin_;
   ast::Builtin builtin_;
   bool is_exec_ctx_required_;
+
+  std::unique_ptr<util::Region> ast_region_;
+  std::unique_ptr<ast::Context> ast_context_;
+  ast::File *file_;
 };
 
 }  // namespace terrier::execution::functions

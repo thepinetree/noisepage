@@ -5,6 +5,7 @@
 #include "common/macros.h"
 #include "execution/ast/ast_fwd.h"
 #include "execution/compiler/expression/column_value_provider.h"
+#include "execution/util/region_containers.h"
 
 namespace terrier::parser {
 class AbstractExpression;
@@ -46,6 +47,10 @@ class ExpressionTranslator {
    * @return The TPL value of the expression.
    */
   virtual ast::Expr *DeriveValue(WorkContext *ctx, const ColumnValueProvider *provider) const = 0;
+
+  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {}
+
+  virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {}
 
   /**
    * @return The expression being translated.

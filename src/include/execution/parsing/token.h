@@ -2,6 +2,14 @@
 
 #include <cstdint>
 
+#ifdef TRUE
+#undef TRUE
+#endif
+
+#ifdef FALSE
+#undef FALSE
+#endif
+
 namespace terrier::execution::parsing {
 
 #undef NIL  // pg_list.h defined this symbol, but TPL uses it as a different symbol so need to undef it

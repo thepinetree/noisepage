@@ -115,7 +115,7 @@ class OperatorTranslator : public ColumnValueProvider {
    * declaration container.
    * @param decls Query-level declarations.
    */
-  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {}
+  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls);
 
   /**
    * Initialize all query state.

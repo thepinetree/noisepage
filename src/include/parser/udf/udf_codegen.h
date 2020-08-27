@@ -1,0 +1,81 @@
+#pragma once
+
+#include "execution/compiler/function_builder.h"
+#include "ast_node_visitor.h"
+#include "udf_ast_context.h"
+#include "execution/compiler/codegen.h"
+#include "execution/functions/function_context.h"
+
+namespace terrier::catalog{
+ class CatalogAccessor;
+}
+
+namespace terrier::parser::udf {
+using namespace execution::compiler;
+
+class AbstractAST;
+class StmtAST;
+class ExprAST;
+class ValueExprAST;
+class VariableExprAST;
+class BinaryExprAST;
+class CallExprAST;
+class SeqStmtAST;
+class DeclStmtAST;
+class IfStmtAST;
+class WhileStmtAST;
+class RetStmtAST;
+class AssignStmtAST;
+class SQLStmtAST;
+class DynamicSQLStmtAST;
+
+class UDFCodegen : ASTNodeVisitor {
+ public:
+
+  UDFCodegen(catalog::CatalogAccessor *accessor, FunctionBuilder *fb,
+             parser::udf::UDFASTContext *udf_ast_context, CodeGen *codegen);
+  ~UDFCodegen(){};
+
+  catalog::type_oid_t GetCatalogTypeOidFromSQLType(execution::ast::BuiltinType::Kind type);
+
+  void GenerateUDF(AbstractAST *);
+  void Visit(AbstractAST *) override;
+  void Visit(FunctionAST *) override;
+  void Visit(StmtAST *) override;
+  void Visit(ExprAST *) override;
+  void Visit(ValueExprAST *) override;
+  void Visit(VariableExprAST *) override;
+  void Visit(BinaryExprAST *) override;
+  void Visit(CallExprAST *) override;
+  void Visit(SeqStmtAST *) override;
+  void Visit(DeclStmtAST *) override;
+  void Visit(IfStmtAST *) override;
+  void Visit(WhileStmtAST *) override;
+  void Visit(RetStmtAST *) override;
+  void Visit(AssignStmtAST *) override;
+  void Visit(SQLStmtAST *) override;
+  void Visit(DynamicSQLStmtAST *) override;
+
+  execution::ast::File *Finish(){
+    auto fn = fb_->Finish();
+////  util::RegionVector<ast::Decl *> decls_reg_vec{decls->begin(), decls->end(), codegen.Region()};
+    execution::util::RegionVector<execution::ast::Decl*> decls({fn}, codegen_->GetAstContext()->GetRegion());
+    for(auto decl : aux_decls_){
+      decls.push_back(decl);
+    }
+    auto file = codegen_->GetAstContext()->GetNodeFactory()->NewFile({0,0}, std::move(decls));
+    return file;
+  }
+
+  static const char *GetReturnParamString();
+
+ private:
+  catalog::CatalogAccessor *accessor_;
+  FunctionBuilder *fb_;
+  UDFASTContext *udf_ast_context_;
+  CodeGen *codegen_;
+  execution::ast::Expr *dst_;
+  std::unordered_map<std::string, execution::ast::Identifier> str_to_ident_;
+  execution::util::RegionVector<execution::ast::Decl *> aux_decls_;
+};
+}  // namespace terrier::parser::udf

@@ -25,6 +25,10 @@ void BytecodeEmitter::EmitAssign(Bytecode bytecode, LocalVar dest, LocalVar src)
   EmitAll(bytecode, dest, src);
 }
 
+void BytecodeEmitter::EmitAssignN(LocalVar dest, LocalVar src, uint32_t len) {
+  EmitAll(Bytecode::AssignN, dest, src.AddressOf(), len);
+}
+
 void BytecodeEmitter::EmitAssignImm1(LocalVar dest, int8_t val) { EmitAll(Bytecode::AssignImm1, dest, val); }
 
 void BytecodeEmitter::EmitAssignImm2(LocalVar dest, int16_t val) { EmitAll(Bytecode::AssignImm2, dest, val); }

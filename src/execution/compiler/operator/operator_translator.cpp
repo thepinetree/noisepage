@@ -34,6 +34,12 @@ ast::Expr *OperatorTranslator::GetOutput(WorkContext *context, uint32_t attr_idx
   return context->DeriveValue(*output_expression, this);
 }
 
+void OperatorTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
+  for (const auto &output_column : GetPlan().GetOutputSchema()->GetColumns()) {
+    GetCompilationContext()->LookupTranslator(*output_column.GetExpr())->DefineHelperFunctions(decls);
+  }
+}
+
 ast::Expr *OperatorTranslator::GetChildOutput(WorkContext *context, uint32_t child_idx, uint32_t attr_idx) const {
   // Check valid child.
   if (child_idx >= plan_.GetChildrenSize()) {

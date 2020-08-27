@@ -168,6 +168,10 @@ VM_OP_HOT void OpAssign4(int32_t *dest, int32_t src) { *dest = src; }
 
 VM_OP_HOT void OpAssign8(int64_t *dest, int64_t src) { *dest = src; }
 
+VM_OP_HOT void OpAssignN(terrier::byte *dest, const terrier::byte *const src, uint32_t len) {
+  std::memcpy(dest, src, len);
+}
+
 VM_OP_HOT void OpAssignImm1(int8_t *dest, int8_t src) { *dest = src; }
 
 VM_OP_HOT void OpAssignImm2(int16_t *dest, int16_t src) { *dest = src; }

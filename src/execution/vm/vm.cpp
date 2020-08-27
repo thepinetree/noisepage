@@ -412,6 +412,13 @@ void VM::Interpret(const uint8_t *ip, Frame *frame) {  // NOLINT
   GEN_ASSIGN(int32_t, 4);
   GEN_ASSIGN(int64_t, 8);
 #undef GEN_ASSIGN
+  OP(AssignN) : {
+    auto *dest = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto *src = frame->LocalAt<byte *>(READ_LOCAL_ID());
+    auto len = READ_UIMM4();
+    OpAssignN(dest, src, len);
+    DISPATCH_NEXT();
+  }
 
   OP(AssignImm4F) : {
     auto *dest = frame->LocalAt<float *>(READ_LOCAL_ID());
@@ -2326,6 +2333,9 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
 
   // Set up the arguments to the function
   for (uint32_t i = 0; i < num_params; i++) {
+    if(num_params >= 2 && (func_info->GetLocals()[1].GetSize() > sizeof(void*))){
+      std::cout << "hoopla\n";
+    }
     const LocalInfo &param_info = func_info->GetLocals()[i];
     const LocalVar param = LocalVar::Decode(READ_LOCAL_ID());
     const void *param_ptr = caller->PtrToLocalAt(param);
