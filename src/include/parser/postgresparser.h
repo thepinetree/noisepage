@@ -167,7 +167,7 @@ class PostgresParser {
    * @param[in,out] parse_result the current parse result, which will be updated
    * @param root list of parsed nodes
    */
-  static void ListTransform(ParseResult *parse_result, List *root);
+  static void ListTransform(ParseResult *parse_result, List *root, const std::string &query_string);
 
   /**
    * Transforms a single node in the parse list into a terrier SQLStatement object.
@@ -175,7 +175,7 @@ class PostgresParser {
    * @param node parsed node
    * @return SQLStatement corresponding to the parsed node
    */
-  static std::unique_ptr<SQLStatement> NodeTransform(ParseResult *parse_result, Node *node);
+  static std::unique_ptr<SQLStatement> NodeTransform(ParseResult *parse_result, Node *node, const std::string &query_string);
 
   static std::unique_ptr<AbstractExpression> ExprTransform(ParseResult *parse_result, Node *node, char *alias);
   static ExpressionType StringToExpressionType(const std::string &parser_str);
@@ -214,7 +214,8 @@ class PostgresParser {
   // CREATE statements
   static std::unique_ptr<SQLStatement> CreateTransform(ParseResult *parse_result, CreateStmt *root);
   static std::unique_ptr<SQLStatement> CreateDatabaseTransform(ParseResult *parse_result, CreateDatabaseStmt *root);
-  static std::unique_ptr<SQLStatement> CreateFunctionTransform(ParseResult *parse_result, CreateFunctionStmt *root);
+  static std::unique_ptr<SQLStatement> CreateFunctionTransform(ParseResult *parse_result, CreateFunctionStmt *root,
+                                                               const std::string &query_string);
   static std::unique_ptr<SQLStatement> CreateIndexTransform(ParseResult *parse_result, IndexStmt *root);
   static std::unique_ptr<SQLStatement> CreateSchemaTransform(ParseResult *parse_result, CreateSchemaStmt *root);
   static std::unique_ptr<SQLStatement> CreateTriggerTransform(ParseResult *parse_result, CreateTrigStmt *root);
@@ -253,7 +254,8 @@ class PostgresParser {
                                                                                     List *root);
 
   // EXPLAIN statements
-  static std::unique_ptr<ExplainStatement> ExplainTransform(ParseResult *parse_result, ExplainStmt *root);
+  static std::unique_ptr<ExplainStatement> ExplainTransform(ParseResult *parse_result, ExplainStmt *root,
+                                                            const std::string &query_string);
 
   // INSERT statements
   static std::unique_ptr<InsertStatement> InsertTransform(ParseResult *parse_result, InsertStmt *root);
@@ -264,7 +266,8 @@ class PostgresParser {
       ParseResult *parse_result, List *root);
 
   // PREPARE statements
-  static std::unique_ptr<PrepareStatement> PrepareTransform(ParseResult *parse_result, PrepareStmt *root);
+  static std::unique_ptr<PrepareStatement> PrepareTransform(ParseResult *parse_result, PrepareStmt *root,
+                                                            const std::string &query_string);
 
   static std::unique_ptr<DeleteStatement> TruncateTransform(ParseResult *parse_result, TruncateStmt *truncate_stmt);
 

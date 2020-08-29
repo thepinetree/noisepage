@@ -18,7 +18,9 @@ UDFCodegen::UDFCodegen(catalog::CatalogAccessor *accessor, FunctionBuilder *fb,
       aux_decls_(codegen->GetAstContext()->GetRegion()) {
   for(size_t i = 0;fb->GetParameterByPosition(i) != nullptr;i++){
     auto param = fb->GetParameterByPosition(i);
-    str_to_ident_.emplace(std::string(param->KindName()), codegen->MakeIdentifier(param->KindName()));
+    const auto &name = param->As<execution::ast::IdentifierExpr>()->Name();
+    str_to_ident_.emplace(name.GetString(),
+                          name);
   }
 }
 
@@ -103,7 +105,7 @@ void UDFCodegen::Visit(ExprAST *ast) {
 }
 
 void UDFCodegen::Visit(DeclStmtAST *ast) {
-    execution::ast::Identifier ident = codegen_->MakeFreshIdentifier("udf");
+    execution::ast::Identifier ident = codegen_->MakeFreshIdentifier(ast->name);
     str_to_ident_.emplace(ast->name, ident);
     if(ast->initial != nullptr) {
 //      Visit(ast->initial.get());
@@ -121,9 +123,9 @@ void UDFCodegen::Visit(FunctionAST *ast) {
 }
 
 void UDFCodegen::Visit(VariableExprAST *ast) {
-//    auto it = str_to_ident_.find(ast->name);
-//    TERRIER_ASSERT(it != str_to_ident_.end(), "variable not declared");
-  dst_ = codegen_->MakeExpr(codegen_->MakeIdentifier(ast->name));
+    auto it = str_to_ident_.find(ast->name);
+    TERRIER_ASSERT(it != str_to_ident_.end(), "variable not declared");
+  dst_ = codegen_->MakeExpr(it->second);
   }
 
 void UDFCodegen::Visit(ValueExprAST *ast) {

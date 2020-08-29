@@ -44,7 +44,7 @@ std::unique_ptr<FunctionAST> PLpgSQLParser::ParsePLpgSQL(std::vector<std::string
                                           std::vector<type::TypeId> &&param_types,
                                           const std::string &func_body,
                                           common::ManagedPointer<UDFASTContext> ast_context) {
-  auto result = pg_query_parse_plpgsql("CREATE function add(x int) returns int language plpgsql as $$ begin return x + 1; end; $$;");
+  auto result = pg_query_parse_plpgsql(func_body.c_str());
   if (result.error) {
     PARSER_LOG_INFO("PL/pgSQL parse error : {}", result.error->message);
     pg_query_free_plpgsql_parse_result(result);

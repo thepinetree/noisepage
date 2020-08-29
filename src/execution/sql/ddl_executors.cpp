@@ -107,7 +107,7 @@ bool DDLExecutors::CreateFunctionExecutor(const common::ManagedPointer<planner::
 //  char *name_alloc = reinterpret_cast<char*>(codegen.GetAstContext()->GetRegion()->Allocate(name.length() + 1));
 //  std::memcpy(name_alloc, name.c_str(), name.length() + 1);
 
-  compiler::FunctionBuilder fb{&codegen, ast_context->GetIdentifier(name), std::move(fn_params),
+  compiler::FunctionBuilder fb{&codegen, codegen.MakeFreshIdentifier(name), std::move(fn_params),
 //                               codegen.PointerType(
                                    codegen.TplType(
                                    execution::sql::GetTypeId(
