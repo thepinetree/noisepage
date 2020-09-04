@@ -2333,9 +2333,6 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
 
   // Set up the arguments to the function
   for (uint32_t i = 0; i < num_params; i++) {
-    if(num_params >= 2 && (func_info->GetLocals()[1].GetSize() > sizeof(void*))){
-      std::cout << "hoopla\n";
-    }
     const LocalInfo &param_info = func_info->GetLocals()[i];
     const LocalVar param = LocalVar::Decode(READ_LOCAL_ID());
     const void *param_ptr = caller->PtrToLocalAt(param);

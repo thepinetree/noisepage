@@ -15,4 +15,10 @@ ast::Expr *ExpressionTranslator::GetExecutionContextPtr() const {
   return compilation_context_->GetExecutionContextPtrFromQueryState();
 }
 
+void ExpressionTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
+  for(auto child : expr_.GetChildren()){
+    compilation_context_->LookupTranslator(*child)->DefineHelperFunctions(decls);
+  }
+}
+
 }  // namespace terrier::execution::compiler

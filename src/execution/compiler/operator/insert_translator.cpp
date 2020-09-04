@@ -131,16 +131,21 @@ void InsertTranslator::GetInsertPR(terrier::execution::compiler::FunctionBuilder
 
 void InsertTranslator::GenSetTablePR(FunctionBuilder *builder, WorkContext *context, uint32_t idx) const {
   const auto &node_vals = GetPlanAs<planner::InsertPlanNode>().GetValues(idx);
+  auto codegen = GetCodeGen();
   for (size_t i = 0; i < node_vals.size(); i++) {
     // @prSet(insert_pr, ...)
     const auto &val = node_vals[i];
     auto *src = context->DeriveValue(*val.Get(), this);
+    auto insertion_val = codegen->MakeFreshIdentifier("set-val");
+    builder->Append(
+        codegen->DeclareVar(insertion_val,
+                            codegen->TplType(execution::sql::GetTypeId(val->GetReturnValueType())), src));
 
     const auto &table_col_oid = all_oids_[i];
     const auto &table_col = table_schema_.GetColumn(table_col_oid);
     const auto &pr_set_call =
-        GetCodeGen()->PRSet(GetCodeGen()->MakeExpr(insert_pr_), table_col.Type(), table_col.Nullable(),
-                            table_pm_.find(table_col_oid)->second, src, true);
+        GetCodeGen()->PRSet(codegen->MakeExpr(insert_pr_), table_col.Type(), table_col.Nullable(),
+                            table_pm_.find(table_col_oid)->second, codegen->AddressOf(insertion_val), true);
     builder->Append(GetCodeGen()->MakeStmt(pr_set_call));
   }
 }

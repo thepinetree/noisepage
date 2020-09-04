@@ -661,7 +661,7 @@ class DBMain {
     bool use_traffic_cop_ = false;
     uint64_t optimizer_timeout_ = 5000;
     bool use_query_cache_ = true;
-    execution::vm::ExecutionMode execution_mode_ = execution::vm::ExecutionMode::Interpret;
+    execution::vm::ExecutionMode execution_mode_ = execution::vm::ExecutionMode::Compiled;
     uint16_t network_port_ = 15721;
     uint16_t connection_thread_count_ = 4;
     bool use_network_ = false;

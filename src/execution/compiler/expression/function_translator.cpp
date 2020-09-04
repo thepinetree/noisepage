@@ -53,6 +53,7 @@ ast::Expr *FunctionTranslator::DeriveValue(WorkContext *ctx, const ColumnValuePr
   return codegen->CallBuiltin(func_context->GetBuiltin(), params);
 }
 void FunctionTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
+  ExpressionTranslator::DefineHelperFunctions(decls);
   auto proc_oid = GetExpressionAs<parser::FunctionExpression>().GetProcOid();
   auto func_context = GetCodeGen()->GetCatalogAccessor()->GetFunctionContext(proc_oid);
   if(func_context->IsBuiltin()){

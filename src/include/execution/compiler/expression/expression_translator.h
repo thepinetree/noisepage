@@ -48,7 +48,7 @@ class ExpressionTranslator {
    */
   virtual ast::Expr *DeriveValue(WorkContext *ctx, const ColumnValueProvider *provider) const = 0;
 
-  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {}
+  virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls);
 
   virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {}
 

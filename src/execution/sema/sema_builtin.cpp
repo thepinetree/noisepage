@@ -2174,8 +2174,9 @@ void Sema::CheckBuiltinPRCall(ast::CallExpr *call, ast::Builtin builtin) {
       return;
     }
     // Third argument depends of call
-    if (GetBuiltinType(sql_type) != call->Arguments()[2]->GetType()) {
-      ReportIncorrectCallArg(call, 2, GetBuiltinType(sql_type));
+    auto type = call->Arguments()[2]->GetType();
+    if (!type->IsPointerType() || GetBuiltinType(sql_type) != type->GetPointeeType()) {
+      ReportIncorrectCallArg(call, 2, GetBuiltinType(sql_type)->PointerTo());
       return;
     }
     // For varlens, there is a fourth boolean argument.
