@@ -152,13 +152,19 @@ void ExecutableQuery::Run(common::ManagedPointer<exec::ExecutionContext> exec_ct
   auto query_state = std::make_unique<byte[]>(query_state_size_);
   *reinterpret_cast<exec::ExecutionContext **>(query_state.get()) = exec_ctx.Get();
 
-  exec_ctx->SetExecutionMode(static_cast<uint8_t>(mode));
-  exec_ctx->SetPipelineOperatingUnits(GetPipelineOperatingUnits());
+  double elapsed_ms;
+  {
+    util::ScopedTimer timer(&elapsed_ms);
+    exec_ctx->SetExecutionMode(static_cast<uint8_t>(mode));
+    exec_ctx->SetPipelineOperatingUnits(GetPipelineOperatingUnits());
 
-  // Now run through fragments.
-  for (const auto &fragment : fragments_) {
-    fragment->Run(query_state.get(), mode);
+    // Now run through fragments.
+
+    for (const auto &fragment : fragments_) {
+      fragment->Run(query_state.get(), mode);
+    }
   }
+  std::cout << "Query took " << elapsed_ms << " ms to run\n";
 }
 
 }  // namespace terrier::execution::compiler
