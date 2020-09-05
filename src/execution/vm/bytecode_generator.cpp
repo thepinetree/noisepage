@@ -190,7 +190,9 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
 }
 
 void BytecodeGenerator::VisitBreakStmt(ast::BreakStmt *node) {
-  current_loop_->Break();
+  if(current_loop_ != nullptr) {
+    current_loop_->Break();
+  }
 }
 
 void BytecodeGenerator::VisitForInStmt(UNUSED_ATTRIBUTE ast::ForInStmt *node) {
