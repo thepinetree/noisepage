@@ -203,6 +203,10 @@ void AstDumperImpl::VisitBlockStmt(BlockStmt *node) {
   }
 }
 
+void AstDumperImpl::VisitBreakStmt(BreakStmt *node) {
+  DumpNodeCommon(node);
+}
+
 void AstDumperImpl::VisitDeclStmt(DeclStmt *node) { AstVisitor<AstDumperImpl>::Visit(node->Declaration()); }
 
 void AstDumperImpl::VisitExpressionStmt(ExpressionStmt *node) { AstVisitor<AstDumperImpl>::Visit(node->Expression()); }

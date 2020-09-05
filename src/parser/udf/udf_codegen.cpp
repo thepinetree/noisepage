@@ -47,6 +47,7 @@ catalog::type_oid_t UDFCodegen::GetCatalogTypeOidFromSQLType(execution::ast::Bui
       return accessor_->GetTypeOidFromTypeId(type::TypeId::BOOLEAN);
     }
     default:
+      return accessor_->GetTypeOidFromTypeId(type::TypeId::INVALID);
       TERRIER_ASSERT(false, "Unsupported param type");
   }
 }

@@ -328,7 +328,13 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info, 
 
 llvm::Value *LLVMEngine::FunctionLocalsMap::GetArgumentById(LocalVar var) {
   if (auto iter = params_.find(var.GetOffset()); iter != params_.end()) {
-    return iter->second;
+    auto val = iter->second;
+    if((var.GetAddressMode() == LocalVar::AddressMode::Address) && llvm::isa<llvm::Argument>(val)){
+      auto new_val = ir_builder_->CreateAlloca(val->getType());
+      ir_builder_->CreateStore(val, new_val);
+      val = new_val;
+    }
+    return val;
   }
 
   if (auto iter = locals_.find(var.GetOffset()); iter != locals_.end()) {
