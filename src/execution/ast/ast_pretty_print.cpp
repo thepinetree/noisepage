@@ -274,6 +274,10 @@ void AstPrettyPrintImpl::VisitIfStmt(IfStmt *node) {
   }
 }
 
+void AstPrettyPrintImpl::VisitBreakStmt(BreakStmt *node) {
+  os_ << "break;\n";
+}
+
 void AstPrettyPrintImpl::VisitExpressionStmt(ExpressionStmt *node) { Visit(node->Expression()); }
 
 void AstPrettyPrintImpl::VisitIndexExpr(IndexExpr *node) {

@@ -29,4 +29,8 @@ ast::Type *Scope::LookupLocal(ast::Identifier name) const {
   return (iter == decls_.end() ? nullptr : iter->second);
 }
 
+Scope::Kind Scope::GetKind() const {
+  return scope_kind_;
+}
+
 }  // namespace terrier::execution::sema

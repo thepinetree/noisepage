@@ -48,6 +48,7 @@ namespace ast {
   T(DeclStmt)              \
   T(ExpressionStmt)        \
   T(ForStmt)               \
+  T(BreakStmt)             \
   T(ForInStmt)             \
   T(IfStmt)                \
   T(ReturnStmt)
@@ -689,6 +690,27 @@ class IterationStmt : public Stmt {
  private:
   // The body of the iteration.
   BlockStmt *body_;
+};
+
+/**
+ * A break statement.
+ */
+class BreakStmt : public Stmt {
+ public:
+  /**
+   * Constructor
+   * @param pos source position
+   */
+  BreakStmt(const SourcePosition &pos) : Stmt(Kind::BreakStmt, pos) {}
+
+  /**
+   * Is the given node a return statement? Needed as part of the custom AST RTTI infrastructure.
+   * @param node The node to check.
+   * @return True if the node is a return statement; false otherwise.
+   */
+  static bool classof(const AstNode *node) {  // NOLINT
+    return node->GetKind() == Kind::BreakStmt;
+  }
 };
 
 /**

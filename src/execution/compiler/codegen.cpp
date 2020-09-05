@@ -293,6 +293,12 @@ ast::Expr *CodeGen::AccessStructMember(ast::Expr *object, ast::Identifier member
   return context_->GetNodeFactory()->NewMemberExpr(position_, object, MakeExpr(member));
 }
 
+ast::Stmt *CodeGen::Break() {
+  ast::Stmt *break_stmt = context_->GetNodeFactory()->NewBreakStmt(position_);
+  NewLine();
+  return break_stmt;
+}
+
 ast::Stmt *CodeGen::Return() { return Return(nullptr); }
 
 ast::Stmt *CodeGen::Return(ast::Expr *ret) {

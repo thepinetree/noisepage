@@ -170,7 +170,7 @@ AstNode *AstCloneImpl::VisitIndexExpr(IndexExpr *node) {
 }
 
 AstNode *AstCloneImpl::VisitLitExpr(LitExpr *node) {
-  AstNode *literal;
+  AstNode *literal = nullptr;
   switch (node->GetLiteralKind()) {
     case LitExpr::LitKind::Nil: {
       literal = factory_->NewNilLiteral(node->Position());
@@ -195,6 +195,10 @@ AstNode *AstCloneImpl::VisitLitExpr(LitExpr *node) {
   }
   TERRIER_ASSERT(literal != nullptr, "Unknown literal kind");
   return literal;
+}
+
+AstNode *AstCloneImpl::VisitBreakStmt(BreakStmt *node) {
+  return factory_->NewBreakStmt(node->Position());
 }
 
 AstNode *AstCloneImpl::VisitMemberExpr(MemberExpr *node) {

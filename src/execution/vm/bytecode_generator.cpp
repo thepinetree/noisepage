@@ -164,6 +164,7 @@ void BytecodeGenerator::VisitIterationStatement(ast::IterationStmt *iteration, L
 }
 
 void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
+  LoopBuilder *prev = current_loop_;
   LoopBuilder loop_builder(this);
 
   if (node->Init() != nullptr) {
@@ -177,13 +178,19 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
     VisitExpressionForTest(node->Condition(), &loop_body_label, loop_builder.GetBreakLabel(), TestFallthrough::Then);
   }
 
+  current_loop_ = &loop_builder;
   VisitIterationStatement(node, &loop_builder);
+  current_loop_ = prev;
 
   if (node->Next() != nullptr) {
     Visit(node->Next());
   }
 
   loop_builder.JumpToHeader();
+}
+
+void BytecodeGenerator::VisitBreakStmt(ast::BreakStmt *node) {
+  current_loop_->Break();
 }
 
 void BytecodeGenerator::VisitForInStmt(UNUSED_ATTRIBUTE ast::ForInStmt *node) {

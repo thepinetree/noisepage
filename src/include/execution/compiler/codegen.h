@@ -394,6 +394,8 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *AccessStructMember(ast::Expr *object, ast::Identifier member);
 
+  [[nodiscard]] ast::Stmt *Break();
+
   /**
    * Create a return statement without a return value.
    * @return The statement.

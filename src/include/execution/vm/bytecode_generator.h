@@ -146,6 +146,8 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   void VisitExpressionForTest(ast::Expr *expr, BytecodeLabel *then_label, BytecodeLabel *else_label,
                               TestFallthrough fallthrough);
 
+  void VisitBreakStatement(ast::BreakStmt *break_stmt);
+
   // Visit the body of an iteration statement
   void VisitIterationStatement(ast::IterationStmt *iteration, LoopBuilder *loop_builder);
 
@@ -202,6 +204,8 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
 
   // RAII struct to capture semantics of expression evaluation
   ExpressionResultScope *execution_result_{nullptr};
+
+  LoopBuilder *current_loop_{nullptr};
 };
 
 }  // namespace terrier::execution::vm

@@ -133,6 +133,8 @@ class AstNodeFactory {
     return new (region_) IfStmt(pos, cond, then_stmt, else_stmt);
   }
 
+  BreakStmt *NewBreakStmt(const SourcePosition &pos) { return new (region_) BreakStmt(pos); }
+
   /**
    * @param pos source position
    * @param ret returned expression
