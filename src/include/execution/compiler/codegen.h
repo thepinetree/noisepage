@@ -1282,7 +1282,7 @@ class CodeGen {
    * @param need_indexes Whether the storage interface will need to use indexes
    * @return The expression corresponding to the builtin call.
    */
-  ast::Expr *StorageInterfaceInit(ast::Identifier si, ast::Expr *exec_ctx, uint32_t table_oid, ast::Identifier col_oids,
+  ast::Expr *StorageInterfaceInit(ast::Expr *si, ast::Expr *exec_ctx, uint32_t table_oid, ast::Identifier col_oids,
                                   bool need_indexes);
 
   // ---------------------------------------------------------------------------

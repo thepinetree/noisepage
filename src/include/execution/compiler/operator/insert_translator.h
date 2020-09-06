@@ -5,6 +5,7 @@
 #include "execution/ast/identifier.h"
 #include "execution/compiler/operator/operator_translator.h"
 #include "execution/compiler/pipeline_driver.h"
+#include "execution/compiler/state_descriptor.h"
 #include "storage/storage_defs.h"
 
 namespace terrier::catalog {
@@ -42,7 +43,9 @@ class InsertTranslator : public OperatorTranslator, public PipelineDriver {
    * @param pipeline The current pipeline.
    * @param function The pipeline generating function.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {
+    DeclareInserter(function);
+  }
 
   /**
    * Implement insertion logic where it fills in the insert PR obtained from the StorageInterface struct
@@ -51,6 +54,10 @@ class InsertTranslator : public OperatorTranslator, public PipelineDriver {
    * @param function The pipeline generating function.
    */
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+
+  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {
+    GenInserterFree(function);
+  }
 
   /**
    * @return The child's output at the given index.
@@ -99,7 +106,7 @@ class InsertTranslator : public OperatorTranslator, public PipelineDriver {
   static std::vector<catalog::col_oid_t> AllColOids(const catalog::Schema &table_schema);
 
   // Storage interface inserter struct which we use to insert.
-  ast::Identifier inserter_;
+  StateDescriptor::Entry inserter_;
 
   // Projected row that the inserter spits out for us to insert with.
   ast::Identifier insert_pr_;
