@@ -582,7 +582,7 @@ void BytecodeGenerator::VisitSqlConversionCall(ast::CallExpr *call, ast::Builtin
 
 #define GEN_CASE(Builtin, Bytecode)                              \
   case Builtin: {                                                \
-    auto input = VisitExpressionForLValue(call->Arguments()[0]); \
+    auto input = VisitExpressionForRValue(call->Arguments()[0]); \
     GetEmitter()->Emit(Bytecode, dest, input);                   \
     break;                                                       \
   }
@@ -944,7 +944,7 @@ void BytecodeGenerator::VisitBuiltinVectorFilterCall(ast::CallExpr *call, ast::B
 #define GEN_CASE(BYTECODE)                                                                         \
   LocalVar left_col = VisitExpressionForRValue(call->Arguments()[2]);                              \
   if (!call->Arguments()[3]->GetType()->IsIntegerType()) {                                         \
-    LocalVar right_val = VisitExpressionForLValue(call->Arguments()[3]);                           \
+    LocalVar right_val = VisitExpressionForRValue(call->Arguments()[3]);                           \
     GetEmitter()->Emit(BYTECODE##Val, exec_ctx, vector_projection, left_col, right_val, tid_list); \
   } else {                                                                                         \
     LocalVar right_col = VisitExpressionForRValue(call->Arguments()[3]);                           \
@@ -3044,6 +3044,8 @@ void BytecodeGenerator::VisitSqlCompareOpExpr(ast::ComparisonOpExpr *compare) {
   LocalVar dest = GetExecutionResult()->GetOrCreateDestination(compare->GetType());
   LocalVar left = VisitExpressionForLValue(compare->Left());
   LocalVar right = VisitExpressionForLValue(compare->Right());
+  left = left.AddressOf();
+  right = right.AddressOf();
 
   TERRIER_ASSERT(compare->Left()->GetType() == compare->Right()->GetType(),
                  "Left and right input types to comparison are not equal");

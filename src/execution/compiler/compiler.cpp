@@ -101,7 +101,7 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
 
   callbacks->EndPhase(Phase::BytecodeGeneration, this);
 
-//  bytecode_module_->Dump(std::cout);
+  bytecode_module_->Dump(std::cout);
 
   // -------------------------------------------------------
   // Phase 4 : Module Generation
