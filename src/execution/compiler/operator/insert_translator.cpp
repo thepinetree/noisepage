@@ -29,6 +29,9 @@ InsertTranslator::InsertTranslator(const planner::InsertPlanNode &plan, Compilat
                     ->GetTable(GetPlanAs<planner::InsertPlanNode>().GetTableOid())
                     ->ProjectionMapForOids(all_oids_)) {
   pipeline->RegisterSource(this, Pipeline::Parallelism::Serial);
+  if (plan.GetChildrenSize() > 0){
+    compilation_context->Prepare(*plan.GetChild(0), pipeline);
+  }
   for (uint32_t idx = 0; idx < plan.GetBulkInsertCount(); idx++) {
     const auto &node_vals = GetPlanAs<planner::InsertPlanNode>().GetValues(idx);
     for (const auto &node_val : node_vals) {
@@ -133,6 +136,7 @@ void InsertTranslator::GenSetTablePR(FunctionBuilder *builder, WorkContext *cont
   const auto &node_vals = GetPlanAs<planner::InsertPlanNode>().GetValues(idx);
   auto codegen = GetCodeGen();
   for (size_t i = 0; i < node_vals.size(); i++) {
+
     // @prSet(insert_pr, ...)
     const auto &val = node_vals[i];
     auto *src = context->DeriveValue(*val.Get(), this);
@@ -160,15 +164,16 @@ void InsertTranslator::GenTableInsert(FunctionBuilder *builder) const {
 void InsertTranslator::GenIndexInsert(WorkContext *context, FunctionBuilder *builder,
                                       const catalog::index_oid_t &index_oid) const {
   // var insert_index_pr = @getIndexPR(&inserter, oid)
-  const auto &insert_index_pr = GetCodeGen()->MakeFreshIdentifier("insert_index_pr");
-  std::vector<ast::Expr *> pr_call_args{GetCodeGen()->AddressOf(inserter_), GetCodeGen()->Const32(!index_oid)};
-  auto *get_index_pr_call = GetCodeGen()->CallBuiltin(ast::Builtin::GetIndexPR, pr_call_args);
-  builder->Append(GetCodeGen()->DeclareVar(insert_index_pr, nullptr, get_index_pr_call));
+  auto codegen = GetCodeGen();
+  const auto &insert_index_pr = codegen->MakeFreshIdentifier("insert_index_pr");
+  std::vector<ast::Expr *> pr_call_args{codegen->AddressOf(inserter_), GetCodeGen()->Const32(!index_oid)};
+  auto *get_index_pr_call = codegen->CallBuiltin(ast::Builtin::GetIndexPR, pr_call_args);
+  builder->Append(codegen->DeclareVar(insert_index_pr, nullptr, get_index_pr_call));
 
-  const auto &index = GetCodeGen()->GetCatalogAccessor()->GetIndex(index_oid);
+  const auto &index = codegen->GetCatalogAccessor()->GetIndex(index_oid);
   const auto &index_pm = index->GetKeyOidToOffsetMap();
-  const auto &index_schema = GetCodeGen()->GetCatalogAccessor()->GetIndexSchema(index_oid);
-  auto *index_pr_expr = GetCodeGen()->MakeExpr(insert_index_pr);
+  const auto &index_schema = codegen->GetCatalogAccessor()->GetIndexSchema(index_oid);
+  auto *index_pr_expr = codegen->MakeExpr(insert_index_pr);
 
   for (const auto &index_col : index_schema.GetColumns()) {
     // @prSet(insert_index_pr, attr_idx, val, true)
@@ -176,7 +181,13 @@ void InsertTranslator::GenIndexInsert(WorkContext *context, FunctionBuilder *bui
     uint16_t attr_offset = index_pm.at(index_col.Oid());
     type::TypeId attr_type = index_col.Type();
     bool nullable = index_col.Nullable();
-    auto *set_key_call = GetCodeGen()->PRSet(index_pr_expr, attr_type, nullable, attr_offset, col_expr, false);
+    auto insertion_val = codegen->MakeFreshIdentifier("set-val");
+    builder->Append(
+        codegen->DeclareVar(insertion_val,
+                            codegen->TplType(execution::sql::GetTypeId(index_col.StoredExpression()
+                                                                           ->GetReturnValueType())), col_expr));
+    auto *set_key_call = GetCodeGen()->PRSet(index_pr_expr, attr_type,
+                                             nullable, attr_offset, codegen->AddressOf(insertion_val), false);
     builder->Append(GetCodeGen()->MakeStmt(set_key_call));
   }
 

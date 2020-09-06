@@ -230,7 +230,11 @@ void InputColumnDeriver::Visit(UNUSED_ATTRIBUTE const Insert *op) {
   output_input_cols_ = std::make_pair(std::move(required_cols_), std::move(input));
 }
 
-void InputColumnDeriver::Visit(UNUSED_ATTRIBUTE const InsertSelect *op) { Passdown(); }
+void InputColumnDeriver::Visit(const InsertSelect *op) {
+  auto db_id = op->GetDatabaseOid();
+  auto tbl_id = op->GetTableOid();
+  InputBaseTableColumns("", db_id, tbl_id);
+}
 
 void InputColumnDeriver::InputBaseTableColumns(const std::string &alias, catalog::db_oid_t db,
                                                catalog::table_oid_t tbl) {

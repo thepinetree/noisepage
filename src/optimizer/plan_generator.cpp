@@ -749,11 +749,26 @@ void PlanGenerator::Visit(const InsertSelect *op) {
   TERRIER_ASSERT(children_plans_.size() == 1, "InsertSelect needs 1 child plan");
   auto output_schema = std::make_unique<planner::OutputSchema>();
 
+  std::vector<catalog::index_oid_t> indexes(op->GetIndexes());
+
+  std::vector<common::ManagedPointer<parser::AbstractExpression>> values;
+
+  int index = 0;
+  for(auto &col : children_plans_[0]->GetOutputSchema()->GetColumns()){
+    auto dve = new parser::DerivedValueExpression(col.GetExpr()->GetReturnValueType(), 0, index);
+    txn_->RegisterCommitAction([=]{ delete dve; });
+    txn_->RegisterAbortAction([=]{ delete dve; });
+    values.push_back(common::ManagedPointer<parser::AbstractExpression>(dve));
+    index++;
+  }
+
   output_plan_ = planner::InsertPlanNode::Builder()
                      .SetOutputSchema(std::move(output_schema))
                      .SetDatabaseOid(op->GetDatabaseOid())
                      .SetTableOid(op->GetTableOid())
                      .AddChild(std::move(children_plans_[0]))
+                     .SetIndexOids(std::move(indexes))
+                     .AddValues(std::move(values))
                      .Build();
 }
 
