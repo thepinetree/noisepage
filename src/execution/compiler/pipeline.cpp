@@ -238,6 +238,8 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(query_id_t query_id) co
       op->BeginPipelineWork(*this, &builder);
     }
 
+    InjectStartResourceTracker(&builder);
+
     // Launch pipeline work.
     if (IsParallel()) {
       // TODO(wz2): When can track parallel work, insert trackers
@@ -250,7 +252,6 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(query_id_t query_id) co
       // SerialWork(queryState, pipelineState)
       builder.Append(codegen_->DeclareVarWithInit(state_var_, state));
 
-      InjectStartResourceTracker(&builder);
       started_tracker = true;
 
       builder.Append(
@@ -262,9 +263,7 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(query_id_t query_id) co
       op->FinishPipelineWork(*this, &builder);
     }
 
-    if (started_tracker) {
-      InjectEndResourceTracker(&builder, query_id);
-    }
+    InjectEndResourceTracker(&builder, query_id);
   }
   return builder.Finish();
 }
