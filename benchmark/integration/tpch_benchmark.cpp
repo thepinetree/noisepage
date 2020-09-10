@@ -7,7 +7,7 @@
 #include "test_util/tpch/workload.h"
 #include <tbb/task_scheduler_init.h>
 
-tbb::task_scheduler_init s(1);
+tbb::task_scheduler_init s(40);
 
 namespace terrier::tpch {
 class TPCHBenchmark : public benchmark::Fixture {

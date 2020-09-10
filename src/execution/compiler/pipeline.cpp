@@ -252,8 +252,6 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(query_id_t query_id) co
       // SerialWork(queryState, pipelineState)
       builder.Append(codegen_->DeclareVarWithInit(state_var_, state));
 
-      started_tracker = true;
-
       builder.Append(
           codegen_->Call(GetWorkFunctionName(), {builder.GetParameterByPosition(0), codegen_->MakeExpr(state_var_)}));
     }
