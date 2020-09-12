@@ -10,6 +10,8 @@
 #include "execution/exec/execution_context.h"
 #include "execution/sema/error_reporter.h"
 #include "execution/vm/module.h"
+
+#include "planner/plannodes/abstract_plan_node.h"
 #include "loggers/execution_logger.h"
 #include "transaction/transaction_context.h"
 
@@ -164,7 +166,9 @@ void ExecutableQuery::Run(common::ManagedPointer<exec::ExecutionContext> exec_ct
       fragment->Run(query_state.get(), mode);
     }
   }
-  std::cout << "Query took " << elapsed_ms << " ms to run\n";
+  if(this->GetPlan().GetPlanNodeType() != planner::PlanNodeType::INSERT) {
+    std::cout << "Query took " << elapsed_ms << " ms to run\n";
+  }
 }
 
 }  // namespace terrier::execution::compiler
