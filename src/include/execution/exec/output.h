@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "catalog/catalog_defs.h"
+//#include "common/shared_latch.h"
 #include "execution/sql/memory_pool.h"
 #include "execution/util/execution_common.h"
 #include "network/network_defs.h"
@@ -58,14 +59,15 @@ class EXPORT OutputBuffer {
    */
   byte *AllocOutputSlot() {
 
-    common::SpinLatch::ScopedSpinLatch guard(&latch_);
-    if (num_tuples_ == BATCH_SIZE) {
-      callback_(tuples_, num_tuples_, tuple_size_);
-      num_tuples_ = 0;
-    }
+//    common::SharedLatch::ScopedSharedLatch guard(&latch_);
+    auto val = (num_tuples_++) % BATCH_SIZE;
+//    if (num_tuples_ == BATCH_SIZE) {
+////      callback_(tuples_, num_tuples_, tuple_size_);
+//      num_tuples_ = 0;
+//    }
     // Return the current slot and advance to the to the next one.
-    num_tuples_++;
-    return tuples_ + tuple_size_ * (num_tuples_ - 1);
+//    auto val = num_tuples_++;
+    return tuples_ + tuple_size_ * (val);
   }
 
   /**
@@ -85,8 +87,8 @@ class EXPORT OutputBuffer {
 
  private:
   sql::MemoryPool *memory_pool_;
-  common::SpinLatch latch_;
-  uint32_t num_tuples_;
+//  common::SharedLatch latch_;
+  std::atomic<uint32_t> num_tuples_;
   uint32_t tuple_size_;
   byte *tuples_;
   OutputCallback callback_;

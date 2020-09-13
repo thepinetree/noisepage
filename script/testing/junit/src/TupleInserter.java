@@ -56,7 +56,7 @@ public class TupleInserter {
         StringBuilder sb = new StringBuilder("INSERT INTO sample VALUES (1)");
 //        assert(false);
         int rows_inserted = 0;
-        for(int i = 0;i < 100;i++){
+        for(int i = 0;i < 10000;i++){
             sb.append(",(1)");
         }
         sb.append(";");
@@ -67,7 +67,7 @@ public class TupleInserter {
 
         for(int i = 0;i < 100000;i++){
             stmt.execute(insert_SQL_1);
-            rows_inserted += 100;
+            rows_inserted += 10000;
             System.out.printf("%d\n", rows_inserted);
         }
 
