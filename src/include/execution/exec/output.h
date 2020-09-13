@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdio>
 #include <memory>
 #include <sstream>
 #include <unordered_map>
@@ -56,6 +57,8 @@ class EXPORT OutputBuffer {
    * @return an output slot to be written to.
    */
   byte *AllocOutputSlot() {
+
+    common::SpinLatch::ScopedSpinLatch guard(&latch_);
     if (num_tuples_ == BATCH_SIZE) {
       callback_(tuples_, num_tuples_, tuple_size_);
       num_tuples_ = 0;
@@ -82,6 +85,7 @@ class EXPORT OutputBuffer {
 
  private:
   sql::MemoryPool *memory_pool_;
+  common::SpinLatch latch_;
   uint32_t num_tuples_;
   uint32_t tuple_size_;
   byte *tuples_;

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "common/managed_pointer.h"
+#include "common/spin_latch.h"
 #include "network/network_io_utils.h"
 #include "network/postgres/postgres_defs.h"
 
@@ -68,6 +69,7 @@ class PacketWriter {
     queue_->BufferWriteRawValue<int32_t>(0, false);
     WriteBuffer &tail = *(queue_->buffers_[queue_->buffers_.size() - 1]);
     curr_packet_len_ = reinterpret_cast<uint32_t *>(&tail.buf_[tail.size_ - sizeof(int32_t)]);
+    TERRIER_ASSERT(!IsPacketEmpty(), "packet length is null");
     return *this;
   }
 
@@ -176,6 +178,7 @@ class PacketWriter {
     // Switch to network byte ordering, add the 4 bytes of size field
     *curr_packet_len_ = htonl(*curr_packet_len_ + static_cast<uint32_t>(sizeof(uint32_t)));
     curr_packet_len_ = nullptr;
+    TERRIER_ASSERT(IsPacketEmpty(), "packet length is null");
   }
 
  private:
