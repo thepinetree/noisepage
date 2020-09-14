@@ -226,7 +226,6 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
 }
 
 ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(query_id_t query_id) const {
-  bool started_tracker = false;
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
   FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
   {
