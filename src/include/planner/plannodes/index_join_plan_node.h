@@ -6,14 +6,13 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
 #include "parser/expression/abstract_expression.h"
 #include "parser/expression/column_value_expression.h"
 #include "planner/plannodes/abstract_join_plan_node.h"
 #include "planner/plannodes/plan_visitor.h"
 
 namespace terrier::planner {
-
-using IndexExpression = common::ManagedPointer<parser::AbstractExpression>;
 
 /**
  * Plan node for nested loop joins

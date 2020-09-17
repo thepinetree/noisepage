@@ -4,12 +4,13 @@
 #include <string>
 #include <variant>
 
+#include "common/thread_context.h"
+#include "metrics/metrics_store.h"
 #include "network/network_util.h"
 #include "network/postgres/postgres_packet_util.h"
 #include "network/postgres/postgres_protocol_interpreter.h"
 #include "network/postgres/statement.h"
 #include "traffic_cop/traffic_cop.h"
-#include "traffic_cop/traffic_cop_util.h"
 
 namespace terrier::network {
 
@@ -43,7 +44,13 @@ static void ExecutePortal(const common::ManagedPointer<network::ConnectionContex
       connection_ctx->Transaction()->SetMustAbort();
       return;
     }
-    result = t_cop->ExecuteCreateStatement(connection_ctx, physical_plan, query_type);
+    if (query_type == network::QueryType::QUERY_CREATE_INDEX) {
+      result = t_cop->ExecuteCreateStatement(connection_ctx, physical_plan, query_type);
+      result = t_cop->CodegenPhysicalPlan(connection_ctx, out, portal);
+      result = t_cop->RunExecutableQuery(connection_ctx, out, portal);
+    } else {
+      result = t_cop->ExecuteCreateStatement(connection_ctx, physical_plan, query_type);
+    }
   } else if (NetworkUtil::DropQueryType(query_type)) {
     if (explicit_txn_block && query_type == network::QueryType::QUERY_DROP_DB) {
       out->WriteError({common::ErrorSeverity::ERROR, "DROP DATABASE cannot run inside a transaction block",
@@ -112,6 +119,24 @@ Transition SimpleQueryCommand::Exec(const common::ManagedPointer<ProtocolInterpr
     out->WriteError({common::ErrorSeverity::ERROR,
                      "current transaction is aborted, commands ignored until end of transaction block",
                      common::ErrorCode::ERRCODE_IN_FAILED_SQL_TRANSACTION});
+    return FinishSimpleQueryCommand(out, connection);
+  }
+
+  // Set statements are manually handled here. They are not transactional, so handle them before transactional logic.
+  if (UNLIKELY(query_type == network::QueryType::QUERY_SET)) {
+    if (postgres_interpreter->ExplicitTransactionBlock()) {
+      out->WriteError({common::ErrorSeverity::ERROR, "SET cannot run inside a transaction block",
+                       common::ErrorCode::ERRCODE_ACTIVE_SQL_TRANSACTION});
+      connection->Transaction()->SetMustAbort();
+      return FinishSimpleQueryCommand(out, connection);
+    }
+
+    auto set_result = t_cop->ExecuteSetStatement(connection, common::ManagedPointer(statement));
+    if (set_result.type_ == trafficcop::ResultType::ERROR) {
+      out->WriteError(std::get<common::ErrorData>(set_result.extra_));
+    } else {
+      out->WriteCommandComplete(network::QueryType::QUERY_SET, 0);
+    }
     return FinishSimpleQueryCommand(out, connection);
   }
 
@@ -256,6 +281,14 @@ Transition BindCommand::Exec(const common::ManagedPointer<ProtocolInterpreter> i
                              const common::ManagedPointer<PostgresPacketWriter> out,
                              const common::ManagedPointer<trafficcop::TrafficCop> t_cop,
                              const common::ManagedPointer<ConnectionContext> connection) {
+  const bool bind_command_metrics_enabled =
+      common::thread_context.metrics_store_ != nullptr &&
+      common::thread_context.metrics_store_->ComponentToRecord(metrics::MetricsComponent::BIND_COMMAND);
+  if (bind_command_metrics_enabled) {
+    // start the operating unit resource tracker
+    common::thread_context.resource_tracker_.Start();
+  }
+
   const auto postgres_interpreter = interpreter.CastManagedPointerTo<network::PostgresProtocolInterpreter>();
   TERRIER_ASSERT(!postgres_interpreter->WaitingForSync(),
                  "We shouldn't be trying to execute commands while waiting for Sync message. This should have been "
@@ -298,6 +331,7 @@ Transition BindCommand::Exec(const common::ManagedPointer<ProtocolInterpreter> i
   // read the params
   auto params =
       PostgresPacketUtil::ReadParameters(common::ManagedPointer(&in_), statement->ParamTypes(), param_formats);
+  uint64_t param_num = params.size();
 
   // read out the result formats
   auto result_formats = PostgresPacketUtil::ReadFormatCodes(common::ManagedPointer(&in_));
@@ -314,15 +348,17 @@ Transition BindCommand::Exec(const common::ManagedPointer<ProtocolInterpreter> i
   }
 
   // Begin a transaction, regardless of statement type. If it's a BEGIN statement it's implicitly in this txn
-  if (connection->TransactionState() == network::NetworkTransactionStateType::IDLE) {
+  if (connection->TransactionState() == network::NetworkTransactionStateType::IDLE &&
+      !NetworkUtil::NonTransactionalQueryType(query_type)) {
     TERRIER_ASSERT(!postgres_interpreter->ExplicitTransactionBlock(),
                    "We shouldn't be in an explicit txn block is transaction state is IDLE.");
     t_cop->BeginTransaction(connection);
   }
 
   // This logic relies on ordering of values in the enum's definition and is documented there as well.
-  if (NetworkUtil::TransactionalQueryType(query_type)) {
-    // Don't begin an implicit txn in this case, and don't bind or optimize this statement
+  // TODO(Matt): maybe this check against SET eventually encompasses a class of non-transactional query types
+  if (NetworkUtil::TransactionalQueryType(query_type) || query_type == QueryType::QUERY_SET) {
+    // Don't bind or optimize this statement
     postgres_interpreter->SetPortal(portal_name,
                                     std::make_unique<Portal>(statement, std::move(params), std::move(result_formats)));
     out->WriteBindComplete();
@@ -379,6 +415,13 @@ Transition BindCommand::Exec(const common::ManagedPointer<ProtocolInterpreter> i
     postgres_interpreter->SetWaitingForSync();
   }
 
+  if (bind_command_metrics_enabled) {
+    common::thread_context.resource_tracker_.Stop();
+    auto &resource_metrics = common::thread_context.resource_tracker_.GetMetrics();
+    common::thread_context.metrics_store_->RecordBindCommandData(param_num, statement->GetQueryText().size(),
+                                                                 resource_metrics);
+  }
+
   return Transition::PROCEED;
 }
 
@@ -430,6 +473,14 @@ Transition ExecuteCommand::Exec(const common::ManagedPointer<ProtocolInterpreter
                                 const common::ManagedPointer<PostgresPacketWriter> out,
                                 const common::ManagedPointer<trafficcop::TrafficCop> t_cop,
                                 const common::ManagedPointer<ConnectionContext> connection) {
+  const bool execute_command_metrics_enabled =
+      common::thread_context.metrics_store_ != nullptr &&
+      common::thread_context.metrics_store_->ComponentToRecord(metrics::MetricsComponent::EXECUTE_COMMAND);
+  if (execute_command_metrics_enabled) {
+    // start the operating unit resource tracker
+    common::thread_context.resource_tracker_.Start();
+  }
+
   const auto postgres_interpreter = interpreter.CastManagedPointerTo<network::PostgresProtocolInterpreter>();
   TERRIER_ASSERT(!postgres_interpreter->WaitingForSync(),
                  "We shouldn't be trying to execute commands while waiting for Sync message. This should have been "
@@ -452,6 +503,23 @@ Transition ExecuteCommand::Exec(const common::ManagedPointer<ProtocolInterpreter
   const auto query_type = statement->GetQueryType();
 
   // TODO(Matt): Probably handle EmptyStatement around here somewhere, maybe somewhere more general purpose though?
+  // Set statements are manually handled here.
+  if (UNLIKELY(query_type == network::QueryType::QUERY_SET)) {
+    if (postgres_interpreter->ExplicitTransactionBlock()) {
+      out->WriteError({common::ErrorSeverity::ERROR, "SET cannot run inside a transaction block",
+                       common::ErrorCode::ERRCODE_ACTIVE_SQL_TRANSACTION});
+      connection->Transaction()->SetMustAbort();
+      return FinishSimpleQueryCommand(out, connection);
+    }
+
+    auto set_result = t_cop->ExecuteSetStatement(connection, common::ManagedPointer(statement));
+    if (set_result.type_ == trafficcop::ResultType::ERROR) {
+      out->WriteError(std::get<common::ErrorData>(set_result.extra_));
+    } else {
+      out->WriteCommandComplete(network::QueryType::QUERY_SET, 0);
+    }
+    return Transition::PROCEED;
+  }
 
   // This logic relies on ordering of values in the enum's definition and is documented there as well.
   if (NetworkUtil::TransactionalQueryType(query_type)) {
@@ -468,6 +536,12 @@ Transition ExecuteCommand::Exec(const common::ManagedPointer<ProtocolInterpreter
     // We don't yet support query types with values greater than this
     out->WriteCommandComplete(query_type, 0);
     return Transition::PROCEED;
+  }
+
+  if (execute_command_metrics_enabled) {
+    common::thread_context.resource_tracker_.Stop();
+    auto &resource_metrics = common::thread_context.resource_tracker_.GetMetrics();
+    common::thread_context.metrics_store_->RecordExecuteCommandData(portal_name.size(), resource_metrics);
   }
 
   if (portal->PhysicalPlan() != nullptr) {

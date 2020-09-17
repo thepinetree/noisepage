@@ -5,7 +5,7 @@
 
 #include "catalog/catalog_defs.h"
 #include "execution/exec/execution_context.h"
-#include "execution/sql/projected_columns_iterator.h"
+#include "execution/sql/vector_projection_iterator.h"
 #include "storage/index/index.h"
 
 namespace terrier::storage {
@@ -93,6 +93,12 @@ class EXPORT IndexIterator {
    * @return The current tuple slot of the iterator.
    */
   storage::TupleSlot CurrentSlot() { return tuples_[curr_index_ - 1]; }
+
+  /**
+   * @return The size of the index.
+   * TODO(WAN): This should be a uint64_t, #1049.
+   */
+  uint32_t GetIndexSize() const { return index_->GetSize(); }
 
  private:
   exec::ExecutionContext *exec_ctx_;

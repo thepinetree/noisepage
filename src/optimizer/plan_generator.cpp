@@ -210,6 +210,7 @@ void PlanGenerator::Visit(const SeqScan *op) {
 void PlanGenerator::Visit(const IndexScan *op) {
   auto tbl_oid = op->GetTableOID();
   auto output_schema = GenerateScanOutputSchema(tbl_oid);
+  uint64_t table_num_tuple = accessor_->GetTable(tbl_oid)->GetNumTuple();
 
   // Generate the predicate in the scan
   auto predicate = parser::ExpressionUtil::JoinAnnotatedExprs(op->GetPredicates()).release();
@@ -227,6 +228,7 @@ void PlanGenerator::Visit(const IndexScan *op) {
   builder.SetIndexOid(op->GetIndexOID());
   builder.SetTableOid(tbl_oid);
   builder.SetColumnOids(std::move(column_ids));
+  builder.SetTableNumTuple(table_num_tuple);
   builder.SetIndexSize(accessor_->GetTable(tbl_oid)->GetNumTuple());
 
   auto type = op->GetIndexScanType();
@@ -775,6 +777,20 @@ void PlanGenerator::Visit(const Update *op) {
   auto tbl_oid = op->GetTableOid();
   auto tbl_schema = accessor_->GetSchema(tbl_oid);
 
+  auto indexes = accessor_->GetIndexes(op->GetTableOid());
+  ExprSet cves;
+  for (auto index : indexes) {
+    for (auto &column : index.second.GetColumns()) {
+      // TODO(tanujnay112) big cheating with the const_cast but as the todo in abstract_expression.h says
+      // these are supposed to be immutable anyway. We need to either go around consting everything or document
+      // this assumption better somewhere
+      parser::ExpressionUtil::GetTupleValueExprs(
+          &cves, common::ManagedPointer(const_cast<parser::AbstractExpression *>(column.StoredExpression().Get())));
+    }
+  }
+
+  std::unordered_set<std::string> update_column_names;
+
   // Evaluate update expression and add to target list
   auto updates = op->GetUpdateClauses();
   for (auto &update : updates) {
@@ -786,7 +802,21 @@ void PlanGenerator::Visit(const Update *op) {
     update_col_offsets.insert(col_id);
     auto upd_value = update->GetUpdateValue()->Copy().release();
     builder.AddSetClause(std::make_pair(col_id, common::ManagedPointer(upd_value)));
+
+    update_column_names.insert(update->GetColumnName());
     RegisterPointerCleanup<parser::AbstractExpression>(upd_value, true, true);
+  }
+
+  bool indexed_update = false;
+
+  // TODO(tanujnay112) can optimize if we stored updated column oids in the update nodes during binding
+  // such that we didn't have to store string sets
+  for (auto &cve : cves) {
+    if (update_column_names.find(cve.CastManagedPointerTo<parser::ColumnValueExpression>()->GetColumnName()) !=
+        update_column_names.end()) {
+      indexed_update = true;
+      break;
+    }
   }
 
   // Empty OutputSchema for update
@@ -796,6 +826,7 @@ void PlanGenerator::Visit(const Update *op) {
   output_plan_ = builder.SetOutputSchema(std::move(output_schema))
                      .SetDatabaseOid(op->GetDatabaseOid())
                      .SetTableOid(op->GetTableOid())
+                     .SetIndexedUpdate(indexed_update)
                      .SetUpdatePrimaryKey(false)
                      .AddChild(std::move(children_plans_[0]))
                      .Build();
@@ -831,12 +862,14 @@ void PlanGenerator::Visit(const CreateIndex *create_index) {
   }
   auto idx_schema = std::make_unique<catalog::IndexSchema>(std::move(cols), schema->Type(), schema->Unique(),
                                                            schema->Primary(), schema->Exclusion(), schema->Immediate());
+  auto out_schema = std::make_unique<planner::OutputSchema>();
 
   output_plan_ = planner::CreateIndexPlanNode::Builder()
                      .SetNamespaceOid(create_index->GetNamespaceOid())
                      .SetTableOid(create_index->GetTableOid())
                      .SetIndexName(create_index->GetIndexName())
                      .SetSchema(std::move(idx_schema))
+                     .SetOutputSchema(std::move(out_schema))
                      .Build();
 }
 
