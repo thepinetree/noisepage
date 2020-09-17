@@ -244,10 +244,10 @@ void Sorter::SortParallel(exec::ExecutionContext *exec_ctx, execution::pipeline_
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Parallel Sort Thread-Local Instances");
 
-  tbb::task_scheduler_init sched;
+  tbb::task_scheduler_init sched(40);
   size_t num_concurrent = 0;
   {
-    size_t num_threads = tbb::task_scheduler_init::default_num_threads();
+    size_t num_threads = 40;
     size_t num_tasks = tl_sorters.size();
     num_concurrent = std::min(num_threads, num_tasks) - 1;
   }
