@@ -218,6 +218,61 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   }
 }
 
+void BytecodeGenerator::VisitLambdaDecl(ast::LambdaDecl *node) {
+  VisitFunctionDecl(node->GetFunctionDecl());
+  auto struct_type = node->GetCaptureStructType();
+  auto &current_locals = GetCurrentFunction()->GetLocals();
+  auto dest = GetExecutionResult()->GetOrCreateDestination(struct_type);
+  size_t index = 0;
+  for(auto local : current_locals){
+    LocalVar elem_ptr = GetCurrentFunction()->NewLocal(local.GetType()->PointerTo());
+
+    // can optimize
+    GetEmitter()->EmitLea(elem_ptr, dest, index);
+    BuildAssign(elem_ptr.ValueOf(), GetCurrentFunction()->LookupLocal(local.GetName()));
+    index++;
+  }
+}
+
+void BytecodeGenerator::VisitLambdaCallExpr(ast::CallExpr *call){
+  bool caller_wants_result = GetExecutionResult() != nullptr;
+  TERRIER_ASSERT(!caller_wants_result || GetExecutionResult()->IsRValue(), "Calls can only be R-Values!");
+  std::vector<LocalVar> params;
+
+  auto lambda_fn = call->As<ast::LambdaCallExpr>();
+
+
+  auto *func_type = call->Function()->GetType()->As<ast::FunctionType>();
+
+  if (!func_type->GetReturnType()->IsNilType()) {
+    LocalVar ret_val;
+    if (caller_wants_result) {
+      ret_val = GetExecutionResult()->GetOrCreateDestination(func_type->GetReturnType());
+
+      // Let the caller know where the result value is
+      GetExecutionResult()->SetDestination(ret_val.ValueOf());
+    } else {
+      ret_val = GetCurrentFunction()->NewLocal(func_type->GetReturnType());
+    }
+
+    // Push return value address into parameter list
+    params.push_back(ret_val);
+  }
+
+  // Collect non-return-value parameters as usual
+  for (uint32_t i = 0; i < func_type->GetNumParams(); i++) {
+    params.push_back(VisitExpressionForRValue(call->Arguments()[i]));
+  }
+  LocalVar x;
+
+  params.push_back(GetCurrentFunction()->LookupLocal(lambda_fn.GetVar()).AddressOf());
+
+  // Emit call
+  const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
+  TERRIER_ASSERT(func_id != FunctionInfo::K_INVALID_FUNC_ID, "Function not found!");
+  GetEmitter()->EmitCall(func_id, params);
+}
+
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   // Lookup the local in the current function. It must be there through a
   // previous variable declaration (or parameter declaration). What is returned
@@ -2784,11 +2839,20 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
   ast::CallExpr::CallKind call_kind = node->GetCallKind();
 
-  if (call_kind == ast::CallExpr::CallKind::Builtin) {
+  switch (call_kind)
+  case ast::CallExpr::CallKind::Builtin: {
     VisitBuiltinCallExpr(node);
-  } else {
-    VisitRegularCallExpr(node);
+    break;
   }
+  case ast::CallExpr::CallKind::Regular: {
+    VisitRegularCallExpr(node);
+    break;
+  }
+  case ast::CallExpr::CallKind::Lambda: {
+    VisitLambdaCallExpr(node);
+    break;
+  }
+
 }
 
 void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {

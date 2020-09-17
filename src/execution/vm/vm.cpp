@@ -28,6 +28,9 @@ class VM::Frame {
 
   void *PtrToLocalAt(const LocalVar local) const {
     EnsureInFrame(local);
+    if(local.GetReferenceMode() == LocalVar::ReferenceMode::Reference){
+      return *reinterpret_cast<void**>(frame_data_ + local.GetOffset());
+    }
     return frame_data_ + local.GetOffset();
   }
 

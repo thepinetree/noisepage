@@ -85,10 +85,12 @@ const bool BuiltinType::SIGNED_FLAGS[] = {
 // Function Type
 // ---------------------------------------------------------
 
-FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret)
+FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret, bool is_lambda)
     : Type(ret->GetContext(), sizeof(void *), alignof(void *), TypeId::FunctionType),
       params_(std::move(params)),
-      ret_(ret) {}
+      ret_(ret),
+      is_lambda_(is_lambda)
+      {}
 
 // ---------------------------------------------------------
 // Map Type

@@ -317,11 +317,23 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info, 
     params_[param.GetOffset()] = &*arg_iter;
   }
 
+  auto calling_context = func_info;
+  auto locals_offset = local_idx;
+
   // Allocate all local variables up front.
   for (; local_idx < func_info.GetLocals().size(); local_idx++) {
     const LocalInfo &local_info = func_locals[local_idx];
+//    if(local_in)
     llvm::Type *llvm_type = type_map->GetLLVMType(local_info.GetType());
-    llvm::Value *val = ir_builder_->CreateAlloca(llvm_type);
+    llvm::Value *val;
+    if(local_info.IsReference()){
+      auto origin = calling_context.GetLocals()[local_idx];
+      val = ir_builder_->CreateGEP(params_[func_locals[1].GetOffset()],
+                                     llvm::ConstantInt::get(type_map->UInt32Type(), 0),
+                                     llvm::ConstantInt::get(type_map->UInt32Type(), local_idx - locals_offset));
+    }else{
+      val = ir_builder_->CreateAlloca(llvm_type);
+    }
     locals_[local_info.GetOffset()] = val;
   }
 }
@@ -732,6 +744,7 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           const auto static_locals_iter = static_locals_.find(offset);
           TERRIER_ASSERT(static_locals_iter != static_locals_.end(), "Static local at offset does not exist");
           args.push_back(static_locals_iter->second);
+          ir_builder->GetInsertPoint()->getFunction()->
           break;
         }
         case OperandType::LocalCount: {

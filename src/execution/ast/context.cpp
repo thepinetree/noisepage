@@ -343,7 +343,7 @@ StructType *StructType::Get(util::RegionVector<Field> &&fields) {
 }
 
 // static
-FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
+FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret, bool is_lambda = false) {
   Context *ctx = ret->GetContext();
 
   const FunctionTypeKeyInfo::KeyTy key(ret, params);
@@ -357,7 +357,7 @@ FunctionType *FunctionType::Get(util::RegionVector<Field> &&params, Type *ret) {
   if (inserted) {
     // The function type was not in the cache, create the type now and insert it
     // into the cache
-    func_type = new (ctx->GetRegion()) FunctionType(std::move(params), ret);
+    func_type = new (ctx->GetRegion()) FunctionType(std::move(params), ret, is_lambda);
     *iter = func_type;
   } else {
     func_type = *iter;
