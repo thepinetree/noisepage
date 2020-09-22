@@ -8,7 +8,7 @@
 
 1. **Is this Carnegie Mellon's new database system project that is replacing [Peloton](https://github.com/cmu-db/peloton)?**
 
-   Maybe.
+   Maybe. Yes.
    
 2. **Is the new name of the DBMS "terrier"?**
 
