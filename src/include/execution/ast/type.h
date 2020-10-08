@@ -11,6 +11,10 @@
 #include "execution/util/region.h"
 #include "execution/util/region_containers.h"
 
+namespace sema {
+class Sema;
+}  // namespace sema
+
 namespace terrier::execution::ast {
 
 class Context;
@@ -20,6 +24,7 @@ class Context;
   F(BuiltinType)     \
   F(StringType)      \
   F(PointerType)     \
+  F(ReferenceType)   \
   F(ArrayType)       \
   F(MapType)         \
   F(StructType)      \
@@ -290,6 +295,8 @@ class Type : public util::RegionObject {
    */
   PointerType *PointerTo();
 
+  ReferenceType *ReferenceTo();
+
   /**
    * @return If this is a pointer type, the type of the element pointed to. Returns null otherwise.
    */
@@ -481,6 +488,34 @@ class PointerType : public Type {
   Type *base_;
 };
 
+class ReferenceType : public Type {
+ public:
+  /**
+   * @return base type
+   */
+  Type *GetBase() const { return base_; }
+
+  /**
+   * Static Constructor
+   * @param base type
+   * @return pointer to base type
+   */
+  static ReferenceType *Get(Type *base);
+
+  /**
+   * @param type checked type
+   * @return whether type is a pointer type.
+   */
+  static bool classof(const Type *type) { return type->GetTypeId() == TypeId::ReferenceType; }  // NOLINT
+
+ private:
+  explicit ReferenceType(Type *base)
+  : Type(base->GetContext(), sizeof(int8_t *), alignof(int8_t *), TypeId::ReferenceType), base_(base) {}
+
+ private:
+  Type *base_;
+};
+
 /**
  * Array type.
  */
@@ -583,6 +618,8 @@ class FunctionType : public Type {
    */
   Type *GetReturnType() const { return ret_; }
 
+  bool IsLambda() const { return is_lambda_; }
+
   /**
    * Create a function with parameters @em params and returning types of type @em ret.
    * @param params The parameters to the function.
@@ -601,6 +638,7 @@ class FunctionType : public Type {
   explicit FunctionType(util::RegionVector<Field> &&params, Type *ret, bool is_lambda);
 
  private:
+  friend class sema::Sema;
   util::RegionVector<Field> params_;
   Type *ret_;
   bool is_lambda_;
@@ -729,6 +767,10 @@ inline Type *Type::GetPointeeType() const {
     return ptr_type->GetBase();
   }
   return nullptr;
+}
+
+inline Type *Type::GetReferenceType() const {
+  if ()
 }
 
 inline bool Type::IsSpecificBuiltin(uint16_t kind) const {

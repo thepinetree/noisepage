@@ -241,6 +241,8 @@ class FunctionInfo {
    */
   LocalVar GetReturnValueLocal() const;
 
+  LocalVar GetCapturesLocal() const;
+
   /**
    * Lookup a local variable by name.
    * @param name The name of the local variable.

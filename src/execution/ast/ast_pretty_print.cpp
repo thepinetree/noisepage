@@ -300,6 +300,11 @@ void AstPrettyPrintImpl::VisitFunctionTypeRepr(FunctionTypeRepr *node) {
   Visit(node->ReturnType());
 }
 
+void AstPrettyPrintImpl::VisitLambdaExpr(LambdaExpr *node) {
+  os_ << "lambda ";
+  VisitFunctionLitExpr(node->GetFunctionLitExpr());
+}
+
 }  // namespace
 
 void AstPrettyPrint::Dump(std::ostream &os, AstNode *node) {

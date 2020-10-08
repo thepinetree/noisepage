@@ -69,6 +69,8 @@ class Scope {
 
   Kind GetKind() const;
 
+  std::vector<std::pair<ast::Identifier, ast::Type*>> GetLocals() const;
+
   /**
    * @return the parent scope
    */

@@ -205,8 +205,10 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   // The function's TPL type
   auto *func_type = node->TypeRepr()->GetType()->As<ast::FunctionType>();
 
+  FunctionInfo *func_info;
+
   // Allocate the function
-  FunctionInfo *func_info = AllocateFunc(node->Name().GetData(), func_type);
+  func_info = AllocateFunc(node->Name().GetData(), func_type);
 
   {
     // Visit the body of the function. We use this handy scope object to track
@@ -218,60 +220,107 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
   }
 }
 
-void BytecodeGenerator::VisitLambdaDecl(ast::LambdaDecl *node) {
-  VisitFunctionDecl(node->GetFunctionDecl());
-  auto struct_type = node->GetCaptureStructType();
-  auto &current_locals = GetCurrentFunction()->GetLocals();
-  auto dest = GetExecutionResult()->GetOrCreateDestination(struct_type);
-  size_t index = 0;
-  for(auto local : current_locals){
-    LocalVar elem_ptr = GetCurrentFunction()->NewLocal(local.GetType()->PointerTo());
+void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
+  // The function's TPL type
+  auto *func_type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
 
-    // can optimize
-    GetEmitter()->EmitLea(elem_ptr, dest, index);
-    BuildAssign(elem_ptr.ValueOf(), GetCurrentFunction()->LookupLocal(local.GetName()));
-    index++;
-  }
-}
+  FunctionInfo *func_info;
 
-void BytecodeGenerator::VisitLambdaCallExpr(ast::CallExpr *call){
-  bool caller_wants_result = GetExecutionResult() != nullptr;
-  TERRIER_ASSERT(!caller_wants_result || GetExecutionResult()->IsRValue(), "Calls can only be R-Values!");
-  std::vector<LocalVar> params;
-
-  auto lambda_fn = call->As<ast::LambdaCallExpr>();
-
-
-  auto *func_type = call->Function()->GetType()->As<ast::FunctionType>();
-
-  if (!func_type->GetReturnType()->IsNilType()) {
-    LocalVar ret_val;
-    if (caller_wants_result) {
-      ret_val = GetExecutionResult()->GetOrCreateDestination(func_type->GetReturnType());
-
-      // Let the caller know where the result value is
-      GetExecutionResult()->SetDestination(ret_val.ValueOf());
-    } else {
-      ret_val = GetCurrentFunction()->NewLocal(func_type->GetReturnType());
+  // Allocate the function
+  auto captures = GetCurrentFunction()->NewLocal(node->GetCaptureStructType(), "capture");
+  for(auto local : GetCurrentFunction()->GetLocals()){
+    if(local.GetName() == "capture"){
+      continue;
     }
-
-    // Push return value address into parameter list
-    params.push_back(ret_val);
+    auto localvar = GetCurrentFunction()->LookupLocal(local.GetName());
+    LocalVar fielvar = GetCurrentFunction()->NewLocal(
+        node->GetCaptureStructType()->As<ast::StructType>()->LookupFieldByName(local.GetName()),
+        local.GetName() + "ptr");
+    GetEmitter()->EmitLea(fielvar, captures,
+                                       node->GetCaptureStructType()
+                                           ->As<ast::StructType>()->GetOffsetOfFieldByName(local.GetName()));
+    GetEmitter()->EmitAssign(Bytecode::Assign8, fieldvar.ValueOf(), localvar.AddressOf());
   }
 
-  // Collect non-return-value parameters as usual
-  for (uint32_t i = 0; i < func_type->GetNumParams(); i++) {
-    params.push_back(VisitExpressionForRValue(call->Arguments()[i]));
+  func_info = AllocateFunc("lambda" + std::to_string(node->Position().line_), func_type);
+
+  {
+    // Visit the body of the function. We use this handy scope object to track
+    // the start and end position of this function's bytecode in the module's
+    // bytecode array. Upon destruction, the scoped class will set the bytecode
+    // range in the function.
+    BytecodePositionScope position_scope(this, func_info);
+    Visit(node->GetFunctionLitExpr()->Body());
   }
-  LocalVar x;
-
-  params.push_back(GetCurrentFunction()->LookupLocal(lambda_fn.GetVar()).AddressOf());
-
-  // Emit call
-  const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
-  TERRIER_ASSERT(func_id != FunctionInfo::K_INVALID_FUNC_ID, "Function not found!");
-  GetEmitter()->EmitCall(func_id, params);
 }
+
+//void BytecodeGenerator::VisitLambdaDecl(ast::FunctionDecl *node) {
+//  VisitFunctionDecl(node->GetFunctionDecl());
+//  auto struct_type = node->GetCaptureStructType();
+//  auto &current_locals = GetCurrentFunction()->GetLocals();
+//  for(auto local : current_locals){
+//    local.GetType()
+//  }
+//
+//  auto dest = GetExecutionResult()->GetOrCreateDestination(struct_type);
+//  size_t index = 0;
+//
+//  for(auto local : current_locals){
+//    LocalVar elem_ptr = GetCurrentFunction()->NewLocal(local.GetType()->PointerTo());
+//
+//    // can optimize
+//    GetEmitter()->EmitLea(elem_ptr, dest, index);
+//    BuildAssign(elem_ptr.ValueOf(), GetCurrentFunction()->LookupLocal(local.GetName()));
+//    index++;
+//  }
+//  node->SetCaptureStructLocal(dest);
+//}
+//
+//void BytecodeGenerator::VisitLambdaCallExpr(ast::CallExpr *call){
+//  bool caller_wants_result = GetExecutionResult() != nullptr;
+//  TERRIER_ASSERT(!caller_wants_result || GetExecutionResult()->IsRValue(), "Calls can only be R-Values!");
+//  std::vector<LocalVar> params;
+//
+//  auto lambda_fn = call->As<ast::LambdaCallExpr>();
+//
+//
+//  auto *func_type = call->Function()->GetType()->As<ast::FunctionType>();
+//
+//  if (!func_type->GetReturnType()->IsNilType()) {
+//    LocalVar ret_val;
+//    if (caller_wants_result) {
+//      ret_val = GetExecutionResult()->GetOrCreateDestination(func_type->GetReturnType());
+//
+//      // Let the caller know where the result value is
+//      GetExecutionResult()->SetDestination(ret_val.ValueOf());
+//    } else {
+//      ret_val = GetCurrentFunction()->NewLocal(func_type->GetReturnType());
+//    }
+//
+//    // Push return value address into parameter list
+//    params.push_back(ret_val);
+//  }
+//
+//  // push lambda stack struct
+//  LocalVar captures = GetExecutionResult()->GetOrCreateDestination(func_type
+//                                                                 ->GetCaptureStructType()->PointerTo());
+//  BuildAssign(captures, func_type->GetCaptureLocal().AddressOf(), func_type
+//      ->GetCaptureStructType()->PointerTo());
+//  params.push_back(captures);
+//
+//  // Collect non-return-value parameters as usual
+//  for (uint32_t i = 0; i < func_type->GetNumParams(); i++) {
+//    params.push_back(VisitExpressionForRValue(call->Arguments()[i]));
+//  }
+//  LocalVar x;
+//
+//  params.push_back(GetCurrentFunction()->LookupLocal(lambda_fn.GetVar()).AddressOf());
+//
+//  // Emit call
+//  const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
+//  TERRIER_ASSERT(func_id != FunctionInfo::K_INVALID_FUNC_ID, "Function not found!");
+//  GetEmitter()->EmitCall(func_id, params);
+//}
 
 void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   // Lookup the local in the current function. It must be there through a
@@ -2839,20 +2888,19 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
 void BytecodeGenerator::VisitCallExpr(ast::CallExpr *node) {
   ast::CallExpr::CallKind call_kind = node->GetCallKind();
 
-  switch (call_kind)
-  case ast::CallExpr::CallKind::Builtin: {
-    VisitBuiltinCallExpr(node);
-    break;
+  switch (call_kind) {
+    case ast::CallExpr::CallKind::Builtin: {
+      VisitBuiltinCallExpr(node);
+      break;
+    }
+    case ast::CallExpr::CallKind::Regular: {
+      VisitRegularCallExpr(node);
+      break;
+    }
+    default: {
+      UNREACHABLE("bruh");
+    }
   }
-  case ast::CallExpr::CallKind::Regular: {
-    VisitRegularCallExpr(node);
-    break;
-  }
-  case ast::CallExpr::CallKind::Lambda: {
-    VisitLambdaCallExpr(node);
-    break;
-  }
-
 }
 
 void BytecodeGenerator::VisitAssignmentStmt(ast::AssignmentStmt *node) {
@@ -3382,6 +3430,34 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name, ast:
   if (auto *return_type = func_type->GetReturnType(); !return_type->IsNilType()) {
     func->NewParameterLocal(return_type->PointerTo(), "hiddenRv");
   }
+
+  // Register parameters
+  for (const auto &param : func_type->GetParams()) {
+    func->NewParameterLocal(param.type_, param.name_.GetData());
+  }
+
+  // Cache
+  func_map_[func->GetName()] = func->GetId();
+
+  return func;
+}
+
+FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name,
+                                              ast::FunctionType *func_type, LocalVar captures,
+                                              ast::Type *capture_type) {
+
+  // Allocate function
+  const auto func_id = static_cast<FunctionId>(functions_.size());
+  functions_.emplace_back(func_id, func_name, func_type);
+  FunctionInfo *func = &functions_.back();
+
+  // Register return type
+  if (auto *return_type = func_type->GetReturnType(); !return_type->IsNilType()) {
+    func->NewParameterLocal(return_type->PointerTo(), "hiddenRv");
+  }
+
+  // lambda captures
+  func->NewParameterLocal(capture_type->PointerTo(), "hiddenCaptures");
 
   // Register parameters
   for (const auto &param : func_type->GetParams()) {

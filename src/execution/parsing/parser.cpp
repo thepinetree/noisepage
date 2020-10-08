@@ -425,11 +425,28 @@ ast::Expr *Parser::ParseUnaryOpExpr() {
   return ParsePrimaryExpr();
 }
 
+ast::Expr *Parser::ParseLambdaExpr() {
+  Expect(Token::Type::LAMBDA);
+
+  const SourcePosition &position = scanner_->CurrentPosition();
+
+  // The function literal
+  auto *fun = ParseFunctionLitExpr()->As<ast::FunctionLitExpr>();
+
+  // Create declaration
+//  ast::FunctionDecl *decl = node_factory_->NewFunctionDecl(position, name fun);
+  auto *lambda = node_factory_->NewLambdaExpr(position, fun);
+
+  // Done
+  return lambda;
+}
+
 ast::Expr *Parser::ParsePrimaryExpr() {
-  // PrimaryExpr = Operand | CallExpr | MemberExpr | IndexExpr ;
+  // PrimaryExpr = Operand | CallExpr | MemberExpr | IndexExpr | LambdaExpr ;
   // CallExpr = PrimaryExpr '(' (Expr)* ') ;
   // MemberExpr = PrimaryExpr '.' Expr
   // IndexExpr = PrimaryExpr '[' Expr ']'
+  // LambdaExpr = lambda (FunctionLitExpr)
 
   ast::Expr *result = ParseOperand();
 
@@ -464,6 +481,10 @@ ast::Expr *Parser::ParsePrimaryExpr() {
         ast::Expr *index = ParseExpr();
         Expect(Token::Type::RIGHT_BRACKET);
         result = node_factory_->NewIndexExpr(result->Position(), result, index);
+        break;
+      }
+      case Token::Type::LAMBDA: {
+        result = ParseLambdaExpr();
         break;
       }
       default: {

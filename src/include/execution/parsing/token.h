@@ -72,6 +72,7 @@ namespace terrier::execution::parsing {
   K(FUN, "fun", 0)                                 \
   K(IF, "if", 0)                                   \
   K(IN, "in", 0)                                   \
+  K(LAMBDA, "lambda", 0)                           \
   K(MAP, "map", 0)                                 \
   K(NIL, "nil", 0)                                 \
   K(RETURN, "return", 0)                           \

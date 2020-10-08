@@ -33,4 +33,12 @@ Scope::Kind Scope::GetKind() const {
   return scope_kind_;
 }
 
+std::vector<std::pair<ast::Identifier, ast::Type*>> Scope::GetLocals() const {
+  std::vector<std::pair<ast::Identifier, ast::Type*>> locals;
+  for(auto it : decls_){
+    locals.emplace_back(it.first, it.second);
+  }
+  return locals;
+}
+
 }  // namespace terrier::execution::sema

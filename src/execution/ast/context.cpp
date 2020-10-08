@@ -232,6 +232,8 @@ Identifier Context::GetBuiltinType(BuiltinType::Kind kind) {
 
 PointerType *Type::PointerTo() { return PointerType::Get(this); }
 
+ReferenceType *Type::ReferenceTo() { return ReferenceType::Get(this); }
+
 // static
 BuiltinType *BuiltinType::Get(Context *ctx, BuiltinType::Kind kind) { return ctx->Impl()->builtin_types_list_[kind]; }
 

@@ -45,6 +45,10 @@ class AstNodeFactory {
     return new (region_) FunctionDecl(pos, name, fun);
   }
 
+  LambdaExpr *NewLambdaExpr(const SourcePosition &pos, FunctionLitExpr *fun) {
+    return new (region_) LambdaExpr(pos, fun);
+  }
+
   /**
    * @param pos source position
    * @param name struct name

@@ -70,6 +70,9 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   // Allocate a new function ID
   FunctionInfo *AllocateFunc(const std::string &func_name, ast::FunctionType *func_type);
 
+  FunctionInfo *AllocateFunc(const std::string &func_name, ast::FunctionType *func_type, LocalVar captures,
+                             ast::Type *capture_type);
+
   void VisitAbortTxn(ast::CallExpr *call);
 
   // ONLY FOR TESTING!

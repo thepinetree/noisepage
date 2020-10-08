@@ -121,6 +121,8 @@ class Parser {
 
   ast::Expr *ParseUnaryOpExpr();
 
+  ast::Expr *ParseLambdaExpr();
+
   ast::Expr *ParsePrimaryExpr();
 
   ast::Expr *ParseOperand();

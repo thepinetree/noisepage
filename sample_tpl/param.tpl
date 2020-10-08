@@ -6,5 +6,6 @@ fun check(x: int32) -> int32 {
 }
 
 fun main() -> int32 {
-    return check(10)
+    var fn = lambda (x: int32) -> nil { return x + 1; }
+    return fn(2)
 }

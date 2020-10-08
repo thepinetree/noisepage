@@ -141,6 +141,37 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   node->SetType(func_type->GetReturnType());
 }
 
+void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
+  // make struct type
+  const auto &locals = GetCurrentScope()->GetLocals();
+  auto factory = GetContext()->GetNodeFactory();
+  util::RegionVector<ast::FieldDecl *> fields(GetContext()->GetRegion());
+  for(auto local : locals){
+    auto name = local.first;
+    auto type = local.second;
+    ast::Expr *type_repr = factory->NewIdentifierExpr(SourcePosition(), name);
+    type_repr->SetType(type->PointerTo());
+    ast::FieldDecl *field = factory->NewFieldDecl(SourcePosition(), name, type_repr);
+    fields.push_back(field);
+  }
+
+  ast::StructTypeRepr *struct_type_repr =
+      factory->NewStructType(SourcePosition(), std::move(fields));
+  // TODO(tanujnay112) Find a better name
+  ast::StructDecl *struct_decl = factory->NewStructDecl(SourcePosition(),
+                                                        GetContext()->GetIdentifier("lambda" + std::to_string(node->Position().line_)),
+                                                        struct_type_repr);
+  node->captures_ = struct_type_repr;
+  node->capture_type_ = Resolve(struct_decl->TypeRepr());
+  GetCurrentScope()->Declare(struct_decl->Name(), node->capture_type_);
+
+  auto type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
+
+//  type->params_.emplace_back(GetContext->GetIdentifier("captures"), Resolve(struct_decl->TypeRepr()));
+
+  VisitFunctionLitExpr(node->GetFunctionLitExpr());
+}
+
 void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // Resolve the type, if not resolved already
   if (auto *type = node->TypeRepr()->GetType(); type == nullptr) {
@@ -157,10 +188,20 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
   // The function scope
   FunctionSemaScope function_scope(this, node);
 
+  if(node->IsLambda()){
+    auto &params = func_type->GetParams();
+    auto captures = params[params.size() - 1];
+    auto capture_type = captures.type_->As<ast::StructType>();
+    for(auto field : capture_type->GetFields()){
+      GetCurrentScope()->Declare(field.name_, field.type_->GetPointeeType()->ReferenceTo());
+    }
+  }
+
   // Declare function parameters in scope
   for (const auto &param : func_type->GetParams()) {
     GetCurrentScope()->Declare(param.name_, param.type_);
   }
+
 
   // Recurse into the function body
   Visit(node->Body());

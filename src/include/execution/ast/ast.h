@@ -67,6 +67,7 @@ namespace ast {
   T(IdentifierExpr)                     \
   T(ImplicitCastExpr)                   \
   T(IndexExpr)                          \
+  T(LambdaExpr)                         \
   T(LitExpr)                            \
   T(MemberExpr)                         \
   T(UnaryOpExpr)                        \
@@ -353,12 +354,14 @@ class FunctionDecl : public Decl {
    * @param name identifier
    * @param func function literal (param types, return type, body)
    */
-  FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLitExpr *func);
+  FunctionDecl(const SourcePosition &pos, Identifier name, FunctionLitExpr *func, bool is_lambda_ = false);
 
   /**
    * @return The function literal defining the body of the function declaration.
    */
   FunctionLitExpr *Function() const { return func_; }
+
+  bool IsLambda() const { return is_lambda_; }
 
   /**
    * Is the given node a function declaration? Needed as part of the custom AST RTTI infrastructure.
@@ -372,6 +375,8 @@ class FunctionDecl : public Decl {
  private:
   // The function definition (signature and body).
   FunctionLitExpr *func_;
+  bool is_lambda_;
+  ast::Type *capture_type_;
 };
 
 /**
@@ -1061,6 +1066,25 @@ class BinaryOpExpr : public Expr {
   Expr *right_;
 };
 
+class LambdaExpr : public Expr {
+ public:
+  LambdaExpr(const SourcePosition &pos, FunctionLitExpr *func)
+      : Expr(Kind::LambdaExpr, pos), captures_{nullptr}, func_lit_(func) {}
+
+  FunctionLitExpr *GetFunctionLitExpr() const { return func_lit_; }
+
+  ast::StructTypeRepr *GetCaptureStruct() const { return captures_; }
+
+  ast::Type *GetCaptureStructType() const { return capture_type_; }
+
+ private:
+  friend class sema::Sema;
+
+  ast::StructTypeRepr *captures_;
+  ast::Type *capture_type_;
+  FunctionLitExpr *func_lit_;
+};
+
 /**
  * A function call expression.
  */
@@ -1069,7 +1093,7 @@ class CallExpr : public Expr {
   /**
    * Type of call (builtin call or regular function call)
    */
-  enum class CallKind : uint8_t { Regular, Builtin };
+  enum class CallKind : uint8_t { Regular, Builtin, Lambda };
 
   /**
    * Constructor for regular calls
@@ -1224,7 +1248,7 @@ class FunctionLitExpr : public Expr {
    * @param type_repr type representation (param types, return type)
    * @param body body of the function
    */
-  FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body);
+  FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body, bool is_lambda);
 
   /**
    * @return The function's signature.
@@ -1241,6 +1265,8 @@ class FunctionLitExpr : public Expr {
    */
   bool IsEmpty() const { return Body()->IsEmpty(); }
 
+  bool IsLambda() const { return is_lambda_; }
+
   /**
    * Is the given node a function literal? Needed as part of the custom AST RTTI infrastructure.
    * @param node The node to check.
@@ -1255,6 +1281,8 @@ class FunctionLitExpr : public Expr {
   FunctionTypeRepr *type_repr_;
   // The body of the function.
   BlockStmt *body_;
+
+  bool is_lambda_;
 };
 
 /**

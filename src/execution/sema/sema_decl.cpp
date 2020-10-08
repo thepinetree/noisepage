@@ -1,5 +1,6 @@
 #include <llvm/ADT/DenseSet.h>
 #include "execution/ast/context.h"
+#include "execution/ast/ast_node_factory.h"
 #include "execution/ast/type.h"
 #include "execution/sema/sema.h"
 
@@ -91,6 +92,17 @@ void Sema::VisitFunctionDecl(ast::FunctionDecl *node) {
     GetErrorReporter()->Report(node->Position(), ErrorMessages::kDuplicateArgName, dup->Name(), node->Name());
     return;
   }
+
+//  if(node->IsLambda()){
+//    // make capture struct
+//    util::RegionVector<ast::Field> fields(GetContext()->GetRegion());
+//    auto factory = GetContext()->GetNodeFactory();
+//    for(auto &it : GetCurrentScope()->GetLocals()){
+//      fields.emplace_back(it.first, it.second->PointerTo());
+//    }
+//    auto capture_type = ast::StructType::Get(GetContext(), std::move(fields));
+//    node->SetCaptureType(capture_type);
+//  }
 
   // Make declaration available.
   GetCurrentScope()->Declare(node->Name(), func_type);
