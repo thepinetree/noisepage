@@ -11,7 +11,7 @@
 #include "execution/util/region.h"
 #include "execution/util/region_containers.h"
 
-namespace sema {
+namespace terrier::execution::sema {
 class Sema;
 }  // namespace sema
 
@@ -638,7 +638,7 @@ class FunctionType : public Type {
   explicit FunctionType(util::RegionVector<Field> &&params, Type *ret, bool is_lambda);
 
  private:
-  friend class Sema;
+  friend class terrier::execution::sema::Sema;
   util::RegionVector<Field> params_;
   Type *ret_;
   bool is_lambda_;

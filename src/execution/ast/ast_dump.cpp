@@ -171,6 +171,12 @@ void AstDumperImpl::VisitFunctionDecl(FunctionDecl *node) {
   DumpExpr(node->Function());
 }
 
+void AstDumperImpl::VisitLambdaExpr(LambdaExpr *node) {
+  DumpNodeCommon(node);
+//  DumpIdentifier(ast::Identifier(node->GetName().data()));
+  DumpExpr(node->GetFunctionLitExpr());
+}
+
 void AstDumperImpl::VisitVariableDecl(VariableDecl *node) {
   DumpNodeCommon(node);
   DumpIdentifier(node->Name());

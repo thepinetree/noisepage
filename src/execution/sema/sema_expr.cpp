@@ -97,7 +97,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Check argument count matches
-  if (!CheckArgCount(node, func_type->GetNumParams())) {
+  if (!CheckArgCount(node, func_type->IsLambda() ? func_type->GetNumParams() - 1 : func_type->GetNumParams())) {
     return;
   }
 
@@ -168,10 +168,10 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
 
 //  node->name_ =
 
-//  auto type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
+  auto type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
 
   // so that caller doesn't get messed up?
-//  type->params_.emplace_back(GetContext->GetIdentifier("captures"), Resolve(struct_decl->TypeRepr()));
+  type->params_.emplace_back(GetContext()->GetIdentifier("captures"), Resolve(struct_decl->TypeRepr()));
 
   VisitFunctionLitExpr(node->GetFunctionLitExpr());
 }
