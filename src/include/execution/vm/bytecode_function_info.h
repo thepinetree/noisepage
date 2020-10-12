@@ -325,6 +325,10 @@ class FunctionInfo {
   // Allocate a new local variable in the function.
   LocalVar NewLocal(ast::Type *type, const std::string &name, LocalInfo::Kind kind);
 
+  LocalVar captures_;
+
+  bool is_lambda_{false};
+
  private:
   // The ID of the function in the module. IDs are unique within a module.
   FunctionId id_;

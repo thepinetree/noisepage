@@ -143,6 +143,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
 void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   // make struct type
+  node->SetType(Resolve(node->GetFunctionLitExpr()->TypeRepr()));
   const auto &locals = GetCurrentScope()->GetLocals();
   auto factory = GetContext()->GetNodeFactory();
   util::RegionVector<ast::FieldDecl *> fields(GetContext()->GetRegion());
@@ -165,8 +166,11 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   node->capture_type_ = Resolve(struct_decl->TypeRepr());
   GetCurrentScope()->Declare(struct_decl->Name(), node->capture_type_);
 
-  auto type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
+//  node->name_ =
 
+//  auto type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
+
+  // so that caller doesn't get messed up?
 //  type->params_.emplace_back(GetContext->GetIdentifier("captures"), Resolve(struct_decl->TypeRepr()));
 
   VisitFunctionLitExpr(node->GetFunctionLitExpr());

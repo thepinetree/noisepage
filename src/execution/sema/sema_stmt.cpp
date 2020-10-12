@@ -24,6 +24,11 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   if (source != node->Source()) {
     node->SetSource(source);
   }
+  if(src_type->IsFunctionType()){
+    // this is a lambda function assignment
+    node->Source()->As<ast::LambdaExpr>()->name_ =
+        node->Destination()->As<ast::IdentifierExpr>()->Name().GetData();
+  }
 }
 
 void Sema::VisitBlockStmt(ast::BlockStmt *node) {

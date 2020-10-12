@@ -90,7 +90,7 @@ bool ComparisonOpExpr::IsLiteralCompareNil(Expr **result) const {
 // Function Literal Expressions
 // ---------------------------------------------------------
 
-FunctionLitExpr::FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body, bool is_lambda = false)
+FunctionLitExpr::FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body, bool is_lambda)
     : Expr(Kind::FunctionLitExpr, type_repr->Position()), type_repr_(type_repr), body_(body),
       is_lambda_(is_lambda) {}
 

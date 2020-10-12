@@ -262,6 +262,9 @@ void AstDumperImpl::VisitCallExpr(CallExpr *node) {
       case CallExpr::CallKind::Regular: {
         out_ << "Regular";
       }
+      case CallExpr::CallKind::Lambda: {
+        out_ << "Lambda";
+      }
     }
   }
   DumpPrimitive("> ");

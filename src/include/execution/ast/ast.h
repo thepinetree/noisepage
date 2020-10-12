@@ -376,7 +376,7 @@ class FunctionDecl : public Decl {
   // The function definition (signature and body).
   FunctionLitExpr *func_;
   bool is_lambda_;
-  ast::Type *capture_type_;
+//  ast::Type *capture_type_;
 };
 
 /**
@@ -1077,9 +1077,12 @@ class LambdaExpr : public Expr {
 
   ast::Type *GetCaptureStructType() const { return capture_type_; }
 
+  const std::string &GetName() const { return name_; }
+
  private:
   friend class sema::Sema;
 
+  std::string name_;
   ast::StructTypeRepr *captures_;
   ast::Type *capture_type_;
   FunctionLitExpr *func_lit_;
@@ -1248,7 +1251,7 @@ class FunctionLitExpr : public Expr {
    * @param type_repr type representation (param types, return type)
    * @param body body of the function
    */
-  FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body, bool is_lambda);
+  FunctionLitExpr(FunctionTypeRepr *type_repr, BlockStmt *body, bool is_lambda = false);
 
   /**
    * @return The function's signature.

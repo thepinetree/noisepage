@@ -626,7 +626,7 @@ class FunctionType : public Type {
    * @param ret The type of the object the function returns.
    * @return The function type.
    */
-  static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret, bool is_lambda);
+  static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
 
   /**
    * @param type type to compare with
@@ -638,7 +638,7 @@ class FunctionType : public Type {
   explicit FunctionType(util::RegionVector<Field> &&params, Type *ret, bool is_lambda);
 
  private:
-  friend class sema::Sema;
+  friend class Sema;
   util::RegionVector<Field> params_;
   Type *ret_;
   bool is_lambda_;
@@ -769,9 +769,11 @@ inline Type *Type::GetPointeeType() const {
   return nullptr;
 }
 
-inline Type *Type::GetReferenceType() const {
-  if ()
-}
+//inline Type *Type::GetReferenceType() const {
+//  if (auto *ref_type = SafeAs<ReferenceType>>()){
+//    return re
+//  }
+//}
 
 inline bool Type::IsSpecificBuiltin(uint16_t kind) const {
   if (auto *builtin_type = SafeAs<BuiltinType>()) {

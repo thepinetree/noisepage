@@ -54,6 +54,11 @@ void TypePrinter::VisitPointerType(const PointerType *type) {
   Visit(type->GetBase());
 }
 
+void TypePrinter::VisitReferenceType(const ReferenceType *type) {
+  Os() << "&";
+  Visit(type->GetBase());
+}
+
 void TypePrinter::VisitStructType(const StructType *type) {
   Os() << "struct{";
   bool first = true;

@@ -74,7 +74,7 @@ LocalVar FunctionInfo::GetCapturesLocal() const {
   // This invocation only makes sense if the function actually returns a value
   TERRIER_ASSERT(!func_type_->GetReturnType()->IsNilType(),
                  "Cannot lookup local slot for function that does not have return value");
-  return LocalVar(1u, LocalVar::AddressMode::Address);
+  return LocalVar(GetParamsCount(), LocalVar::AddressMode::Address);
 }
 
 const LocalInfo *FunctionInfo::LookupLocalInfoByName(const std::string &name) const {

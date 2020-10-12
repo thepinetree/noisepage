@@ -227,23 +227,25 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
   FunctionInfo *func_info;
 
   // Allocate the function
-  auto captures = GetCurrentFunction()->NewLocal(node->GetCaptureStructType(), "capture");
+  auto captures = GetExecutionResult()->GetOrCreateDestination(node->GetCaptureStructType());
   for(auto local : GetCurrentFunction()->GetLocals()){
-    if(local.GetName() == "capture"){
-      continue;
-    }
+//    if(local.GetName() == "capture"){
+//      continue;
+//    }
     auto localvar = GetCurrentFunction()->LookupLocal(local.GetName());
-    LocalVar fielvar = GetCurrentFunction()->NewLocal(
+    LocalVar fieldvar = GetCurrentFunction()->NewLocal(
         node->GetCaptureStructType()->As<ast::StructType>()->LookupFieldByName(local.GetName()),
         local.GetName() + "ptr");
-    GetEmitter()->EmitLea(fielvar, captures,
+    GetEmitter()->EmitLea(fieldvar, captures,
                                        node->GetCaptureStructType()
                                            ->As<ast::StructType>()->GetOffsetOfFieldByName(local.GetName()));
     GetEmitter()->EmitAssign(Bytecode::Assign8, fieldvar.ValueOf(), localvar.AddressOf());
   }
 
-  func_info = AllocateFunc("lambda" + std::to_string(node->Position().line_), func_type);
-
+  func_info = AllocateFunc(node->GetName(), func_type);
+  func_info->captures_ = captures;
+  func_info->is_lambda_ = true;
+//  GetCurrentFunction()->GetCapturesLocal()
   {
     // Visit the body of the function. We use this handy scope object to track
     // the start and end position of this function's bytecode in the module's
@@ -252,6 +254,8 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
     BytecodePositionScope position_scope(this, func_info);
     Visit(node->GetFunctionLitExpr()->Body());
   }
+
+  func_info->GetId();
 }
 
 //void BytecodeGenerator::VisitLambdaDecl(ast::FunctionDecl *node) {
@@ -2875,8 +2879,12 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Collect non-return-value parameters as usual
-  for (uint32_t i = 0; i < func_type->GetNumParams(); i++) {
+  for (uint32_t i = 0; i < params.size(); i++) {
     params.push_back(VisitExpressionForRValue(call->Arguments()[i]));
+  }
+
+  if(func_type->IsLambda()){
+    params.push_back( GetCurrentFunction()->LookupLocalInfoByName(call->GetFuncName().GetString()))
   }
 
   // Emit call
