@@ -169,6 +169,10 @@ AstNode *AstCloneImpl::VisitIndexExpr(IndexExpr *node) {
                                 reinterpret_cast<Expr*>(Visit(node->Index())));
 }
 
+AstNode *AstCloneImpl::VisitLambdaExpr(LambdaExpr *node) {
+  return factory_->NewLambdaExpr(node->Position(), node->GetFunctionLitExpr());
+}
+
 AstNode *AstCloneImpl::VisitLitExpr(LitExpr *node) {
   AstNode *literal = nullptr;
   switch (node->GetLiteralKind()) {

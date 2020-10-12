@@ -228,18 +228,21 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
 
   // Allocate the function
   auto captures = GetExecutionResult()->GetOrCreateDestination(node->GetCaptureStructType());
+  auto fields = node->GetCaptureStructType()->As<ast::StructType>()->GetFields();
+  size_t i = 0;
   for(auto local : GetCurrentFunction()->GetLocals()){
 //    if(local.GetName() == "capture"){
 //      continue;
 //    }
     auto localvar = GetCurrentFunction()->LookupLocal(local.GetName());
     LocalVar fieldvar = GetCurrentFunction()->NewLocal(
-        node->GetCaptureStructType()->As<ast::StructType>()->LookupFieldByName(local.GetName()),
+        fields[i].type_,
         local.GetName() + "ptr");
     GetEmitter()->EmitLea(fieldvar, captures,
                                        node->GetCaptureStructType()
-                                           ->As<ast::StructType>()->GetOffsetOfFieldByName(local.GetName()));
+                                           ->As<ast::StructType>()->GetOffsetOfFieldByName(fields[i].name_));
     GetEmitter()->EmitAssign(Bytecode::Assign8, fieldvar.ValueOf(), localvar.AddressOf());
+    i++;
   }
 
   func_info = AllocateFunc(node->GetName(), func_type);
@@ -2884,7 +2887,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   if(func_type->IsLambda()){
-    params.push_back( GetCurrentFunction()->LookupLocalInfoByName(call->GetFuncName().GetString()))
+    params.push_back( GetCurrentFunction()->LookupLocal(call->GetFuncName().GetString()));
   }
 
   // Emit call

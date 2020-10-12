@@ -52,7 +52,7 @@ void Sema::VisitFunctionTypeRepr(ast::FunctionTypeRepr *node) {
   }
 
   // Create type
-  ast::FunctionType *func_type = ast::FunctionType::Get(std::move(param_types), ret);
+  ast::FunctionType *func_type = ast::FunctionType::Get(std::move(param_types), ret, false);
   node->SetType(func_type);
 }
 

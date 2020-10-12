@@ -177,6 +177,11 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
       llvm_type = llvm::PointerType::getUnqual(GetLLVMType(ptr_type->GetBase()));
       break;
     }
+//    case ast::Type::TypeId::ReferenceType: {
+//      auto *ptr_type = type->As<ast::ReferenceType>();
+//      llvm_type = llvm::PointerType::getUnqual(GetLLVMType(ptr_type->GetBase()));
+//      break;
+//    }
     case ast::Type::TypeId::ArrayType: {
       auto *arr_type = type->As<ast::ArrayType>();
       llvm::Type *elem_type = GetLLVMType(arr_type->GetElementType());
@@ -197,6 +202,10 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
     }
     case ast::Type::TypeId::FunctionType: {
       llvm_type = GetLLVMFunctionType(type->As<ast::FunctionType>());
+      break;
+    }
+    default : {
+      TERRIER_ASSERT(false, "shouldn't be here");
       break;
     }
   }
@@ -318,7 +327,7 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info, 
   }
 
   auto calling_context = func_info;
-  auto locals_offset = local_idx;
+//  auto locals_offset = local_idx;
 
   // Allocate all local variables up front.
   for (; local_idx < func_info.GetLocals().size(); local_idx++) {
@@ -326,14 +335,14 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info, 
 //    if(local_in)
     llvm::Type *llvm_type = type_map->GetLLVMType(local_info.GetType());
     llvm::Value *val;
-    if(local_info.IsReference()){
-      auto origin = calling_context.GetLocals()[local_idx];
-      val = ir_builder_->CreateGEP(params_[func_locals[1].GetOffset()],
-                                     llvm::ConstantInt::get(type_map->UInt32Type(), 0),
-                                     llvm::ConstantInt::get(type_map->UInt32Type(), local_idx - locals_offset));
-    }else{
+//    if(local_info.IsReference()){
+//      auto origin = calling_context.GetLocals()[local_idx];
+//      val = ir_builder_->CreateGEP(params_[func_locals[1].GetOffset()],
+//                                     llvm::ConstantInt::get(type_map->UInt32Type(), 0),
+//                                     llvm::ConstantInt::get(type_map->UInt32Type(), local_idx - locals_offset));
+//    }else{
       val = ir_builder_->CreateAlloca(llvm_type);
-    }
+//    }
     locals_[local_info.GetOffset()] = val;
   }
 }
@@ -744,7 +753,6 @@ void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_
           const auto static_locals_iter = static_locals_.find(offset);
           TERRIER_ASSERT(static_locals_iter != static_locals_.end(), "Static local at offset does not exist");
           args.push_back(static_locals_iter->second);
-          ir_builder->GetInsertPoint()->getFunction()->
           break;
         }
         case OperandType::LocalCount: {

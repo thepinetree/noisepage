@@ -150,6 +150,7 @@ struct Context::Implementation {
   llvm::DenseMap<Identifier, Type *> builtin_types_;
   llvm::DenseMap<Identifier, Builtin> builtin_funcs_;
   llvm::DenseMap<Type *, PointerType *> pointer_types_;
+  llvm::DenseMap<Type *, ReferenceType *> reference_types_;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types_;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types_;
   llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types_;
@@ -251,6 +252,19 @@ PointerType *PointerType::Get(Type *base) {
   }
 
   return pointer_type;
+}
+
+// static
+ReferenceType *ReferenceType::Get(Type *base) {
+  Context *ctx = base->GetContext();
+
+  ReferenceType *&reference_type = ctx->Impl()->reference_types_[base];
+
+  if (reference_type == nullptr) {
+    reference_type = new (ctx->GetRegion()) ReferenceType(base);
+  }
+
+  return reference_type;
 }
 
 // static

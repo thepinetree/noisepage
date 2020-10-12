@@ -626,7 +626,7 @@ class FunctionType : public Type {
    * @param ret The type of the object the function returns.
    * @return The function type.
    */
-  static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret);
+  static FunctionType *Get(util::RegionVector<Field> &&params, Type *ret, bool is_lambda);
 
   /**
    * @param type type to compare with
