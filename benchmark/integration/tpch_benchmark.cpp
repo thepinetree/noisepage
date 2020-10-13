@@ -14,8 +14,8 @@ class TPCHBenchmark : public benchmark::Fixture {
  public:
   const bool print_exec_info_ = true;
   const double threshold_ = 0.1;
-  const uint64_t min_iterations_per_query_ = 30;
-  const uint64_t max_iterations_per_query_ = 700;
+  const uint64_t min_iterations_per_query_ = 10;
+  const uint64_t max_iterations_per_query_ = 10;
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
 
   std::unique_ptr<DBMain> db_main_;
