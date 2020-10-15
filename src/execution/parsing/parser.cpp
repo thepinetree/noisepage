@@ -483,10 +483,6 @@ ast::Expr *Parser::ParsePrimaryExpr() {
         result = node_factory_->NewIndexExpr(result->Position(), result, index);
         break;
       }
-      case Token::Type::LAMBDA: {
-        result = ParseLambdaExpr();
-        break;
-      }
       default: {
         break;
       }
@@ -558,6 +554,10 @@ ast::Expr *Parser::ParseOperand() {
       ast::Expr *expr = ParseExpr();
       Expect(Token::Type::RIGHT_PAREN);
       return expr;
+    }
+    case Token::Type::LAMBDA: {
+      return ParseLambdaExpr();
+      break;
     }
     default: {
       break;

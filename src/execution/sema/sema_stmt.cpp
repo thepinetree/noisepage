@@ -27,7 +27,7 @@ void Sema::VisitAssignmentStmt(ast::AssignmentStmt *node) {
   if(src_type->IsFunctionType()){
     // this is a lambda function assignment
     node->Source()->As<ast::LambdaExpr>()->name_ =
-        node->Destination()->As<ast::IdentifierExpr>()->Name().GetData();
+        node->Destination()->As<ast::IdentifierExpr>()->Name();
   }
 }
 

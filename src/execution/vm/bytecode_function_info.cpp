@@ -40,7 +40,7 @@ LocalVar FunctionInfo::NewLocal(ast::Type *type, const std::string &name, LocalI
   }
 
   const auto offset = static_cast<uint32_t>(frame_size_);
-  locals_.emplace_back(name, type, offset, kind);
+  locals_.emplace_back(std::string(name), type, offset, kind);
 
   frame_size_ += type->GetSize();
 
@@ -70,12 +70,12 @@ LocalVar FunctionInfo::GetReturnValueLocal() const {
   return LocalVar(0u, LocalVar::AddressMode::Address);
 }
 
-LocalVar FunctionInfo::GetCapturesLocal() const {
-  // This invocation only makes sense if the function actually returns a value
-  TERRIER_ASSERT(!func_type_->GetReturnType()->IsNilType(),
-                 "Cannot lookup local slot for function that does not have return value");
-  return LocalVar(GetParamsCount(), LocalVar::AddressMode::Address);
-}
+//LocalVar FunctionInfo::GetCapturesLocal() const {
+//  // This invocation only makes sense if the function actually returns a value
+//  TERRIER_ASSERT(!func_type_->GetReturnType()->IsNilType(),
+//                 "Cannot lookup local slot for function that does not have return value");
+//  return LocalVar(GetParamsCount(), LocalVar::AddressMode::Address);
+//}
 
 const LocalInfo *FunctionInfo::LookupLocalInfoByName(const std::string &name) const {
   const auto iter =

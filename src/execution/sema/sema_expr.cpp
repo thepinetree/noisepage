@@ -150,7 +150,15 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   for(auto local : locals){
     auto name = local.first;
     auto type = local.second;
-    ast::Expr *type_repr = factory->NewIdentifierExpr(SourcePosition(), name);
+    ast::Expr *type_repr;
+    if(type->IsBuiltinType()) {
+      type_repr = factory->NewPointerType(SourcePosition(),
+                                          factory->NewIdentifierExpr(SourcePosition(), GetContext()->GetIdentifier(ast::BuiltinType::Get(GetContext(),
+                                                                    type->As<ast::BuiltinType>()->GetKind())
+                                                  ->GetTplName())));
+    }else{
+      TERRIER_ASSERT(false, "UNSUPPORTED CAPTURED TYPE");
+    }
     type_repr->SetType(type->PointerTo());
     ast::FieldDecl *field = factory->NewFieldDecl(SourcePosition(), name, type_repr);
     fields.push_back(field);
@@ -163,15 +171,19 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
                                                         GetContext()->GetIdentifier("lambda" + std::to_string(node->Position().line_)),
                                                         struct_type_repr);
   node->captures_ = struct_type_repr;
-  node->capture_type_ = Resolve(struct_decl->TypeRepr());
-  GetCurrentScope()->Declare(struct_decl->Name(), node->capture_type_);
+  VisitStructDecl(struct_decl);
+  node->capture_type_ = Resolve(struct_type_repr);
+//  node->SetType(node->capture_type_);
+//  GetCurrentScope()->Declare(struct_decl->Name(), node->capture_type_);
 
 //  node->name_ =
+  auto type = Resolve(node->GetFunctionLitExpr()->TypeRepr());
 
-  auto type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
+  auto fn_type = type->As<ast::FunctionType>();
 
   // so that caller doesn't get messed up?
-  type->params_.emplace_back(GetContext()->GetIdentifier("captures"), Resolve(struct_decl->TypeRepr()));
+  fn_type->params_.emplace_back(GetContext()->GetIdentifier("captures"), Resolve(struct_decl->TypeRepr()));
+  fn_type->is_lambda_ = true;
 
   VisitFunctionLitExpr(node->GetFunctionLitExpr());
 }

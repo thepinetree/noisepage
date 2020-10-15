@@ -1077,12 +1077,12 @@ class LambdaExpr : public Expr {
 
   ast::Type *GetCaptureStructType() const { return capture_type_; }
 
-  const std::string &GetName() const { return name_; }
+  const Identifier &GetName() const { return name_; }
 
  private:
   friend class sema::Sema;
 
-  std::string name_;
+  Identifier name_;
   ast::StructTypeRepr *captures_;
   ast::Type *capture_type_;
   FunctionLitExpr *func_lit_;

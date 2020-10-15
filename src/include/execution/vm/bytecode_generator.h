@@ -182,7 +182,9 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
   void SetExecutionResult(ExpressionResultScope *exec_result) { execution_result_ = exec_result; }
 
   // Access the current function that's being generated. May be NULL.
-  FunctionInfo *GetCurrentFunction() { return &functions_.back(); }
+  FunctionInfo *GetCurrentFunction() { return &functions_[current_fn_]; }
+
+  void EnterFunction(FunctionId id) { current_fn_ = id; }
 
  private:
   // The data section of the module
@@ -198,6 +200,8 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
 
   // Information about all generated functions
   std::vector<FunctionInfo> functions_;
+
+  FunctionId current_fn_{0};
 
   // Cache of function names to IDs for faster lookup
   std::unordered_map<std::string, FunctionId> func_map_;

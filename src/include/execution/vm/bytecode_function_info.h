@@ -39,7 +39,7 @@ class LocalInfo {
   /**
    * The kind of local variable
    */
-  enum class Kind : uint8_t { Var, Parameter, Reference };
+  enum class Kind : uint8_t { Var, Parameter };
 
   /**
    * Construct a local with the given, name, type, offset and kind.
@@ -54,13 +54,6 @@ class LocalInfo {
    * @return True if this local variable a parameter to a function; false otherwise.
    */
   bool IsParameter() const noexcept { return kind_ == Kind::Parameter; }
-
-  bool IsReference() const noexcept { return kind_ == Kind::Reference; }
-
-  FunctionId GetOriginFunction() const noexcept {
-    TERRIER_ASSERT(kind_ == Kind::Reference, "Asking for origin function from non reference variable");
-    return origin_fn_;
-  }
 
   /**
    * @return The name of this local variable.
@@ -93,8 +86,6 @@ class LocalInfo {
   uint32_t size_;
   // The "kind" of the local.
   Kind kind_;
-
-  FunctionId origin_fn_;
 };
 
 /**
@@ -109,12 +100,10 @@ class LocalVar {
    */
   enum class AddressMode : uint8_t { Address = 0, Value = 1 };
 
-  enum class ReferenceMode : uint8_t { Plain = 0, Reference = 1 };
-
   /**
    * An invalid local variable.
    */
-  LocalVar() : LocalVar(K_INVALID_OFFSET, ReferenceMode::Plain, AddressMode::Address) {}
+  LocalVar() : LocalVar(K_INVALID_OFFSET, AddressMode::Address) {}
 
   /**
    * A local variable with a given addressing mode.
@@ -124,16 +113,10 @@ class LocalVar {
   LocalVar(uint32_t offset, AddressMode address_mode)
       : bitfield_(AddressModeField::Encode(address_mode) | LocalOffsetField::Encode(offset)) {}
 
-  LocalVar(uint32_t offset, ReferenceMode reference_mode, AddressMode address_mode)
-      : bitfield_(AddressModeField::Encode(address_mode) | ReferenceModeField::Encode(reference_mode) |
-                  LocalOffsetField::Encode(offset)) {}
-
   /**
    * @return The addressing mode (direct or indirect) of this local.
    */
   AddressMode GetAddressMode() const { return AddressModeField::Decode(bitfield_); }
-
-  ReferenceMode GetReferenceMode() const { return ReferenceModeField::Decode(bitfield_); }
 
   /**
    * @return The offset (in bytes) of this local in the function's frame.
@@ -164,8 +147,6 @@ class LocalVar {
    */
   LocalVar AddressOf() const { return LocalVar(GetOffset(), AddressMode::Address); }
 
-  LocalVar GetReference() const { return LocalVar(GetOffset(), ReferenceMode::Reference, GetAddressMode()); }
-
   /**
    * @return True if this local is valid; false otherwise.
    */
@@ -184,10 +165,8 @@ class LocalVar {
   // Single bit indicating the addressing mode of the local
   class AddressModeField : public execution::util::BitField32<AddressMode, 0, 1> {};
 
-  class ReferenceModeField : public execution::util::BitField32<ReferenceMode, AddressModeField::K_NEXT_BIT, 1> {};
-
   // The offset of the local variable in the function's execution frame
-  class LocalOffsetField : public execution::util::BitField32<uint32_t, ReferenceModeField::K_NEXT_BIT, 30> {};
+  class LocalOffsetField : public execution::util::BitField32<uint32_t, AddressModeField::K_NEXT_BIT, 31> {};
 
  private:
   explicit LocalVar(uint32_t bitfield) : bitfield_(bitfield) {}
@@ -240,8 +219,6 @@ class FunctionInfo {
    *         function does not return a value.
    */
   LocalVar GetReturnValueLocal() const;
-
-  LocalVar GetCapturesLocal() const;
 
   /**
    * Lookup a local variable by name.
@@ -310,6 +287,8 @@ class FunctionInfo {
    */
   uint32_t GetParamsCount() const noexcept { return num_params_; }
 
+  void DeferAction(const std::function<void()> action) { actions_.push_back(action); }
+
  private:
   friend class BytecodeGenerator;
 
@@ -329,9 +308,11 @@ class FunctionInfo {
 
   bool is_lambda_{false};
 
+  std::vector<std::function<void()>> actions_;
  private:
   // The ID of the function in the module. IDs are unique within a module.
   FunctionId id_;
+
   // The name of the function.
   std::string name_;
   // The TPL function type of this function.
@@ -350,7 +331,6 @@ class FunctionInfo {
   uint32_t num_params_;
   // The number of temporary variables.
   uint32_t num_temps_;
-
 };
 
 }  // namespace vm

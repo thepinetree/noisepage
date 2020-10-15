@@ -135,7 +135,7 @@ class BytecodeGenerator::BytecodePositionScope {
 // Bytecode Generator begins
 // ---------------------------------------------------------
 
-BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_) {}
+BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_) {functions_.reserve(10);}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   IfThenElseBuilder if_builder(this);
@@ -209,6 +209,7 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
 
   // Allocate the function
   func_info = AllocateFunc(node->Name().GetData(), func_type);
+  EnterFunction(func_info->GetId());
 
   {
     // Visit the body of the function. We use this handy scope object to track
@@ -218,22 +219,28 @@ void BytecodeGenerator::VisitFunctionDecl(ast::FunctionDecl *node) {
     BytecodePositionScope position_scope(this, func_info);
     Visit(node->Function());
   }
+
+  for(auto f : func_info->actions_){
+    f();
+  }
 }
 
 void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
   // The function's TPL type
   auto *func_type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
 
-  FunctionInfo *func_info;
-
   // Allocate the function
   auto captures = GetExecutionResult()->GetOrCreateDestination(node->GetCaptureStructType());
+  GetExecutionResult()->SetDestination(captures.ValueOf());
   auto fields = node->GetCaptureStructType()->As<ast::StructType>()->GetFields();
   size_t i = 0;
-  for(auto local : GetCurrentFunction()->GetLocals()){
-//    if(local.GetName() == "capture"){
-//      continue;
-//    }
+  auto &locals = GetCurrentFunction()->GetLocals();
+  auto size = locals.size();
+  for(size_t j = 0;j < size;j++){
+    auto local = locals[j];
+    if(local.GetName() != fields[i].name_.GetString()){
+      continue;
+    }
     auto localvar = GetCurrentFunction()->LookupLocal(local.GetName());
     LocalVar fieldvar = GetCurrentFunction()->NewLocal(
         fields[i].type_,
@@ -244,21 +251,20 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
     GetEmitter()->EmitAssign(Bytecode::Assign8, fieldvar.ValueOf(), localvar.AddressOf());
     i++;
   }
-
-  func_info = AllocateFunc(node->GetName(), func_type);
+  FunctionInfo *func_info = AllocateFunc(node->GetName().GetString(), func_type);
+  GetCurrentFunction()->DeferAction([=](){
   func_info->captures_ = captures;
   func_info->is_lambda_ = true;
-//  GetCurrentFunction()->GetCapturesLocal()
-  {
-    // Visit the body of the function. We use this handy scope object to track
-    // the start and end position of this function's bytecode in the module's
-    // bytecode array. Upon destruction, the scoped class will set the bytecode
-    // range in the function.
-    BytecodePositionScope position_scope(this, func_info);
-    Visit(node->GetFunctionLitExpr()->Body());
-  }
-
-  func_info->GetId();
+   {
+      // Visit the body of the function. We use this handy scope object to track
+      // the start and end position of this function's bytecode in the module's
+      // bytecode array. Upon destruction, the scoped class will set the bytecode
+      // range in the function.
+      EnterFunction(func_info->GetId());
+      BytecodePositionScope position_scope(this, func_info);
+      Visit(node->GetFunctionLitExpr()->Body());
+    }
+  });
 }
 
 //void BytecodeGenerator::VisitLambdaDecl(ast::FunctionDecl *node) {
@@ -336,6 +342,40 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 
   const std::string local_name = node->Name().GetData();
   LocalVar local = GetCurrentFunction()->LookupLocal(local_name);
+
+  if(local.IsInvalid() && GetCurrentFunction()->is_lambda_) {
+    if (GetExecutionResult()->IsRValue()) {
+      local = GetCurrentFunction()->LookupLocal(local_name + "val");
+    } else {
+      local = GetCurrentFunction()->LookupLocal(local_name + "ptr");
+    }
+  }
+
+  if(local.IsInvalid()){
+    TERRIER_ASSERT(GetCurrentFunction()->is_lambda_, "Not a lambda and variable not found");
+
+    //TODO modularize this fetch of capture struct
+    auto params = GetCurrentFunction()->func_type_->GetParams();
+    auto captures = params[params.size() - 1].type_->As<ast::StructType>();
+    for(auto field : captures->GetFields()){
+      // TODO: cache these
+      if(field.name_.GetString() == local_name){
+        auto captures_local = GetCurrentFunction()->LookupLocal("captures");
+        auto local_ptr = GetCurrentFunction()->NewLocal(field.type_->PointerTo());
+        GetEmitter()->EmitLea(local_ptr, captures_local.ValueOf(),
+                              captures->GetOffsetOfFieldByName(field.name_));
+        auto local_ptr_2 = GetCurrentFunction()->NewLocal(field.type_, local_name + "ptr");
+        GetEmitter()->EmitDerefN(local_ptr_2, local_ptr.ValueOf(), field.type_->GetSize());
+        local = GetCurrentFunction()->NewLocal(field.type_->GetPointeeType(), local_name + "val");
+        GetEmitter()->EmitDerefN(local, local_ptr_2.ValueOf(), field.type_->GetPointeeType()->GetSize());
+        if(GetExecutionResult()->IsLValue()) {
+          local = local_ptr_2.ValueOf();
+        }
+        break;
+      }
+    }
+  }
+  TERRIER_ASSERT(!local.IsInvalid(), "Local not found");
 
   if (GetExecutionResult()->IsLValue()) {
     GetExecutionResult()->SetDestination(local);
@@ -2882,7 +2922,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   }
 
   // Collect non-return-value parameters as usual
-  for (uint32_t i = 0; i < params.size(); i++) {
+  for (uint32_t i = 0; i < call->Arguments().size(); i++) {
     params.push_back(VisitExpressionForRValue(call->Arguments()[i]));
   }
 
@@ -3434,7 +3474,7 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
 FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name, ast::FunctionType *const func_type) {
   // Allocate function
   const auto func_id = static_cast<FunctionId>(functions_.size());
-  functions_.emplace_back(func_id, func_name, func_type);
+  functions_.emplace_back(func_id, std::string(func_name), func_type);
   FunctionInfo *func = &functions_.back();
 
   // Register return type
