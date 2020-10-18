@@ -620,6 +620,13 @@ class FunctionType : public Type {
 
   bool IsLambda() const { return is_lambda_; }
 
+  ast::StructType *GetCapturesType() const {
+    TERRIER_ASSERT(is_lambda_, "Getting capture type from not lambda");
+    return captures_;
+  }
+
+  void RegisterCapture();
+
   /**
    * Create a function with parameters @em params and returning types of type @em ret.
    * @param params The parameters to the function.
@@ -642,6 +649,7 @@ class FunctionType : public Type {
   util::RegionVector<Field> params_;
   Type *ret_;
   bool is_lambda_;
+  ast::StructType *captures_{nullptr};
 };
 
 /**

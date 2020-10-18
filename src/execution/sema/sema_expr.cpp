@@ -91,9 +91,15 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
   // Check that the resolved function type is actually a function
   auto *func_type = type->SafeAs<ast::FunctionType>();
+  auto *struct_type = type->SafeAs<ast::StructType>();
   if (func_type == nullptr) {
-    GetErrorReporter()->Report(node->Position(), ErrorMessages::kNonFunction);
-    return;
+
+    if(struct_type != nullptr && struct_type->GetFields().back().name_.GetString() == "function"){
+      func_type = struct_type->GetFields().back().type_->As<ast::PointerType>()->GetBase()->As<ast::FunctionType>();
+    } else {
+      GetErrorReporter()->Report(node->Position(), ErrorMessages::kNonFunction);
+      return;
+    }
   }
 
   // Check argument count matches
@@ -163,6 +169,8 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
     ast::FieldDecl *field = factory->NewFieldDecl(SourcePosition(), name, type_repr);
     fields.push_back(field);
   }
+  fields.push_back(factory->NewFieldDecl(SourcePosition(), GetContext()->GetIdentifier("function"),
+                                         factory->NewPointerType(SourcePosition(), node->GetFunctionLitExpr())));
 
   ast::StructTypeRepr *struct_type_repr =
       factory->NewStructType(SourcePosition(), std::move(fields));
@@ -173,7 +181,7 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   node->captures_ = struct_type_repr;
   VisitStructDecl(struct_decl);
   node->capture_type_ = Resolve(struct_type_repr);
-//  node->SetType(node->capture_type_);
+  node->SetType(node->capture_type_);
 //  GetCurrentScope()->Declare(struct_decl->Name(), node->capture_type_);
 
 //  node->name_ =
@@ -182,8 +190,10 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   auto fn_type = type->As<ast::FunctionType>();
 
   // so that caller doesn't get messed up?
-  fn_type->params_.emplace_back(GetContext()->GetIdentifier("captures"), Resolve(struct_decl->TypeRepr()));
+  fn_type->params_.emplace_back(GetContext()->GetIdentifier("captures"),
+                                GetBuiltinType(ast::BuiltinType::Kind::Int32)->PointerTo());
   fn_type->is_lambda_ = true;
+  fn_type->captures_ = node->GetCaptureStructType()->As<ast::StructType>();
 
   VisitFunctionLitExpr(node->GetFunctionLitExpr());
 }

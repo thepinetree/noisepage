@@ -230,6 +230,7 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
   auto *func_type = node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>();
 
   // Allocate the function
+//  func_type->RegisterCapture();
   auto captures = GetExecutionResult()->GetOrCreateDestination(node->GetCaptureStructType());
   GetExecutionResult()->SetDestination(captures.ValueOf());
   auto fields = node->GetCaptureStructType()->As<ast::StructType>()->GetFields();
@@ -342,12 +343,15 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 
   const std::string local_name = node->Name().GetData();
   LocalVar local = GetCurrentFunction()->LookupLocal(local_name);
+  std::string suffix;
 
   if(local.IsInvalid() && GetCurrentFunction()->is_lambda_) {
     if (GetExecutionResult()->IsRValue()) {
       local = GetCurrentFunction()->LookupLocal(local_name + "val");
+      suffix = "val";
     } else {
       local = GetCurrentFunction()->LookupLocal(local_name + "ptr");
+      suffix = "ptr";
     }
   }
 
@@ -356,7 +360,7 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 
     //TODO modularize this fetch of capture struct
     auto params = GetCurrentFunction()->func_type_->GetParams();
-    auto captures = params[params.size() - 1].type_->As<ast::StructType>();
+    auto captures = GetCurrentFunction()->func_type_->GetCapturesType();
     for(auto field : captures->GetFields()){
       // TODO: cache these
       if(field.name_.GetString() == local_name){
@@ -368,8 +372,10 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
         GetEmitter()->EmitDerefN(local_ptr_2, local_ptr.ValueOf(), field.type_->GetSize());
         local = GetCurrentFunction()->NewLocal(field.type_->GetPointeeType(), local_name + "val");
         GetEmitter()->EmitDerefN(local, local_ptr_2.ValueOf(), field.type_->GetPointeeType()->GetSize());
+        suffix = "val";
         if(GetExecutionResult()->IsLValue()) {
           local = local_ptr_2.ValueOf();
+          suffix = "ptr";
         }
         break;
       }
@@ -396,7 +402,11 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 
   // If the local we want the R-Value of is a parameter, we can't take its
   // pointer for the deref, so we use an assignment. Otherwise, a deref is good.
-  if (auto *local_info = GetCurrentFunction()->LookupLocalInfoByName(local_name); local_info->IsParameter()) {
+  auto *local_info = GetCurrentFunction()->LookupLocalInfoByName(local_name);
+  if(local_info == nullptr){
+    local_info = GetCurrentFunction()->LookupLocalInfoByName(local_name + suffix);
+  }
+  if (local_info->IsParameter()) {
     BuildAssign(dest, local.ValueOf(), node->GetType());
   } else {
     BuildDeref(dest, local, node->GetType());
@@ -2904,7 +2914,11 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
 
   std::vector<LocalVar> params;
 
-  auto *func_type = call->Function()->GetType()->As<ast::FunctionType>();
+  auto *func_type = call->Function()->GetType()->SafeAs<ast::FunctionType>();
+  if(func_type == nullptr){
+    func_type = call->Function()->GetType()->SafeAs<ast::StructType>()->GetFields()
+                    .back().type_->As<ast::PointerType>()->GetBase()->As<ast::FunctionType>();
+  }
 
   if (!func_type->GetReturnType()->IsNilType()) {
     LocalVar ret_val;
@@ -3486,6 +3500,10 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name, ast:
   for (const auto &param : func_type->GetParams()) {
     func->NewParameterLocal(param.type_, param.name_.GetData());
   }
+
+//  if(func_type->IsLambda()){
+//    func->NewParameterLocal(func_type->GetCapturesType(), "captures");
+//  }
 
   // Cache
   func_map_[func->GetName()] = func->GetId();

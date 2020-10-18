@@ -1,5 +1,8 @@
 #include "execution/vm/llvm_engine.h"
 
+#include <iostream>
+#include <fstream>
+
 #include <llvm/ADT/StringMap.h>
 #include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
@@ -324,6 +327,14 @@ LLVMEngine::FunctionLocalsMap::FunctionLocalsMap(const FunctionInfo &func_info, 
   for (auto arg_iter = func->arg_begin(); local_idx < func_info.GetParamsCount(); ++local_idx, ++arg_iter) {
     const LocalInfo &param = func_locals[local_idx];
     params_[param.GetOffset()] = &*arg_iter;
+  }
+
+  if(func_info.IsLambda()){
+    auto capture_type = type_map->GetLLVMType(func_info.GetFuncType()->GetCapturesType()->PointerTo());
+    auto capture_local = func_locals[local_idx - 1];
+    auto capture_param = params_[capture_local.GetOffset()];
+    auto new_capture_param = ir_builder->CreateBitCast(capture_param, capture_type);
+    params_[capture_local.GetOffset()] = new_capture_param;
   }
 
   auto calling_context = func_info;
@@ -953,6 +964,10 @@ void LLVMEngine::CompiledModuleBuilder::Verify() {
     // TODO(pmenon): Do something more here ...
     EXECUTION_LOG_ERROR("ERROR IN MODULE:\n{}", ostream.str());
   }
+  std::ofstream myfile;
+  myfile.open ("llvm.txt");
+  myfile << DumpModuleIR();
+  myfile.close();
 }
 
 void LLVMEngine::CompiledModuleBuilder::Simplify() {
@@ -982,6 +997,9 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
   pm_builder.populateFunctionPassManager(function_passes);
   pm_builder.populateModulePassManager(module_passes);
+  for(auto &func : *llvm_module_) {
+    func.print(llvm::outs());
+  }
 
   // Run optimization passes on module
   function_passes.doInitialization();
@@ -990,6 +1008,7 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   }
   function_passes.doFinalization();
   module_passes.run(*llvm_module_);
+
 }
 
 std::unique_ptr<LLVMEngine::CompiledModule> LLVMEngine::CompiledModuleBuilder::Finalize() {

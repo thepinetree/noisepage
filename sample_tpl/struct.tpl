@@ -3,7 +3,7 @@
 struct S {
     a: int
     b: int
-    c: int
+    c: (int32) -> int32
 }
 struct SDup {
     d: int
@@ -11,18 +11,11 @@ struct SDup {
     f: int
 }
 
+fun sss(x : int32) -> int32 {
+    return x
+}
+
 fun main() -> int {
     var p: S
-    var q: S
-
-    for (var i = 0; i < 100000; i = i + 1) {
-        q.a = 1
-        q.b = 2
-        p.a = 3
-        p.b = 4
-        q.c = p.a + p.b + q.a + q.b
-        p.c = q.c + p.b
-    }
-
-    return q.c
+    p.c = sss
 }

@@ -2340,7 +2340,7 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
     const LocalVar param = LocalVar::Decode(READ_LOCAL_ID());
     const void *param_ptr = caller->PtrToLocalAt(param);
     if (param.GetAddressMode() == LocalVar::AddressMode::Address) {
-      std::memcpy(raw_frame + param_info.GetOffset(), &param_ptr, param_info.GetSize());
+      std::memcpy(raw_frame + param_info.GetOffset(), &param_ptr, sizeof(void*));
     } else {
       std::memcpy(raw_frame + param_info.GetOffset(), param_ptr, param_info.GetSize());
     }

@@ -4,7 +4,11 @@
 
 fun main() -> int32 {
     var x = 10
-    var lam = lambda (z : int) -> nil { x = x + z }
-    lam(2)
+    var f = 25
+    var lam = lambda (z : int) -> nil {
+            x = f + z
+        }
+    var k = lam
+    k(2)
     return x
 }

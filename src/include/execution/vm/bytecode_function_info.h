@@ -289,6 +289,8 @@ class FunctionInfo {
 
   void DeferAction(const std::function<void()> action) { actions_.push_back(action); }
 
+  bool IsLambda() const { return is_lambda_; }
+
  private:
   friend class BytecodeGenerator;
 

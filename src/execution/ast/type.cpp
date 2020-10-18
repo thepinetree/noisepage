@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "brain/operating_unit.h"
+#include "execution/ast/context.h"
 #include "execution/exec/execution_context.h"
 #include "execution/sql/aggregation_hash_table.h"
 #include "execution/sql/aggregators.h"
@@ -91,6 +92,11 @@ FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret, bool i
       ret_(ret),
       is_lambda_(is_lambda)
       {}
+
+void FunctionType::RegisterCapture() {
+  TERRIER_ASSERT(captures_ != nullptr, "no capture given?");
+  params_.emplace_back(GetContext()->GetIdentifier("captures"), captures_);
+}
 
 // ---------------------------------------------------------
 // Map Type
