@@ -35,9 +35,13 @@ Scope::Kind Scope::GetKind() const {
 
 std::vector<std::pair<ast::Identifier, ast::Type*>> Scope::GetLocals() const {
   std::vector<std::pair<ast::Identifier, ast::Type*>> locals;
-  for(auto it : decls_){
-    locals.emplace_back(it.first, it.second);
-  }
+  auto scope = this;
+  do{
+    for (auto it : scope->decls_) {
+      locals.emplace_back(it.first, it.second);
+    }
+    scope = scope->outer_;
+  }while(scope->scope_kind_ != Scope::Kind::Function);
   return locals;
 }
 

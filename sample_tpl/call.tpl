@@ -5,10 +5,11 @@
 fun main() -> int32 {
     var x = 10
     var f = 25
+    for(var i = 0;i < 1;i = i + 1){
     var lam = lambda (z : int) -> nil {
-            x = f + z
-        }
-    var k = lam
-    k(2)
+                    x = z
+                }
+    lam(i)
+    }
     return x
 }
