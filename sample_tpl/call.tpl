@@ -1,15 +1,13 @@
 // Expected output: 70
 
-// fun f(x: int) -> int32 { return x * 7 }
+fun f(lam : *(int32)->nil) -> nil { (*lam)(24)  }
 
 fun main() -> int32 {
     var x = 10
-    var f = 25
-    for(var i = 0;i < 1;i = i + 1){
-    var lam = lambda (z : int) -> nil {
+    //var f = 25
+    var lam = lambda (z : int ) -> nil {
                     x = z
                 }
-    lam(i)
-    }
+    f(lam)
     return x
 }

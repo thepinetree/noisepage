@@ -234,12 +234,21 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
   auto captures = GetExecutionResult()->GetOrCreateDestination(node->GetCaptureStructType());
   GetExecutionResult()->SetDestination(captures.ValueOf());
   auto fields = node->GetCaptureStructType()->As<ast::StructType>()->GetFields();
-  size_t i = 0;
   auto &locals = GetCurrentFunction()->GetLocals();
   auto size = locals.size();
   for(size_t j = 0;j < size;j++){
     auto local = locals[j];
-    if(local.GetName() != fields[i].name_.GetString()){
+
+    size_t i = 0;
+
+    // TODO(tanujnay112) this is sad, make it faster
+    while(i < fields.size()) {
+      if(local.GetName() == fields[i].name_.GetString()){
+        break;
+      }
+      i++;
+    }
+    if(i >= fields.size()){
       continue;
     }
     auto localvar = GetCurrentFunction()->LookupLocal(local.GetName());

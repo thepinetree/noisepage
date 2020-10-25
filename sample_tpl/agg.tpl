@@ -64,6 +64,7 @@ fun pipeline_2(state: *State) -> nil {
     for (@aggHTIterInit(iter, &state.table); @aggHTIterHasNext(iter); @aggHTIterNext(iter)) {
         var agg = @ptrCast(*Agg, @aggHTIterGetRow(iter))
         state.count = state.count + 1
+        lam()
     }
     @aggHTIterClose(iter)
 }
@@ -75,11 +76,16 @@ fun execQuery(execCtx: *ExecutionContext, qs: *State) -> nil {
 
 fun main(execCtx: *ExecutionContext) -> int32 {
     var state: State
+    var count : int32
+    count = 0
+    var lam = lambda () -> nil {
+                        count = count + 1
+                    }
 
     setUpState(execCtx, &state)
-    execQuery(execCtx, &state)
+    execQuery(execCtx, &state, &lam)
     tearDownState(&state)
 
     var ret = state.count
-    return ret
+    return count
 }
