@@ -66,6 +66,20 @@ void BytecodeEmitter::EmitCall(FunctionId func_id, const std::vector<LocalVar> &
   }
 }
 
+std::function<void(FunctionId)> BytecodeEmitter::DeferedEmitCall(const std::vector<LocalVar> &params) {
+  TERRIER_ASSERT(Bytecodes::GetNthOperandSize(Bytecode::Call, 1) == OperandSize::Short,
+                 "Expected argument count to be 2-byte short");
+  TERRIER_ASSERT(params.size() < std::numeric_limits<uint16_t>::max(), "Too many parameters!");
+  auto bc_insert_index = bytecode_->size() + sizeof(Bytecode);
+  EmitAll(Bytecode::Call, std::numeric_limits<uint16_t>::max(), static_cast<uint16_t>(params.size()));
+  for (LocalVar local : params) {
+    EmitImpl(local);
+  }
+  return [=](FunctionId func_id) {
+    EmitScalarValue(static_cast<uint16_t>(func_id), bc_insert_index);
+  };
+}
+
 void BytecodeEmitter::EmitReturn() { EmitImpl(Bytecode::Return); }
 
 void BytecodeEmitter::Bind(BytecodeLabel *label) {

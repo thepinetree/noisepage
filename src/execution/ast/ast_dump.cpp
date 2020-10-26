@@ -388,6 +388,11 @@ void AstDumperImpl::VisitMapTypeRepr(MapTypeRepr *node) {
   DumpExpr(node->ValType());
 }
 
+void AstDumperImpl::VisitLambdaTypeRepr(LambdaTypeRepr *node) {
+  DumpNodeCommon(node);
+  DumpExpr(node->FunctionType());
+}
+
 std::string AstDump::Dump(AstNode *node) {
   llvm::SmallString<256> buffer;
   llvm::raw_svector_ostream stream(buffer);

@@ -205,6 +205,7 @@ class BytecodeGenerator final : public ast::AstVisitor<BytecodeGenerator> {
 
   // Cache of function names to IDs for faster lookup
   std::unordered_map<std::string, FunctionId> func_map_;
+  std::unordered_map<std::string, std::vector<std::function<void(FunctionId)>>> deferred_function_create_actions_;
 
   // Emitter to write bytecode into the code section
   BytecodeEmitter emitter_;

@@ -91,4 +91,17 @@ void Sema::VisitMapTypeRepr(ast::MapTypeRepr *node) {
   node->SetType(ast::MapType::Get(key_type, value_type));
 }
 
+void Sema::VisitLambdaTypeRepr(ast::LambdaTypeRepr *node) {
+  ast::FunctionType *fn_type = Resolve(node->FunctionType())->SafeAs<ast::FunctionType>();
+  fn_type->params_.emplace_back(GetContext()->GetIdentifier("captures"),
+                                GetBuiltinType(ast::BuiltinType::Kind::Int32)->PointerTo());
+
+  if (fn_type == nullptr) {
+    // Error
+    return;
+  }
+
+  node->SetType(ast::LambdaType::Get(fn_type));
+}
+
 }  // namespace terrier::execution::sema

@@ -248,6 +248,10 @@ AstNode *AstCloneImpl::VisitMapTypeRepr(MapTypeRepr *node) {
                               reinterpret_cast<Expr*>(Visit(node->ValType())));
 }
 
+AstNode *AstCloneImpl::VisitLambdaTypeRepr(LambdaTypeRepr *node){
+  return factory_->NewLambdaType(node->Position(), reinterpret_cast<Expr*>(Visit(node->FunctionType())));
+}
+
 AstNode *AstClone::Clone(AstNode *node, AstNodeFactory *factory, std::string prefix,
     Context *old_context, Context *new_context) {
   AstCloneImpl cloner(node, factory, old_context, new_context, prefix);

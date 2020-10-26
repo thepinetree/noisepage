@@ -207,6 +207,10 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
       llvm_type = GetLLVMFunctionType(type->As<ast::FunctionType>());
       break;
     }
+    case ast::Type::TypeId::LambdaType: {
+      llvm_type = Int32Type()->getPointerTo();
+      break;
+    }
     default : {
       TERRIER_ASSERT(false, "shouldn't be here");
       break;

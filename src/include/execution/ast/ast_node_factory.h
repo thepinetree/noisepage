@@ -343,6 +343,10 @@ class AstNodeFactory {
     return new (region_) MapTypeRepr(pos, key_type, val_type);
   }
 
+  LambdaTypeRepr *NewLambdaType(const SourcePosition &pos, Expr *fn_type) {
+    return new (region_) LambdaTypeRepr(pos, fn_type);
+  }
+
  private:
   util::Region *region_;
 };

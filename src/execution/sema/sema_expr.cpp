@@ -91,11 +91,11 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
   // Check that the resolved function type is actually a function
   auto *func_type = type->SafeAs<ast::FunctionType>();
-  auto *struct_type = type->SafeAs<ast::StructType>();
+  auto *struct_type = type->SafeAs<ast::LambdaType>();
   if (func_type == nullptr) {
 
-    if(struct_type != nullptr && struct_type->GetFields().back().name_.GetString() == "function"){
-      func_type = struct_type->GetFields().back().type_->As<ast::PointerType>()->GetBase()->As<ast::FunctionType>();
+    if(struct_type != nullptr){
+      func_type = struct_type->GetFunctionType();
     } else {
       GetErrorReporter()->Report(node->Position(), ErrorMessages::kNonFunction);
       return;
@@ -103,7 +103,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Check argument count matches
-  if (!CheckArgCount(node, func_type->IsLambda() ? func_type->GetNumParams() - 1 : func_type->GetNumParams())) {
+  if (!CheckArgCount(node, struct_type != nullptr ? func_type->GetNumParams() - 1 : func_type->GetNumParams())) {
     return;
   }
 
@@ -139,6 +139,10 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
     }
   }
 
+  if(struct_type != nullptr){
+    node->PushArgument(GetContext()->GetNodeFactory()->NewIdentifierExpr(SourcePosition(), node->GetFuncName()));
+  }
+
   if (has_errors) {
     return;
   }
@@ -149,7 +153,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
 
 void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   // make struct type
-  node->SetType(Resolve(node->GetFunctionLitExpr()->TypeRepr()));
+//  node->SetType(Resolve(node->GetFunctionLitExpr()->TypeRepr()));
   const auto &locals = GetCurrentScope()->GetLocals();
   auto factory = GetContext()->GetNodeFactory();
   util::RegionVector<ast::FieldDecl *> fields(GetContext()->GetRegion());
@@ -181,7 +185,7 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   node->captures_ = struct_type_repr;
   VisitStructDecl(struct_decl);
   node->capture_type_ = Resolve(struct_type_repr);
-  node->SetType(node->capture_type_);
+  node->SetType(ast::LambdaType::Get(node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>()));
 //  GetCurrentScope()->Declare(struct_decl->Name(), node->capture_type_);
 
 //  node->name_ =

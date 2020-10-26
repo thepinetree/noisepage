@@ -90,6 +90,12 @@ void execution::ast::TypePrinter::VisitMapType(const MapType *type) {
   Visit(type->GetValueType());
 }
 
+void execution::ast::TypePrinter::VisitLambdaType(const LambdaType *type) {
+  Os() << "lambda[";
+  Visit(type->GetFunctionType());
+  Os() << "]";
+}
+
 }  // namespace
 
 // static

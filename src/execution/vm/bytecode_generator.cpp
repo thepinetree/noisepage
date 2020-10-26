@@ -231,8 +231,10 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
 
   // Allocate the function
 //  func_type->RegisterCapture();
-  auto captures = GetExecutionResult()->GetOrCreateDestination(node->GetCaptureStructType());
-  GetExecutionResult()->SetDestination(captures.ValueOf());
+  if(!GetExecutionResult()->HasDestination()){
+    return;
+  }
+  auto captures = GetCurrentFunction()->NewLocal(node->GetCaptureStructType(), "captures");
   auto fields = node->GetCaptureStructType()->As<ast::StructType>()->GetFields();
   auto &locals = GetCurrentFunction()->GetLocals();
   auto size = locals.size();
@@ -255,12 +257,14 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
     LocalVar fieldvar = GetCurrentFunction()->NewLocal(
         fields[i].type_,
         local.GetName() + "ptr");
-    GetEmitter()->EmitLea(fieldvar, captures,
+    GetEmitter()->EmitLea(fieldvar, captures.AddressOf(),
                                        node->GetCaptureStructType()
                                            ->As<ast::StructType>()->GetOffsetOfFieldByName(fields[i].name_));
     GetEmitter()->EmitAssign(Bytecode::Assign8, fieldvar.ValueOf(), localvar.AddressOf());
     i++;
   }
+
+  GetEmitter()->EmitAssign(Bytecode::Assign8, GetExecutionResult()->GetDestination(), captures.AddressOf());
   FunctionInfo *func_info = AllocateFunc(node->GetName().GetString(), func_type);
   GetCurrentFunction()->DeferAction([=](){
   func_info->captures_ = captures;
@@ -2924,9 +2928,10 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   std::vector<LocalVar> params;
 
   auto *func_type = call->Function()->GetType()->SafeAs<ast::FunctionType>();
+  bool is_lambda = false;
   if(func_type == nullptr){
-    func_type = call->Function()->GetType()->SafeAs<ast::StructType>()->GetFields()
-                    .back().type_->As<ast::PointerType>()->GetBase()->As<ast::FunctionType>();
+    func_type = call->Function()->GetType()->SafeAs<ast::LambdaType>()->GetFunctionType();
+    is_lambda = true;
   }
 
   if (!func_type->GetReturnType()->IsNilType()) {
@@ -2949,12 +2954,18 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
     params.push_back(VisitExpressionForRValue(call->Arguments()[i]));
   }
 
-  if(func_type->IsLambda()){
-    params.push_back( GetCurrentFunction()->LookupLocal(call->GetFuncName().GetString()));
-  }
+//  if(is_lambda){
+//    params.push_back( GetCurrentFunction()->LookupLocal(call->GetFuncName().GetString()));
+//  }
 
   // Emit call
   const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
+  if(func_id == FunctionInfo::K_INVALID_FUNC_ID){
+    TERRIER_ASSERT(is_lambda, "unknown function and this is not a lambda");
+    auto action = GetEmitter()->DeferedEmitCall(params);
+    deferred_function_create_actions_[call->GetFuncName().GetString()].push_back(action);
+    return;
+  }
   TERRIER_ASSERT(func_id != FunctionInfo::K_INVALID_FUNC_ID, "Function not found!");
   GetEmitter()->EmitCall(func_id, params);
 }
@@ -3494,6 +3505,10 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
   TERRIER_ASSERT(false, "Should not visit type-representation nodes!");
 }
 
+void BytecodeGenerator::VisitLambdaTypeRepr(ast::LambdaTypeRepr *node) {
+  TERRIER_ASSERT(false, "Should not visit type-representation nodes!");
+}
+
 FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name, ast::FunctionType *const func_type) {
   // Allocate function
   const auto func_id = static_cast<FunctionId>(functions_.size());
@@ -3511,11 +3526,15 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name, ast:
   }
 
 //  if(func_type->IsLambda()){
-//    func->NewParameterLocal(func_type->GetCapturesType(), "captures");
+//    auto ctx = func_type->GetContext();
+//    func->NewParameterLocal(ctx->LookupBuiltinType(ctx->GetBuiltinType(ast::BuiltinType::Int32))->PointerTo(), "captures");
 //  }
 
   // Cache
   func_map_[func->GetName()] = func->GetId();
+  for(auto action : deferred_function_create_actions_[func->GetName()]){
+    action(func->GetId());
+  }
 
   return func;
 }
@@ -3544,7 +3563,9 @@ FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name,
 
   // Cache
   func_map_[func->GetName()] = func->GetId();
-
+  for(auto action : deferred_function_create_actions_[func->GetName()]){
+    action(func->GetId());
+  }
   return func;
 }
 

@@ -153,6 +153,7 @@ struct Context::Implementation {
   llvm::DenseMap<Type *, ReferenceType *> reference_types_;
   llvm::DenseMap<std::pair<Type *, uint64_t>, ArrayType *> array_types_;
   llvm::DenseMap<std::pair<Type *, Type *>, MapType *> map_types_;
+  llvm::DenseMap<FunctionType *, LambdaType *> lambda_types_;
   llvm::DenseSet<StructType *, StructTypeKeyInfo> struct_types_;
   llvm::DenseSet<FunctionType *, FunctionTypeKeyInfo> func_types_;
 
@@ -291,6 +292,19 @@ MapType *MapType::Get(Type *key_type, Type *value_type) {
   }
 
   return map_type;
+}
+
+// static
+LambdaType *LambdaType::Get(FunctionType *fn_type) {
+  Context *ctx = fn_type->GetContext();
+
+  LambdaType *&lambda_type = ctx->Impl()->lambda_types_[fn_type];
+
+  if (lambda_type == nullptr) {
+    lambda_type = new (ctx->GetRegion()) LambdaType(fn_type);
+  }
+
+  return lambda_type;
 }
 
 // static

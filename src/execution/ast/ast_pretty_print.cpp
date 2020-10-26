@@ -204,6 +204,12 @@ void AstPrettyPrintImpl::VisitMapTypeRepr(MapTypeRepr *node) {
   Visit(node->ValType());
 }
 
+void AstPrettyPrintImpl::VisitLambdaTypeRepr(LambdaTypeRepr *node) {
+  os_ << "lambda[";
+  Visit(node->FunctionType());
+  os_ << "]";
+}
+
 void AstPrettyPrintImpl::VisitLitExpr(LitExpr *node) {
   switch (node->GetLiteralKind()) {
     case LitExpr::LitKind::Nil:

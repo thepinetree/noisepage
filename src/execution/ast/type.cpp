@@ -93,6 +93,20 @@ FunctionType::FunctionType(util::RegionVector<Field> &&params, Type *ret, bool i
       is_lambda_(is_lambda)
       {}
 
+bool FunctionType::IsEqual(const FunctionType *other) {
+  if(other->params_.size() != params_.size()){
+    return false;
+  }
+
+  for(size_t i = 0;i < params_.size();i++){
+    if(params_[i].type_ != other->params_[i].type_){
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void FunctionType::RegisterCapture() {
   TERRIER_ASSERT(captures_ != nullptr, "no capture given?");
   params_.emplace_back(GetContext()->GetIdentifier("captures"), captures_);
@@ -107,6 +121,11 @@ MapType::MapType(Type *key_type, Type *val_type)
            alignof(std::unordered_map<int32_t, int32_t>), TypeId::MapType),
       key_type_(key_type),
       val_type_(val_type) {}
+
+LambdaType::LambdaType(FunctionType *fn_type)
+    : Type(fn_type->GetContext(), fn_type->GetSize(),
+           fn_type->GetAlignment(), TypeId::LambdaType),
+      fn_type_(fn_type) {}
 
 // ---------------------------------------------------------
 // Struct Type

@@ -74,6 +74,7 @@ namespace ast {
   /* Type Representation Expressions */ \
   T(ArrayTypeRepr)                      \
   T(FunctionTypeRepr)                   \
+  T(LambdaTypeRepr)                     \
   T(MapTypeRepr)                        \
   T(PointerTypeRepr)                    \
   T(StructTypeRepr)
@@ -1163,6 +1164,10 @@ class CallExpr : public Expr {
     args_[arg_idx] = expr;
   }
 
+  void PushArgument(Expr *expr) {
+    args_.push_back(expr);
+  }
+
  private:
   // The function to call.
   Expr *func_;
@@ -1848,6 +1853,39 @@ class MapTypeRepr : public Expr {
   Expr *key_;
   // The value type.
   Expr *val_;
+};
+
+/**
+ * Map type.
+ */
+class LambdaTypeRepr : public Expr {
+ public:
+  /**
+   * Constructor
+   * @param pos source position
+   * @param key key tyoe
+   * @param val value type
+   */
+  LambdaTypeRepr(const SourcePosition &pos, Expr *fn_type)
+      : Expr(Kind::LambdaTypeRepr, pos), fn_type_(fn_type) {}
+
+  /**
+   * @return The key type of the map.
+   */
+  Expr *FunctionType() const { return fn_type_; }
+
+  /**
+   * Is the given node a map type? Needed as part of the custom AST RTTI infrastructure.
+   * @param node The node to check.
+   * @return True if the node is a map type; false otherwise.
+   */
+  static bool classof(const AstNode *node) {  // NOLINT
+    return node->GetKind() == Kind::LambdaTypeRepr;
+  }
+
+ private:
+  // The key type.
+  Expr *fn_type_;
 };
 
 /**

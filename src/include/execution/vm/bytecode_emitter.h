@@ -169,6 +169,8 @@ class BytecodeEmitter {
    */
   void EmitCall(FunctionId func_id, const std::vector<LocalVar> &params);
 
+  std::function<void(FunctionId)> DeferedEmitCall(const std::vector<LocalVar> &params);
+
   /**
    * Emit a return bytecode
    */
@@ -412,6 +414,11 @@ class BytecodeEmitter {
   auto EmitScalarValue(const T val) -> std::enable_if_t<std::is_arithmetic_v<T>> {
     bytecode_->insert(bytecode_->end(), sizeof(T), 0);
     *reinterpret_cast<T *>(&*(bytecode_->end() - sizeof(T))) = val;
+  }
+
+  template <typename T>
+  auto EmitScalarValue(const T val, size_t index) -> std::enable_if_t<std::is_arithmetic_v<T>> {
+    *reinterpret_cast<T *>(&*(bytecode_->begin() + index)) = val;
   }
 
   /** Emit a bytecode */

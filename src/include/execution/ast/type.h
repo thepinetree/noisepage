@@ -26,6 +26,7 @@ class Context;
   F(PointerType)     \
   F(ReferenceType)   \
   F(ArrayType)       \
+  F(LambdaType)      \
   F(MapType)         \
   F(StructType)      \
   F(FunctionType)
@@ -618,6 +619,8 @@ class FunctionType : public Type {
    */
   Type *GetReturnType() const { return ret_; }
 
+  bool IsEqual(const FunctionType *other);
+
   bool IsLambda() const { return is_lambda_; }
 
   ast::StructType *GetCapturesType() const {
@@ -687,6 +690,34 @@ class MapType : public Type {
  private:
   Type *key_type_;
   Type *val_type_;
+};
+
+class LambdaType : public Type {
+ public:
+  /**
+   * @return The types of the keys to the map.
+   */
+  FunctionType *GetFunctionType() const { return fn_type_; }
+
+  /**
+   * Create a map type storing keys of type @em key_type and values of type @em value_type.
+   * @param key_type The types of the key.
+   * @param value_type The types of the value.
+   * @return The map type.
+   */
+  static LambdaType *Get(FunctionType *fn_type);
+
+  /**
+   * @param type to compare with
+   * @return whether type is of map type.
+   */
+  static bool classof(const Type *type) { return type->GetTypeId() == TypeId::LambdaType; }  // NOLINT
+
+ private:
+  LambdaType(FunctionType *fn_type);
+
+ private:
+  FunctionType *fn_type_;
 };
 
 /**

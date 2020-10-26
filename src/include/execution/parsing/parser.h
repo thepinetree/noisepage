@@ -141,6 +141,8 @@ class Parser {
 
   ast::Expr *ParseMapType();
 
+  ast::Expr *ParseLambdaType();
+
  private:
   // The source code scanner
   Scanner *scanner_;

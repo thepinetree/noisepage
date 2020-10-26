@@ -605,6 +605,9 @@ ast::Expr *Parser::ParseType() {
     case Token::Type::STRUCT: {
       return ParseStructType();
     }
+    case Token::Type::LAMBDA: {
+      return ParseLambdaType();
+    }
     default: {
       break;
     }
@@ -747,6 +750,22 @@ ast::Expr *Parser::ParseMapType() {
   ast::Expr *value_type = ParseType();
 
   return node_factory_->NewMapType(position, key_type, value_type);
+}
+
+ast::Expr *Parser::ParseLambdaType() {
+  // LambdaType = 'lambda' '[' FunctionExpr ']' ;
+
+  const SourcePosition &position = scanner_->CurrentPosition();
+
+  Consume(Token::Type::LAMBDA);
+
+  Expect(Token::Type::LEFT_BRACKET);
+
+  ast::Expr *fn_type = ParseFunctionType();
+
+  Expect(Token::Type::RIGHT_BRACKET);
+
+  return node_factory_->NewLambdaType(position, fn_type);
 }
 
 }  // namespace terrier::execution::parsing
