@@ -75,14 +75,16 @@ std::atomic<uint32_t> unique_ids{0};
 }  // namespace
 
 CompilationContext::CompilationContext(ExecutableQuery *query, catalog::CatalogAccessor *accessor,
-                                       const CompilationMode mode)
+                                       const CompilationMode mode, ast::LambdaExpr *output_callback)
     : unique_id_(unique_ids++),
       query_(query),
       mode_(mode),
       codegen_(query_->GetContext(), accessor),
       query_state_var_(codegen_.MakeIdentifier("queryState")),
-      query_state_type_(codegen_.MakeIdentifier("QueryState")),
-      query_state_(query_state_type_, [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }) {}
+      query_state_type_(codegen_.MakeIdentifier(output_callback == nullptr ? "QueryState"
+                                                                           : output_callback->GetName().GetString() + "QueryState")),
+      query_state_(query_state_type_, [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }),
+      output_callback_(output_callback) {}
 
 ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
@@ -150,7 +152,7 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   main_pipeline.CollectDependencies(&execution_order);
   for (auto *pipeline : execution_order) {
     pipeline->Prepare(query_->GetExecutionSettings());
-    pipeline->GeneratePipeline(&main_builder, query_id_t{unique_id_});
+    pipeline->GeneratePipeline(&main_builder, query_id_t{unique_id_}, output_callback_);
 
     // Extract and record the translators.
     brain::OperatingUnitRecorder recorder(common::ManagedPointer(codegen_.GetCatalogAccessor()),
@@ -174,17 +176,19 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
 // static
 std::unique_ptr<ExecutableQuery> CompilationContext::Compile(const planner::AbstractPlanNode &plan,
                                                              const exec::ExecutionSettings &exec_settings,
-                                                             catalog::CatalogAccessor *accessor,
-                                                             const CompilationMode mode,
-                                                             common::ManagedPointer<const std::string> query_text) {
+                                                             catalog::CatalogAccessor *accessor, CompilationMode mode,
+                                                             common::ManagedPointer<const std::string> query_text,
+                                                             ast::LambdaExpr *output_callback, common::ManagedPointer<ast::Context> context) {
   // The query we're generating code for.
-  auto query = std::make_unique<ExecutableQuery>(plan, exec_settings);
+  auto query = std::make_unique<ExecutableQuery>(plan, exec_settings, context.Get());
   // TODO(Lin): Hacking... remove this after getting the counters in
   query->SetQueryText(query_text);
 
   // Generate the plan for the query
-  CompilationContext ctx(query.get(), accessor, mode);
+  CompilationContext ctx(query.get(), accessor, mode, output_callback);
   ctx.GeneratePlan(plan);
+  // TODO(tanujnay112) hacking
+  query->SetQueryStateType(ctx.query_state_.GetType());
 
   // Done
   return query;
@@ -384,7 +388,8 @@ ExpressionTranslator *CompilationContext::LookupTranslator(const parser::Abstrac
   return nullptr;
 }
 
-std::string CompilationContext::GetFunctionPrefix() const { return "Query" + std::to_string(unique_id_); }
+std::string CompilationContext::GetFunctionPrefix() const { return output_callback_ == nullptr ? "Query" + std::to_string(unique_id_) :
+                                                            output_callback_->GetName().GetString() + "Query" + std::to_string(unique_id_); }
 
 util::RegionVector<ast::FieldDecl *> CompilationContext::QueryParams() const {
   ast::Expr *state_type = codegen_.PointerType(codegen_.MakeExpr(query_state_type_));

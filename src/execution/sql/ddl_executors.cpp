@@ -7,6 +7,7 @@
 #include "catalog/catalog_accessor.h"
 #include "catalog/postgres/pg_language.h"
 #include "common/macros.h"
+#include "execution/ast/ast_pretty_print.h"
 #include "execution/ast/context.h"
 #include "execution/exec/execution_context.h"
 #include "execution/compiler/function_builder.h"
@@ -69,7 +70,8 @@ bool DDLExecutors::CreateFunctionExecutor(const common::ManagedPointer<planner::
   // make the context here using the body
   parser::udf::UDFASTContext udf_ast_context;
   // parser::udf::UDFContext udf_context;
-  parser::udf::PLpgSQLParser udf_parser((common::ManagedPointer(&udf_ast_context)));
+  parser::udf::PLpgSQLParser udf_parser((common::ManagedPointer(&udf_ast_context)), accessor,
+                                        node->GetDatabaseOid());
   std::unique_ptr<parser::udf::FunctionAST> ast;
   try {
     ast =
@@ -90,6 +92,8 @@ bool DDLExecutors::CreateFunctionExecutor(const common::ManagedPointer<planner::
 //  auto ret_type = parser::ReturnType::DataTypeToTypeId(node->GetReturnType());
 //  fn_params.emplace_back(codegen.MakeField(ast::Identifier{ret_name},
 //      codegen.PointerType(codegen.TplType(ret_type))));
+  fn_params.emplace_back(codegen.MakeField(codegen.MakeFreshIdentifier("executionCtx"),
+                                           codegen.PointerType(codegen.BuiltinType(ast::BuiltinType::ExecutionContext))));
 
   for(size_t i = 0;i < node->GetFunctionParameterNames().size();i++) {
     auto name = node->GetFunctionParameterNames()[i];
@@ -114,7 +118,7 @@ bool DDLExecutors::CreateFunctionExecutor(const common::ManagedPointer<planner::
                                          parser::ReturnType::DataTypeToTypeId(node->GetReturnType())))
 //                                   )
   };
-  parser::udf::UDFCodegen udf_codegen{accessor.Get(), &fb, &udf_ast_context, &codegen};
+  parser::udf::UDFCodegen udf_codegen{accessor.Get(), &fb, &udf_ast_context, &codegen, node->GetDatabaseOid()};
   udf_codegen.GenerateUDF(ast->body.get());
   auto fn = fb.Finish();
 ////  util::RegionVector<ast::Decl *> decls_reg_vec{decls->begin(), decls->end(), codegen.Region()};
@@ -126,6 +130,7 @@ bool DDLExecutors::CreateFunctionExecutor(const common::ManagedPointer<planner::
     type_check.GetErrorReporter()->Reset();
     type_check.Run(file);
     EXECUTION_LOG_ERROR("Errors: \n {}", type_check.GetErrorReporter()->SerializeErrors());
+    execution::ast::AstPrettyPrint::Dump(std::cout, file);
 //    TERRIER_ASSERT(!bad, "bad function");
   }
 

@@ -1080,6 +1080,8 @@ class LambdaExpr : public Expr {
 
   const Identifier &GetName() const { return name_; }
 
+  void SetName(Identifier name) { name_ = name; }
+
  private:
   friend class sema::Sema;
 

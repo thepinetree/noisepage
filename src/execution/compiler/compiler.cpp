@@ -63,6 +63,7 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
     callbacks->OnError(Phase::Parsing, this);
     return;
   }
+  ast::AstPrettyPrint::Dump(std::cout, GetAST());
 
   // -------------------------------------------------------
   // Phase 2 : Semantic Analysis (i.e., type-checking)
@@ -81,7 +82,6 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
   }
 
   callbacks->EndPhase(Phase::SemanticAnalysis, this);
-//  ast::AstPrettyPrint::Dump(std::cout, GetAST());
 
   // -------------------------------------------------------
   // Phase 3 : Bytecode Generation

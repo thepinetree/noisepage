@@ -83,6 +83,10 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
     return;
   }
 
+  if(node->GetType() != nullptr){
+    return;
+  }
+
   // Resolve the function type
   ast::Type *type = Resolve(node->Function());
   if (type == nullptr) {
@@ -268,7 +272,7 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 }
 
 void Sema::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
-  throw std::runtime_error("Should never perform semantic checking on implicit cast expressions");
+//  throw std::runtime_error("Should never perform semantic checking on implicit cast expressions");
 }
 
 void Sema::VisitIndexExpr(ast::IndexExpr *node) {

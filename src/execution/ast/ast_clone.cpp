@@ -68,8 +68,9 @@ AstNode *AstCloneImpl::VisitFunctionDecl(FunctionDecl *node) {
 }
 
 AstNode *AstCloneImpl::VisitVariableDecl(VariableDecl *node) {
-  return factory_->NewVariableDecl(node->Position(), CloneIdentifier(node->Name()),
-      reinterpret_cast<Expr*>(Visit(node->TypeRepr())), reinterpret_cast<Expr*>(Visit(node->Initial())));
+  return factory_->NewVariableDecl(node->Position(), CloneIdentifier(node->Name()), node->TypeRepr() == nullptr ? nullptr :
+      reinterpret_cast<Expr*>(Visit(node->TypeRepr())), node->Initial() == nullptr ? nullptr
+                                                        : reinterpret_cast<Expr*>(Visit(node->Initial())));
 }
 
 AstNode *AstCloneImpl::VisitStructDecl(StructDecl *node) {
@@ -123,7 +124,12 @@ AstNode *AstCloneImpl::VisitIfStmt(IfStmt *node) {
 }
 
 AstNode *AstCloneImpl::VisitReturnStmt(ReturnStmt *node) {
-  return factory_->NewReturnStmt(node->Position(), reinterpret_cast<Expr*>(Visit(node->Ret())));
+  if(node->Ret() == nullptr){
+    return factory_->NewReturnStmt(node->Position(), nullptr);
+  }else{
+    return factory_->NewReturnStmt(node->Position(), reinterpret_cast<Expr*>(Visit(node->Ret())));
+  }
+
 }
 
 AstNode *AstCloneImpl::VisitCallExpr(CallExpr *node) {

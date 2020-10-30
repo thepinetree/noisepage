@@ -180,6 +180,8 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *Float64Type() const;
 
+  [[nodiscard]] ast::Expr *LambdaType(ast::Expr *fn_type);
+
   /**
    * @return The type representation for the provided builtin type.
    */

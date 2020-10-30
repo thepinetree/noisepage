@@ -29,6 +29,9 @@ class FunctionBuilder {
   FunctionBuilder(CodeGen *codegen, ast::Identifier name, util::RegionVector<ast::FieldDecl *> &&params,
                   ast::Expr *ret_type);
 
+  FunctionBuilder(CodeGen *codegen, util::RegionVector<ast::FieldDecl *> &&params,
+                  ast::Expr *ret_type);
+
   /**
    * Destructor.
    */
@@ -64,11 +67,15 @@ class FunctionBuilder {
    */
   ast::FunctionDecl *Finish(ast::Expr *ret = nullptr);
 
+  ast::LambdaExpr *FinishLambda(ast::Expr *ret = nullptr);
+
   /**
    * @return The final constructed function; null if the builder hasn't been constructed through
    *         FunctionBuilder::Finish().
    */
-  ast::FunctionDecl *GetConstructedFunction() const { return decl_; }
+  ast::FunctionDecl *GetConstructedFunction() const { return decl_.fn_decl_; }
+
+  ast::LambdaExpr *GetConstructedLambda() const { return decl_.lambda_expr_; }
 
   /**
    * @return The code generator instance.
@@ -88,8 +95,14 @@ class FunctionBuilder {
   SourcePosition start_;
   // The list of generated statements making up the function.
   ast::BlockStmt *statements_;
+
+  bool is_lambda_;
   // The cached function declaration. Constructed once in Finish().
-  ast::FunctionDecl *decl_;
+
+  union {
+    ast::FunctionDecl *fn_decl_{nullptr};
+    ast::LambdaExpr *lambda_expr_;
+  } decl_;
 };
 
 }  // namespace terrier::execution::compiler

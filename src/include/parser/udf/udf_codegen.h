@@ -33,7 +33,7 @@ class UDFCodegen : ASTNodeVisitor {
  public:
 
   UDFCodegen(catalog::CatalogAccessor *accessor, FunctionBuilder *fb,
-             parser::udf::UDFASTContext *udf_ast_context, CodeGen *codegen);
+             parser::udf::UDFASTContext *udf_ast_context, CodeGen *codegen, catalog::db_oid_t db_oid);
   ~UDFCodegen(){};
 
   catalog::type_oid_t GetCatalogTypeOidFromSQLType(execution::ast::BuiltinType::Kind type);
@@ -60,9 +60,10 @@ class UDFCodegen : ASTNodeVisitor {
     auto fn = fb_->Finish();
 ////  util::RegionVector<ast::Decl *> decls_reg_vec{decls->begin(), decls->end(), codegen.Region()};
     execution::util::RegionVector<execution::ast::Decl*> decls({fn}, codegen_->GetAstContext()->GetRegion());
-    for(auto decl : aux_decls_){
-      decls.push_back(decl);
-    }
+//    for(auto decl : aux_decls_){
+//      decls.push_back(decl);
+//    }
+    decls.insert(decls.begin(), aux_decls_.begin(), aux_decls_.end());
     auto file = codegen_->GetAstContext()->GetNodeFactory()->NewFile({0,0}, std::move(decls));
     return file;
   }
@@ -77,5 +78,6 @@ class UDFCodegen : ASTNodeVisitor {
   execution::ast::Expr *dst_;
   std::unordered_map<std::string, execution::ast::Identifier> str_to_ident_;
   execution::util::RegionVector<execution::ast::Decl *> aux_decls_;
+  catalog::db_oid_t db_oid_;
 };
 }  // namespace terrier::parser::udf

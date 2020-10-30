@@ -49,12 +49,13 @@ class FunctionContext {
         is_exec_ctx_required_{is_exec_ctx_required} {}
 
   FunctionContext(std::string func_name, type::TypeId func_ret_type, std::vector<type::TypeId> &&args_type,
-  std::unique_ptr<util::Region> ast_region, std::unique_ptr<ast::Context> ast_context, ast::File *file)
+  std::unique_ptr<util::Region> ast_region, std::unique_ptr<ast::Context> ast_context, ast::File *file,
+                  bool is_exec_ctx_required = false)
         : func_name_(std::move(func_name)),
           func_ret_type_(func_ret_type),
           args_type_(std::move(args_type)),
           is_builtin_{false},
-          is_exec_ctx_required_{false},
+          is_exec_ctx_required_{is_exec_ctx_required},
           ast_region_{std::move(ast_region)},
           ast_context_{std::move(ast_context)},
           file_{file} {}
@@ -91,7 +92,7 @@ class FunctionContext {
    * @return returns if this function requires an execution context
    */
   bool IsExecCtxRequired() const {
-    TERRIER_ASSERT(IsBuiltin(), "IsExecCtxRequired is only valid or a builtin function");
+//    TERRIER_ASSERT(IsBuiltin(), "IsExecCtxRequired is only valid or a builtin function");
     return is_exec_ctx_required_;
   }
 

@@ -134,7 +134,7 @@ class Pipeline {
    * @param builder The builder for the executable query container.
    * @param query_id The ID of the query that generates this pipeline.
    */
-  void GeneratePipeline(ExecutableQueryFragmentBuilder *builder, query_id_t query_id) const;
+  void GeneratePipeline(ExecutableQueryFragmentBuilder *builder, query_id_t query_id, ast::LambdaExpr *output_callback = nullptr) const;
 
   /**
    * @return True if the pipeline is parallel; false otherwise.
@@ -194,10 +194,10 @@ class Pipeline {
   ast::FunctionDecl *GenerateInitPipelineFunction() const;
 
   // Generate the main pipeline work function.
-  ast::FunctionDecl *GeneratePipelineWorkFunction() const;
+  ast::FunctionDecl *GeneratePipelineWorkFunction(ast::LambdaExpr *output_callback) const;
 
   // Generate the main pipeline logic.
-  ast::FunctionDecl *GenerateRunPipelineFunction(query_id_t query_id) const;
+  ast::FunctionDecl *GenerateRunPipelineFunction(query_id_t query_id, ast::LambdaExpr *output_callback) const;
 
   // Generate pipeline tear-down logic.
   ast::FunctionDecl *GenerateTearDownPipelineFunction() const;

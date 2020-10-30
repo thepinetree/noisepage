@@ -19,6 +19,7 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan, Compil
       output_var_(GetCodeGen()->MakeFreshIdentifier("outRow")),
       output_struct_(GetCodeGen()->MakeFreshIdentifier("OutputStruct")) {
   // Prepare the child.
+  pipeline->UpdateParallelism(Pipeline::Parallelism::Serial);
   compilation_context->Prepare(plan, pipeline);
 }
 
@@ -26,8 +27,17 @@ void OutputTranslator::PerformPipelineWork(terrier::execution::compiler::WorkCon
                                            terrier::execution::compiler::FunctionBuilder *function) const {
   // First generate the call @resultBufferAllocRow(execCtx)
   auto exec_ctx = GetExecutionContext();
-  ast::Expr *alloc_call = GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {exec_ctx});
-  ast::Expr *cast_call = GetCodeGen()->PtrCast(output_struct_, alloc_call);
+  ast::Expr *cast_call;
+  auto callback = GetCompilationContext()->GetOutputCallback();
+  if(callback){
+    auto output = GetCodeGen()->MakeFreshIdentifier("output_row");
+    auto *row_alloc = GetCodeGen()->DeclareVarNoInit(output, GetCodeGen()->MakeExpr(output_struct_));
+    function->Append(row_alloc);
+    cast_call = GetCodeGen()->AddressOf(GetCodeGen()->MakeExpr(output));
+  }else{
+    ast::Expr *alloc_call = GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {exec_ctx});
+    cast_call = GetCodeGen()->PtrCast(output_struct_, alloc_call);
+  }
   function->Append(GetCodeGen()->DeclareVar(output_var_, nullptr, cast_call));
   const auto child_translator = GetCompilationContext()->LookupTranslator(GetPlan());
 
@@ -39,9 +49,15 @@ void OutputTranslator::PerformPipelineWork(terrier::execution::compiler::WorkCon
     ast::Expr *rhs = child_translator->GetOutput(context, attr_idx);
     function->Append(GetCodeGen()->Assign(lhs, rhs));
   }
+  if(callback) {
+    function->Append(GetCodeGen()->Call(callback->As<ast::LambdaExpr>()->GetName(), {}));
+  }
 }
 
 void OutputTranslator::FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {
+  if(GetCompilationContext()->GetOutputCallback()){
+    return;
+  }
   auto exec_ctx = GetExecutionContext();
   function->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx}));
 }

@@ -33,7 +33,7 @@ ast::Expr *FunctionTranslator::DeriveValue(WorkContext *ctx, const ColumnValuePr
   auto func_context = codegen->GetCatalogAccessor()->GetFunctionContext(proc_oid);
 
   std::vector<ast::Expr *> params;
-  if (func_context->IsBuiltin() && func_context->IsExecCtxRequired()) {
+  if (func_context->IsExecCtxRequired()) {
     params.push_back(GetExecutionContextPtr());
   }
   for (auto child : func_expr.GetChildren()) {

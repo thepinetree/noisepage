@@ -173,10 +173,10 @@ class AssignStmtAST : public ExprAST {
 // SQLStmtAST - Expression class for a SQL Statement.
 class SQLStmtAST : public StmtAST {
  public:
-  std::string query;
+  std::unique_ptr<parser::ParseResult> query;
   std::string var_name;
 
-  SQLStmtAST(std::string query, std::string var_name)
+  SQLStmtAST(std::unique_ptr<parser::ParseResult> query, std::string var_name)
       : query(std::move(query)), var_name(std::move(var_name)) {}
 
   void Accept(ASTNodeVisitor *visitor) override { visitor->Visit(this); };

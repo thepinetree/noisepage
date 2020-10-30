@@ -1,21 +1,34 @@
 #include "common/error/exception.h"
 
+#include "binder/bind_node_visitor.h"
+
 #include "execution/ast/ast.h"
 #include "execution/ast/ast_clone.h"
+#include "execution/exec/execution_settings.h"
+#include "execution/compiler/executable_query.h"
+#include "execution/compiler/compilation_context.h"
 #include "execution/compiler/if.h"
 #include "execution/compiler/loop.h"
+
+#include "optimizer/cost_model/trivial_cost_model.h"
+#include "optimizer/statistics/stats_storage.h"
 #include "catalog/catalog_accessor.h"
 
+#include "traffic_cop/traffic_cop_util.h"
+
 #include "parser/expression/constant_value_expression.h"
+#include "parser/postgresparser.h"
 #include "parser/udf/udf_codegen.h"
 #include "parser/udf/ast_nodes.h"
+
+#include "planner/plannodes/abstract_plan_node.h"
 
 namespace terrier::parser::udf{
 
 UDFCodegen::UDFCodegen(catalog::CatalogAccessor *accessor, FunctionBuilder *fb,
-    parser::udf::UDFASTContext *udf_ast_context, CodeGen *codegen)
+    parser::udf::UDFASTContext *udf_ast_context, CodeGen *codegen, catalog::db_oid_t db_oid)
     : accessor_{accessor}, fb_{fb}, udf_ast_context_{udf_ast_context}, codegen_{codegen},
-      aux_decls_(codegen->GetAstContext()->GetRegion()) {
+      aux_decls_(codegen->GetAstContext()->GetRegion()), db_oid_{db_oid} {
   for(size_t i = 0;fb->GetParameterByPosition(i) != nullptr;i++){
     auto param = fb->GetParameterByPosition(i);
     const auto &name = param->As<execution::ast::IdentifierExpr>()->Name();
@@ -106,6 +119,9 @@ void UDFCodegen::Visit(ExprAST *ast) {
 }
 
 void UDFCodegen::Visit(DeclStmtAST *ast) {
+    if(ast->name == "*internal*"){
+      return;
+    }
     execution::ast::Identifier ident = codegen_->MakeFreshIdentifier(ast->name);
     str_to_ident_.emplace(ast->name, ident);
     if(ast->initial != nullptr) {
@@ -296,6 +312,61 @@ void UDFCodegen::Visit(RetStmtAST *ast) {
 }
 
 void UDFCodegen::Visit(SQLStmtAST *ast) {
+  const auto query = common::ManagedPointer(ast->query);
+  auto stats = optimizer::StatsStorage();
+  std::unique_ptr<planner::AbstractPlanNode> plan = trafficcop::TrafficCopUtil::Optimize(accessor_->GetTxn(),
+                                                   common::ManagedPointer(accessor_), query, db_oid_, common::ManagedPointer(&stats),
+                                                                                         std::make_unique<optimizer::TrivialCostModel>(), 1000000);
+  // make lambda that just writes into this
+  auto count_var = codegen_->MakeFreshIdentifier("counter");
+  auto lam_var = codegen_->MakeFreshIdentifier("lamb");
+  fb_->Append(codegen_->DeclareVar(count_var, codegen_->Int32Type(), codegen_->Const32(0)));
+  execution::util::RegionVector<execution::ast::FieldDecl *> params(codegen_->GetAstContext()->GetRegion());
+  execution::ast::LambdaExpr *lambda_expr;
+  FunctionBuilder fn(codegen_, std::move(params), codegen_->BuiltinType(execution::ast::BuiltinType::Nil));
+  {
+    fn.Append(codegen_->Assign(codegen_->MakeExpr(count_var),
+                               codegen_->BinaryOp(execution::parsing::Token::Type::PLUS, codegen_->MakeExpr(count_var),
+                                                  codegen_->Const32(1))));
+    lambda_expr = fn.FinishLambda();
+    lambda_expr->SetName(lam_var);
+
+    fb_->Append(codegen_->DeclareVar(lam_var, codegen_->LambdaType(lambda_expr->GetFunctionLitExpr()->TypeRepr()),
+                                     lambda_expr));
+  }
+
+  execution::exec::ExecutionSettings exec_settings{};
+  const std::string dummy_query = "";
+  auto exec_query = execution::compiler::CompilationContext::Compile(
+      *plan, exec_settings, accessor_,
+      execution::compiler::CompilationMode::OneShot,
+      common::ManagedPointer<const std::string>(&dummy_query), lambda_expr, codegen_->GetAstContext());
+  auto fns = exec_query->GetFunctions();
+  auto decls = exec_query->GetDecls();
+
+  aux_decls_.insert(aux_decls_.end(), decls.begin(), decls.end());
+
+  // make query state
+  auto query_state = codegen_->MakeFreshIdentifier("query_state");
+  fb_->Append(codegen_->DeclareVarNoInit(query_state,
+                             exec_query->GetQueryStateType()->TypeRepr()));
+  fb_->Append(codegen_->Assign(codegen_->AccessStructMember(codegen_->MakeExpr(query_state), codegen_->MakeIdentifier("execCtx")),
+                               fb_->GetParameterByPosition(0)));
+  // set its execution context to whatever exec context was passed in here
+
+  for(auto &sub_fn : fns){
+//    aux_decls_.push_back(c)
+    if(sub_fn.find("Run") != std::string::npos) {
+      fb_->Append(codegen_->Call(codegen_->GetAstContext()->GetIdentifier(sub_fn),
+                                 {codegen_->AddressOf(query_state), codegen_->MakeExpr(lam_var)}));
+    }else{
+      fb_->Append(codegen_->Call(codegen_->GetAstContext()->GetIdentifier(sub_fn),
+                                 {codegen_->AddressOf(query_state)}));
+    }
+  }
+
+
+
 //  auto *val = codegen_->ConstStringPtr(ast->query);
 //  auto *len = codegen_->Const32(ast->query.size());
 //  auto left = udf_context_->GetAllocValue(ast->var_name);

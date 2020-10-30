@@ -5,6 +5,7 @@
 
 #include "nlohmann/json.hpp"
 #include "ast_nodes.h"
+#include "catalog/catalog_accessor.h"
 
 #include "parser/expression_util.h"
 #include "parser/udf/udf_ast_context.h"
@@ -16,8 +17,9 @@ namespace terrier::parser::udf {
 class FunctionAST;
 class PLpgSQLParser {
  public:
-  PLpgSQLParser(common::ManagedPointer<UDFASTContext> udf_ast_context)
-    : udf_ast_context_(udf_ast_context) {}
+  PLpgSQLParser(common::ManagedPointer<UDFASTContext> udf_ast_context, const common::ManagedPointer<catalog::CatalogAccessor>
+      accessor, catalog::db_oid_t db_oid)
+    : udf_ast_context_(udf_ast_context), accessor_(accessor), db_oid_(db_oid) {}
   std::unique_ptr<FunctionAST> ParsePLpgSQL(std::vector<std::string> &&param_names,
       std::vector<type::TypeId> &&param_types,
       const std::string &func_body,
@@ -37,6 +39,8 @@ class PLpgSQLParser {
   std::unique_ptr<ExprAST> ParseExpr(common::ManagedPointer<parser::AbstractExpression>);
 
   common::ManagedPointer<UDFASTContext> udf_ast_context_;
+  const common::ManagedPointer<catalog::CatalogAccessor> accessor_;
+  catalog::db_oid_t db_oid_;
 //  common::ManagedPointer<parser::PostgresParser> sql_parser_;
   std::unordered_map<std::string, type::TypeId> symbol_table_;
 };

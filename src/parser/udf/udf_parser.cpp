@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include "parser/udf/udf_parser.h"
+#include "binder/bind_node_visitor.h"
 #include "loggers/parser_logger.h"
 
 #include "libpg_query/pg_query.h"
@@ -220,27 +221,27 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseWhile(const nlohmann::json &loop) {
 
 std::unique_ptr<StmtAST> PLpgSQLParser::ParseSQL(const nlohmann::json &sql_stmt) {
   PARSER_LOG_DEBUG("ParseSQL");
-//  auto sql_query = sql_stmt[kSqlstmt][kPLpgSQL_expr][kQuery].get<std::string>();
-//  auto var_name = sql_stmt[kRow][kPLpgSQL_row][kFields][0][kName].get<std::string>();
-//  auto parse_result = PostgresParser::BuildParseTree(sql_query.c_str());
-//  if (parse_result == nullptr) {
-//    PARSER_LOG_DEBUG("Bad SQL statement");
-//    return nullptr;
-//  }
-//  try {
-//    // TODO(Matt): I don't think the binder should need the database name. It's already bound in the ConnectionContext
-//    binder::BindNodeVisitor visitor(accessor_, db_name_);
-//    visitor.BindNameToNode(parse_result->GetStatement(0), parse_result.get());
-//  } catch (...) {
-//    PARSER_LOG_DEBUG("Bad SQL statement");
-//    return nullptr;
-//  }
+  auto sql_query = sql_stmt[kSqlstmt][kPLpgSQL_expr][kQuery].get<std::string>();
+  auto var_name = sql_stmt[kRow][kPLpgSQL_row][kFields][0][kName].get<std::string>();
+  auto parse_result = PostgresParser::BuildParseTree(sql_query.c_str());
+  if (parse_result == nullptr) {
+    PARSER_LOG_DEBUG("Bad SQL statement");
+    return nullptr;
+  }
+  try {
+    // TODO(Matt): I don't think the binder should need the database name. It's already bound in the ConnectionContext
+    binder::BindNodeVisitor visitor(accessor_, db_oid_);
+    visitor.BindNameToNode(common::ManagedPointer(parse_result), nullptr, nullptr);
+  } catch (BinderException &b) {
+    PARSER_LOG_DEBUG("Bad SQL statement");
+    return nullptr;
+  }
 
 
 
-//  return std::unique_ptr<SQLStmtAST>(
-//      new SQLStmtAST(std::move(sql_query), std::move(var_name)));
-  return nullptr;
+  return std::unique_ptr<SQLStmtAST>(
+      new SQLStmtAST(std::move(parse_result), std::move(var_name)));
+//  return nullptr;
 }
 
 std::unique_ptr<StmtAST> PLpgSQLParser::ParseDynamicSQL(

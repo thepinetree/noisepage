@@ -7,8 +7,8 @@ fun main() -> int32 {
     var x = 10
     //var f = 25
     var lam = lambda (z : int ) -> nil {
-                    x = z
+                    y = z + x
                 }
     f(lam, 24)
-    return x
+    return y
 }

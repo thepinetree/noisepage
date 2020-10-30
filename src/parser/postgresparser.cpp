@@ -1239,18 +1239,19 @@ std::unique_ptr<SQLStatement> PostgresParser::CreateFunctionTransform(ParseResul
                                                                       const std::string &query_string) {
   bool replace = root->replace_;
   std::vector<std::unique_ptr<FuncParameter>> func_parameters;
-
-  for (auto cell = root->parameters_->head; cell != nullptr; cell = cell->next) {
-    auto node = reinterpret_cast<Node *>(cell->data.ptr_value);
-    switch (node->type) {
-      case T_FunctionParameter: {
-        func_parameters.emplace_back(
-            FunctionParameterTransform(parse_result, reinterpret_cast<FunctionParameter *>(node)));
-        break;
-      }
-      default: {
-        // TODO(WAN): previous code just ignored it, is this right?
-        break;
+  if(root->parameters_ != nullptr) {
+    for (auto cell = root->parameters_->head; cell != nullptr; cell = cell->next) {
+      auto node = reinterpret_cast<Node *>(cell->data.ptr_value);
+      switch (node->type) {
+        case T_FunctionParameter: {
+          func_parameters.emplace_back(
+              FunctionParameterTransform(parse_result, reinterpret_cast<FunctionParameter *>(node)));
+          break;
+        }
+        default: {
+          // TODO(WAN): previous code just ignored it, is this right?
+          break;
+        }
       }
     }
   }

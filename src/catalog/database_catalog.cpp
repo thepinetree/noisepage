@@ -2619,7 +2619,7 @@ bool DatabaseCatalog::CreateProcedure(const common::ManagedPointer<transaction::
   const auto name_varlen = storage::StorageUtil::CreateVarlen(procname);
 
   std::vector<std::string> arg_name_vec;
-  arg_name_vec.reserve(args.size() * sizeof(storage::VarlenEntry));
+//  arg_name_vec.reserve(args.size() * sizeof(storage::VarlenEntry));
 
   for (auto &arg : args) {
     arg_name_vec.push_back(arg);

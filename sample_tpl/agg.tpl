@@ -35,7 +35,7 @@ fun updateAgg(agg: *Agg, vpi: *VectorProjectionIterator) -> nil {
     @aggAdvance(&agg.count, &input)
 }
 
-fun pipeline_1(execCtx: *ExecutionContext, state: *State) -> nil {
+fun pipeline_1(execCtx: *ExecutionContext, state: *State, lam : lambda [(int32)->nil] ) -> nil {
     var ht = &state.table
     var tvi: TableVectorIterator
     var table_oid = @testCatalogLookup(execCtx, "test_1", "")
@@ -45,45 +45,26 @@ fun pipeline_1(execCtx: *ExecutionContext, state: *State) -> nil {
     for (@tableIterInit(&tvi, execCtx, table_oid, col_oids); @tableIterAdvance(&tvi); ) {
         var vec = @tableIterGetVPI(&tvi)
         for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-            var hash_val = @hash(@vpiGetInt(vec, 1))
-            var agg = @ptrCast(*Agg, @aggHTLookup(ht, hash_val, keyCheck, vec))
-            if (agg == nil) {
-                agg = @ptrCast(*Agg, @aggHTInsert(ht, hash_val))
-                constructAgg(agg, vec)
-            } else {
-                updateAgg(agg, vec)
-            }
+           lam(@vpiGetInt(vec, 0))
         }
     }
     @tableIterClose(&tvi)
 }
 
-fun pipeline_2(state: *State) -> nil {
-    var aht_iter: AHTIterator
-    var iter = &aht_iter
-    for (@aggHTIterInit(iter, &state.table); @aggHTIterHasNext(iter); @aggHTIterNext(iter)) {
-        var agg = @ptrCast(*Agg, @aggHTIterGetRow(iter))
-        state.count = state.count + 1
-        lam()
-    }
-    @aggHTIterClose(iter)
-}
-
-fun execQuery(execCtx: *ExecutionContext, qs: *State) -> nil {
-    pipeline_1(execCtx, qs)
-    pipeline_2(qs)
+fun execQuery(execCtx: *ExecutionContext, qs: *State, lam : lambda [(Integer)->nil] ) -> nil {
+    pipeline_1(execCtx, qs, lam)
 }
 
 fun main(execCtx: *ExecutionContext) -> int32 {
-    var state: State
-    var count : int32
+    var count : Integer
     count = 0
-    var lam = lambda () -> nil {
-                        count = count + 1
+    var lam = lambda (x : Integer) -> nil {
+                        count = count + x
                     }
+    var state: State
 
     setUpState(execCtx, &state)
-    execQuery(execCtx, &state, &lam)
+    execQuery(execCtx, &state, lam)
     tearDownState(&state)
 
     var ret = state.count

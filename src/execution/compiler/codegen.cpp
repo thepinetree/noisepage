@@ -154,6 +154,12 @@ ast::Expr *CodeGen::Float32Type() const { return BuiltinType(ast::BuiltinType::F
 
 ast::Expr *CodeGen::Float64Type() const { return BuiltinType(ast::BuiltinType::Float64); }
 
+ast::Expr *CodeGen::LambdaType(ast::Expr *fn_type) {
+  auto type_repr = context_->GetNodeFactory()->NewLambdaType(position_, fn_type);
+//  type_repr->SetType(ast::LambdaType::Get(fn_type->GetType()->As<ast::FunctionType>()));
+  return type_repr;
+}
+
 ast::Expr *CodeGen::PointerType(ast::Expr *base_type_repr) const {
   // Create the type representation
   auto *type_repr = context_->GetNodeFactory()->NewPointerType(position_, base_type_repr);

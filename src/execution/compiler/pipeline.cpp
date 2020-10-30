@@ -27,7 +27,7 @@ Pipeline::Pipeline(CompilationContext *ctx)
       parallelism_(Parallelism::Parallel),
       check_parallelism_(true),
       state_var_(codegen_->MakeIdentifier("pipelineState")),
-      state_(codegen_->MakeIdentifier(fmt::format("P{}_State", id_)),
+      state_(codegen_->MakeIdentifier(fmt::format("P{}{}_State", ctx->GetFunctionPrefix(), id_)),
              [this](CodeGen *codegen) { return codegen_->MakeExpr(state_var_); }) {}
 
 Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism) : Pipeline(op->GetCompilationContext()) {
@@ -206,12 +206,18 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction() const {
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
+ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction(ast::LambdaExpr *output_callback) const {
   auto params = PipelineParams();
 
   if (IsParallel()) {
     auto additional_params = driver_->GetWorkerParams();
     params.insert(params.end(), additional_params.begin(), additional_params.end());
+  }
+
+  if(output_callback != nullptr){
+    params.push_back(codegen_->MakeField(output_callback->GetName(),
+                                         codegen_->LambdaType(output_callback
+                                             ->GetFunctionLitExpr()->TypeRepr())));
   }
 
   FunctionBuilder builder(codegen_, GetWorkFunctionName(), std::move(params), codegen_->Nil());
@@ -225,10 +231,16 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
   return builder.Finish();
 }
 
-ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(query_id_t query_id) const {
+ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(query_id_t query_id, ast::LambdaExpr *output_callback) const {
   bool started_tracker = false;
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
-  FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
+  auto params = compilation_context_->QueryParams();
+  if(output_callback){
+    params.push_back(codegen_->MakeField(output_callback->GetName(),
+                                         codegen_->LambdaType(output_callback
+                                                                  ->GetFunctionLitExpr()->TypeRepr())));
+  }
+  FunctionBuilder builder(codegen_, name, std::move(params), codegen_->Nil());
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen_);
@@ -252,9 +264,12 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction(query_id_t query_id) co
 
       InjectStartResourceTracker(&builder);
       started_tracker = true;
-
+      std::vector<ast::Expr *> args{builder.GetParameterByPosition(0), codegen_->MakeExpr(state_var_)};
+      if(output_callback){
+        args.push_back(codegen_->MakeExpr(output_callback->GetName()));
+      }
       builder.Append(
-          codegen_->Call(GetWorkFunctionName(), {builder.GetParameterByPosition(0), codegen_->MakeExpr(state_var_)}));
+          codegen_->Call(GetWorkFunctionName(), args));
     }
 
     // Let the operators perform some completion work in this pipeline.
@@ -282,20 +297,19 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
   return builder.Finish();
 }
 
-void Pipeline::GeneratePipeline(ExecutableQueryFragmentBuilder *builder, query_id_t query_id) const {
+void Pipeline::GeneratePipeline(ExecutableQueryFragmentBuilder *builder, query_id_t query_id, ast::LambdaExpr *output_callback) const {
   // Declare the pipeline state.
   builder->DeclareStruct(state_.GetType());
-
   // Generate pipeline state initialization and tear-down functions.
   builder->DeclareFunction(GenerateSetupPipelineStateFunction());
   builder->DeclareFunction(GenerateTearDownPipelineStateFunction());
 
   // Generate main pipeline logic.
-  builder->DeclareFunction(GeneratePipelineWorkFunction());
+  builder->DeclareFunction(GeneratePipelineWorkFunction(output_callback));
 
   // Register the main init, run, tear-down functions as steps, in that order.
   builder->RegisterStep(GenerateInitPipelineFunction());
-  builder->RegisterStep(GenerateRunPipelineFunction(query_id));
+  builder->RegisterStep(GenerateRunPipelineFunction(query_id, output_callback));
   auto teardown = GenerateTearDownPipelineFunction();
   builder->RegisterStep(teardown);
   builder->AddTeardownFn(teardown);
