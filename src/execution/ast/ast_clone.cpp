@@ -176,7 +176,8 @@ AstNode *AstCloneImpl::VisitIndexExpr(IndexExpr *node) {
 }
 
 AstNode *AstCloneImpl::VisitLambdaExpr(LambdaExpr *node) {
-  return factory_->NewLambdaExpr(node->Position(), node->GetFunctionLitExpr());
+  return factory_->NewLambdaExpr(node->Position(), reinterpret_cast<FunctionLitExpr*>(Visit(
+            node->GetFunctionLitExpr())));
 }
 
 AstNode *AstCloneImpl::VisitLitExpr(LitExpr *node) {
@@ -212,7 +213,7 @@ AstNode *AstCloneImpl::VisitBreakStmt(BreakStmt *node) {
 }
 
 AstNode *AstCloneImpl::VisitMemberExpr(MemberExpr *node) {
-  return factory_->NewIndexExpr(node->Position(), reinterpret_cast<Expr*>(Visit(node->Object())),
+  return factory_->NewMemberExpr(node->Position(), reinterpret_cast<Expr*>(Visit(node->Object())),
                                 reinterpret_cast<Expr*>(Visit(node->Member())));
 }
 

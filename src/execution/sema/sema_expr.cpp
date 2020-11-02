@@ -4,6 +4,8 @@
 #include "execution/sema/sema.h"
 #include "loggers/execution_logger.h"
 
+#include <iostream>
+
 namespace terrier::execution::sema {
 
 void Sema::VisitBadExpr(ast::BadExpr *node) { TERRIER_ASSERT(false, "Bad expression in type checker!"); }
@@ -178,7 +180,7 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
     fields.push_back(field);
   }
   fields.push_back(factory->NewFieldDecl(SourcePosition(), GetContext()->GetIdentifier("function"),
-                                         factory->NewPointerType(SourcePosition(), node->GetFunctionLitExpr())));
+                                         factory->NewPointerType(SourcePosition(), node->GetFunctionLitExpr()->TypeRepr())));
 
   ast::StructTypeRepr *struct_type_repr =
       factory->NewStructType(SourcePosition(), std::move(fields));
@@ -189,7 +191,7 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   node->captures_ = struct_type_repr;
   VisitStructDecl(struct_decl);
   node->capture_type_ = Resolve(struct_type_repr);
-  node->SetType(ast::LambdaType::Get(node->GetFunctionLitExpr()->GetType()->As<ast::FunctionType>()));
+  node->SetType(ast::LambdaType::Get(Resolve(node->GetFunctionLitExpr()->TypeRepr())->As<ast::FunctionType>()));
 //  GetCurrentScope()->Declare(struct_decl->Name(), node->capture_type_);
 
 //  node->name_ =
@@ -411,6 +413,11 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
   ast::Identifier member = node->Member()->As<ast::IdentifierExpr>()->Name();
 
   ast::Type *member_type = obj_type->As<ast::StructType>()->LookupFieldByName(member);
+//  if(member_type == nullptr) {
+    for (auto &f : obj_type->As<ast::StructType>()->GetFields()) {
+      std::cout << f.name_.GetData() << " " << (void *)f.name_.GetData() << "\n";
+    }
+//  }
 
   if (member_type == nullptr) {
     GetErrorReporter()->Report(node->Member()->Position(), ErrorMessages::kFieldObjectDoesNotExist, member, obj_type);

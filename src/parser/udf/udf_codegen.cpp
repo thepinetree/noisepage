@@ -349,7 +349,7 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
   // make query state
   auto query_state = codegen_->MakeFreshIdentifier("query_state");
   fb_->Append(codegen_->DeclareVarNoInit(query_state,
-                             exec_query->GetQueryStateType()->TypeRepr()));
+                             codegen_->MakeExpr(exec_query->GetQueryStateType()->Name())));
   fb_->Append(codegen_->Assign(codegen_->AccessStructMember(codegen_->MakeExpr(query_state), codegen_->MakeIdentifier("execCtx")),
                                fb_->GetParameterByPosition(0)));
   // set its execution context to whatever exec context was passed in here

@@ -1661,6 +1661,13 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
     return;
   }
 
+  if (call->Arguments()[0]->GetType() != nullptr
+      && call->Arguments()[1]->GetType() != nullptr
+      && call->Arguments()[0]->GetType()->IsPointerType()
+      && call->Arguments()[1]->GetType()->IsPointerType()){
+    return;
+  }
+
   // The first argument will be a UnaryOpExpr with the '*' (star) op. This is
   // because parsing function calls assumes expression arguments, not types. So,
   // something like '*Type', which would be the first argument to @ptrCast, will
