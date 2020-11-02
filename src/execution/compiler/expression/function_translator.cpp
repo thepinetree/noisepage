@@ -52,6 +52,7 @@ ast::Expr *FunctionTranslator::DeriveValue(WorkContext *ctx, const ColumnValuePr
 
   return codegen->CallBuiltin(func_context->GetBuiltin(), params);
 }
+
 void FunctionTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) {
   ExpressionTranslator::DefineHelperFunctions(decls);
   auto proc_oid = GetExpressionAs<parser::FunctionExpression>().GetProcOid();
@@ -67,7 +68,26 @@ void FunctionTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionD
   main_fn_ = udf_decls.back()->Name();
   for(ast::Decl *udf_decl : udf_decls){
     if(udf_decl->IsFunctionDecl()) {
-      decls->emplace_back(udf_decl->As<ast::FunctionDecl>());
+      decls->insert(decls->begin(), udf_decl->As<ast::FunctionDecl>());
+    }
+  }
+}
+
+void FunctionTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
+  ExpressionTranslator::DefineHelperStructs(decls);
+  auto proc_oid = GetExpressionAs<parser::FunctionExpression>().GetProcOid();
+  auto func_context = GetCodeGen()->GetCatalogAccessor()->GetFunctionContext(proc_oid);
+  if(func_context->IsBuiltin()){
+    return;
+  }
+  auto *file = reinterpret_cast<execution::ast::File*>(ast::AstClone::Clone(func_context->GetFile(),
+                                                                            GetCodeGen()->GetAstContext()
+                                                                                ->GetNodeFactory(),
+                                                                            "", nullptr, GetCodeGen()->GetAstContext().Get()));
+  auto udf_decls = file->Declarations();
+  for(ast::Decl *udf_decl : udf_decls){
+    if(udf_decl->IsStructDecl()) {
+      decls->insert(decls->begin(), udf_decl->As<ast::StructDecl>());
     }
   }
 }

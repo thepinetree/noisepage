@@ -21,4 +21,10 @@ void ExpressionTranslator::DefineHelperFunctions(util::RegionVector<ast::Functio
   }
 }
 
+void ExpressionTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
+  for(auto child : expr_.GetChildren()){
+    compilation_context_->LookupTranslator(*child)->DefineHelperStructs(decls);
+  }
+}
+
 }  // namespace terrier::execution::compiler

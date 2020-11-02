@@ -36,6 +36,8 @@ class FunctionTranslator : public ExpressionTranslator {
 
   void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override;
 
+  void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) override;
+
  private:
   std::vector<const ExpressionTranslator> params_;
   ast::Identifier main_fn_;

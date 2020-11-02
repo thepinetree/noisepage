@@ -50,7 +50,7 @@ class ExpressionTranslator {
 
   virtual void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls);
 
-  virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {}
+  virtual void DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls);
 
   /**
    * @return The expression being translated.
