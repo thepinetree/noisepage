@@ -269,6 +269,11 @@ void Sema::VisitIdentifierExpr(ast::IdentifierExpr *node) {
     return;
   }
 
+  if (auto *type = GetCurrentScope()->Lookup(node->Name())) {
+    node->SetType(type);
+    return;
+  }
+
   // Error
   GetErrorReporter()->Report(node->Position(), ErrorMessages::kUndefinedVariable, node->Name());
 }

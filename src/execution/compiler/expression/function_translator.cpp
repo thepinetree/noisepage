@@ -66,9 +66,11 @@ void FunctionTranslator::DefineHelperFunctions(util::RegionVector<ast::FunctionD
                                                                             "", nullptr, GetCodeGen()->GetAstContext().Get()));
   auto udf_decls = file->Declarations();
   main_fn_ = udf_decls.back()->Name();
+  size_t num_added = 0;
   for(ast::Decl *udf_decl : udf_decls){
     if(udf_decl->IsFunctionDecl()) {
-      decls->insert(decls->begin(), udf_decl->As<ast::FunctionDecl>());
+      decls->insert(decls->begin()+num_added, udf_decl->As<ast::FunctionDecl>());
+      num_added++;
     }
   }
 }

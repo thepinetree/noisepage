@@ -50,7 +50,7 @@ class FunctionContext {
 
   FunctionContext(std::string func_name, type::TypeId func_ret_type, std::vector<type::TypeId> &&args_type,
   std::unique_ptr<util::Region> ast_region, std::unique_ptr<ast::Context> ast_context, ast::File *file,
-                  bool is_exec_ctx_required = false)
+                  bool is_exec_ctx_required = true)
         : func_name_(std::move(func_name)),
           func_ret_type_(func_ret_type),
           args_type_(std::move(args_type)),

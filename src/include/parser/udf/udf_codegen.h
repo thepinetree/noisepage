@@ -79,5 +79,6 @@ class UDFCodegen : ASTNodeVisitor {
   std::unordered_map<std::string, execution::ast::Identifier> str_to_ident_;
   execution::util::RegionVector<execution::ast::Decl *> aux_decls_;
   catalog::db_oid_t db_oid_;
+  bool needs_exec_ctx_{false};
 };
 }  // namespace terrier::parser::udf

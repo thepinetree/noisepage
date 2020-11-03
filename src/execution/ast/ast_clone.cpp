@@ -228,6 +228,10 @@ AstNode *AstCloneImpl::VisitBadExpr(BadExpr *node) {
 
 AstNode *AstCloneImpl::VisitStructTypeRepr(StructTypeRepr *node) {
   util::RegionVector<FieldDecl *> field_decls(new_context_->GetRegion());
+  field_decls.reserve(node->Fields().size());
+  for(auto field : node->Fields()){
+    field_decls.push_back(reinterpret_cast<FieldDecl*>((VisitFieldDecl(field))));
+  }
   return factory_->NewStructType(node->Position(), std::move(field_decls));
 }
 

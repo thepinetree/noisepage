@@ -312,6 +312,7 @@ void UDFCodegen::Visit(RetStmtAST *ast) {
 }
 
 void UDFCodegen::Visit(SQLStmtAST *ast) {
+  needs_exec_ctx_ = true;
   const auto query = common::ManagedPointer(ast->query);
   auto stats = optimizer::StatsStorage();
   std::unique_ptr<planner::AbstractPlanNode> plan = trafficcop::TrafficCopUtil::Optimize(accessor_->GetTxn(),
