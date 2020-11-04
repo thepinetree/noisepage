@@ -1674,15 +1674,17 @@ void Sema::CheckBuiltinPtrCastCall(ast::CallExpr *call) {
   // get parsed as a dereference expression before a type expression.
   // TODO(pmenon): Fix the above to parse correctly
 
-  auto unary_op = call->Arguments()[0]->SafeAs<ast::UnaryOpExpr>();
-  if (unary_op == nullptr || unary_op->Op() != parsing::Token::Type::STAR) {
-    GetErrorReporter()->Report(call->Position(), ErrorMessages::kBadArgToPtrCast, call->Arguments()[0]->GetType(), 1);
-    return;
-  }
+  if(!call->Arguments()[0]->Is<ast::PointerTypeRepr>()) {
+    auto unary_op = call->Arguments()[0]->SafeAs<ast::UnaryOpExpr>();
+    if (unary_op == nullptr || unary_op->Op() != parsing::Token::Type::STAR) {
+      GetErrorReporter()->Report(call->Position(), ErrorMessages::kBadArgToPtrCast, call->Arguments()[0]->GetType(), 1);
+      return;
+    }
 
-  // Replace the unary with a PointerTypeRepr node and resolve it
-  call->SetArgument(
-      0, GetContext()->GetNodeFactory()->NewPointerType(call->Arguments()[0]->Position(), unary_op->Input()));
+    // Replace the unary with a PointerTypeRepr node and resolve it
+    call->SetArgument(
+        0, GetContext()->GetNodeFactory()->NewPointerType(call->Arguments()[0]->Position(), unary_op->Input()));
+  }
 
   for (auto *arg : call->Arguments()) {
     auto *resolved_type = Resolve(arg);

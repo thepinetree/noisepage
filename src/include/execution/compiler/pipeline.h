@@ -139,7 +139,7 @@ class Pipeline {
   /**
    * @return True if the pipeline is parallel; false otherwise.
    */
-  bool IsParallel() const { return parallelism_ == Parallelism ::Parallel; }
+  bool IsParallel() const { return false; }
 
   /**
    * @return True if this pipeline is fully vectorized; false otherwise.

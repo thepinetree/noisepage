@@ -98,10 +98,21 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   // Check that the resolved function type is actually a function
   auto *func_type = type->SafeAs<ast::FunctionType>();
   auto *struct_type = type->SafeAs<ast::LambdaType>();
+  auto lambda_adjustment = 1;
   if (func_type == nullptr) {
 
     if(struct_type != nullptr){
       func_type = struct_type->GetFunctionType();
+      //TODO(tanujnay112) find a better way to see if sema has processed this already
+      ast::IdentifierExpr *last_arg = nullptr;
+      if(!node->Arguments().empty()){
+        last_arg = node->Arguments().back()->SafeAs<ast::IdentifierExpr>();
+      }
+      if(last_arg != nullptr
+          && last_arg->Name() == node->GetFuncName()){
+        // already processed
+        lambda_adjustment = 0;
+      }
     } else {
       GetErrorReporter()->Report(node->Position(), ErrorMessages::kNonFunction);
       return;
@@ -109,7 +120,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
   }
 
   // Check argument count matches
-  if (!CheckArgCount(node, struct_type != nullptr ? func_type->GetNumParams() - 1 : func_type->GetNumParams())) {
+  if (!CheckArgCount(node, struct_type != nullptr ? func_type->GetNumParams() - lambda_adjustment : func_type->GetNumParams())) {
     return;
   }
 
@@ -145,7 +156,7 @@ void Sema::VisitCallExpr(ast::CallExpr *node) {
     }
   }
 
-  if(struct_type != nullptr){
+  if(struct_type != nullptr && lambda_adjustment > 0){
     node->PushArgument(GetContext()->GetNodeFactory()->NewIdentifierExpr(SourcePosition(), node->GetFuncName()));
   }
 

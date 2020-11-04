@@ -87,9 +87,11 @@ void FunctionTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl 
                                                                                 ->GetNodeFactory(),
                                                                             "", nullptr, GetCodeGen()->GetAstContext().Get()));
   auto udf_decls = file->Declarations();
+  size_t num_added = 0;
   for(ast::Decl *udf_decl : udf_decls){
     if(udf_decl->IsStructDecl()) {
-      decls->insert(decls->begin(), udf_decl->As<ast::StructDecl>());
+      decls->insert(decls->begin() + num_added, udf_decl->As<ast::StructDecl>());
+      num_added++;
     }
   }
 }

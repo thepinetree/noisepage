@@ -239,7 +239,7 @@ SETTING_bool(
 SETTING_bool(
     compiled_query_execution,
     "Compile queries to native machine code using LLVM, rather than relying on TPL interpretation (default: false).",
-    true,
+    false,
     false,
     terrier::settings::Callbacks::NoOp
 )

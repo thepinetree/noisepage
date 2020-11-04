@@ -118,6 +118,7 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
     callbacks->OnError(Phase::ModuleGeneration, this);
     return;
   }
+  module->GetBytecodeModule()->Dump(std::cout);
 
   callbacks->EndPhase(Phase::ModuleGeneration, this);
 

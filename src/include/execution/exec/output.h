@@ -58,16 +58,13 @@ class EXPORT OutputBuffer {
    * @return an output slot to be written to.
    */
   byte *AllocOutputSlot() {
-
-//    common::SharedLatch::ScopedSharedLatch guard(&latch_);
-//    auto val = (num_tuples_++) % BATCH_SIZE;
-//    if (num_tuples_ == BATCH_SIZE) {
-////      callback_(tuples_, num_tuples_, tuple_size_);
-//      num_tuples_ = 0;
-//    }
+    if (num_tuples_ == BATCH_SIZE) {
+      callback_(tuples_, num_tuples_, tuple_size_);
+      num_tuples_ = 0;
+    }
     // Return the current slot and advance to the to the next one.
-//    auto val = num_tuples_++;
-    return tuples_;
+    num_tuples_++;
+    return tuples_ + tuple_size_ * (num_tuples_ - 1);
   }
 
   /**

@@ -319,22 +319,25 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
                                                    common::ManagedPointer(accessor_), query, db_oid_, common::ManagedPointer(&stats),
                                                                                          std::make_unique<optimizer::TrivialCostModel>(), 1000000);
   // make lambda that just writes into this
-  auto count_var = codegen_->MakeFreshIdentifier("counter");
+  auto count_var = str_to_ident_.find(ast->var_name)->second;
   auto lam_var = codegen_->MakeFreshIdentifier("lamb");
-  fb_->Append(codegen_->DeclareVar(count_var, codegen_->Int32Type(), codegen_->Const32(0)));
+  TERRIER_ASSERT(plan->GetOutputSchema()->GetColumns().size() == 1, "Can't support non scalars yet!");
+
   execution::util::RegionVector<execution::ast::FieldDecl *> params(codegen_->GetAstContext()->GetRegion());
+  auto input_param = codegen_->MakeFreshIdentifier("input");
+  params.push_back(codegen_->MakeField(input_param, codegen_->TplType(execution::sql::GetTypeId(plan->GetOutputSchema()
+                                                                          ->GetColumn(0).GetType()))));
   execution::ast::LambdaExpr *lambda_expr;
   FunctionBuilder fn(codegen_, std::move(params), codegen_->BuiltinType(execution::ast::BuiltinType::Nil));
   {
     fn.Append(codegen_->Assign(codegen_->MakeExpr(count_var),
-                               codegen_->BinaryOp(execution::parsing::Token::Type::PLUS, codegen_->MakeExpr(count_var),
-                                                  codegen_->Const32(1))));
-    lambda_expr = fn.FinishLambda();
-    lambda_expr->SetName(lam_var);
-
-    fb_->Append(codegen_->DeclareVar(lam_var, codegen_->LambdaType(lambda_expr->GetFunctionLitExpr()->TypeRepr()),
-                                     lambda_expr));
+                               codegen_->MakeExpr(input_param)));
   }
+  lambda_expr = fn.FinishLambda();
+  lambda_expr->SetName(lam_var);
+
+  fb_->Append(codegen_->DeclareVar(lam_var, codegen_->LambdaType(lambda_expr->GetFunctionLitExpr()->TypeRepr()),
+                                     lambda_expr));
 
   execution::exec::ExecutionSettings exec_settings{};
   const std::string dummy_query = "";
@@ -365,27 +368,6 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
                                  {codegen_->AddressOf(query_state)}));
     }
   }
-
-
-
-//  auto *val = codegen_->ConstStringPtr(ast->query);
-//  auto *len = codegen_->Const32(ast->query.size());
-//  auto left = udf_context_->GetAllocValue(ast->var_name);
-//
-//  // auto &code_context = codegen_->GetCodeContext();
-//
-//  // codegen::FunctionBuilder temp_fun{
-//  //     code_context, "temp_fun_1", codegen_->DoubleType(), {}};
-//  // {
-//  //   temp_fun.ReturnAndFinish(codegen_->ConstDouble(12.0));
-//  // }
-//
-//  // auto *right_val = codegen_->CallFunc(temp_fun.GetFunction(), {});
-//  // (*codegen_)->CreateStore(right_val, left.GetValue());
-//
-//  codegen_->Call(codegen::UDFUtilProxy::ExecuteSQLHelper,
-//                 {val, len, left.GetValue()});
-
 
   return;
 }

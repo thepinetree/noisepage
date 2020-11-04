@@ -48,9 +48,9 @@ void OutputTranslator::PerformPipelineWork(terrier::execution::compiler::WorkCon
     ast::Expr *lhs = GetCodeGen()->AccessStructMember(GetCodeGen()->MakeExpr(output_var_), attr_name);
     ast::Expr *rhs = child_translator->GetOutput(context, attr_idx);
     function->Append(GetCodeGen()->Assign(lhs, rhs));
-  }
-  if(callback) {
-    function->Append(GetCodeGen()->Call(callback->As<ast::LambdaExpr>()->GetName(), {}));
+    if(callback) {
+      function->Append(GetCodeGen()->Call(callback->As<ast::LambdaExpr>()->GetName(), {lhs}));
+    }
   }
 }
 

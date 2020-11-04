@@ -6,6 +6,10 @@ struct State {
     count: int32
 }
 
+struct OutputStruct {
+    out0: Integer
+}
+
 struct Agg {
     key: Integer
     count: CountStarAggregate
@@ -35,7 +39,7 @@ fun updateAgg(agg: *Agg, vpi: *VectorProjectionIterator) -> nil {
     @aggAdvance(&agg.count, &input)
 }
 
-fun pipeline_1(execCtx: *ExecutionContext, state: *State, lam : lambda [(int32)->nil] ) -> nil {
+fun pipeline_1(execCtx: *ExecutionContext, state: *State, lam : lambda [(Integer)->nil] ) -> nil {
     var ht = &state.table
     var tvi: TableVectorIterator
     var table_oid = @testCatalogLookup(execCtx, "test_1", "")
@@ -45,7 +49,9 @@ fun pipeline_1(execCtx: *ExecutionContext, state: *State, lam : lambda [(int32)-
     for (@tableIterInit(&tvi, execCtx, table_oid, col_oids); @tableIterAdvance(&tvi); ) {
         var vec = @tableIterGetVPI(&tvi)
         for (; @vpiHasNext(vec); @vpiAdvance(vec)) {
-           lam(@vpiGetInt(vec, 0))
+           var output_row: OutputStruct
+           output_row.out0 = @vpiGetIntNull(vec, 0)
+           lam(output_row.out0)
         }
     }
     @tableIterClose(&tvi)
@@ -57,9 +63,9 @@ fun execQuery(execCtx: *ExecutionContext, qs: *State, lam : lambda [(Integer)->n
 
 fun main(execCtx: *ExecutionContext) -> int32 {
     var count : Integer
-    count = 0
+    count = @intToSqlInt(0)
     var lam = lambda (x : Integer) -> nil {
-                        count = count + x
+                        count = x
                     }
     var state: State
 
