@@ -135,6 +135,7 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseBlock(const nlohmann::json &block) 
     } else {
       throw PARSER_EXCEPTION("Statement type not supported");
     }
+    TERRIER_ASSERT(stmts.back() != nullptr, "It broke");
   }
 
   std::unique_ptr<SeqStmtAST> seq_stmt_ast(new SeqStmtAST(std::move(stmts)));

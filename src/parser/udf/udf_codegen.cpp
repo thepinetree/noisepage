@@ -176,12 +176,11 @@ void UDFCodegen::Visit(ValueExprAST *ast) {
 }
 
 void UDFCodegen::Visit(AssignStmtAST *ast) {
-  reinterpret_cast<AbstractAST*>(ast->rhs.get())->Accept(this);
+  reinterpret_cast<AbstractAST *>(ast->rhs.get())->Accept(this);
   auto rhs_expr = dst_;
 
   type::TypeId left_type;
   udf_ast_context_->GetVariableType(ast->lhs->name, &left_type);
-
 
   auto it = str_to_ident_.find(ast->lhs->name);
   TERRIER_ASSERT(it != str_to_ident_.end(), "Variable not found");
@@ -189,30 +188,11 @@ void UDFCodegen::Visit(AssignStmtAST *ast) {
 
   auto *left_expr = codegen_->MakeExpr(left_codegen_ident);
 
-//  auto right_type = rhs_expr->GetType()->GetTypeId();
+  //  auto right_type = rhs_expr->GetType()->GetTypeId();
 
-  if (left_type == type::TypeId::VARCHAR) {
-//    llvm::Value *l_val = nullptr, *l_len = nullptr, *l_null = nullptr;
-//    left_codegen_val.ValuesForMaterialization(*codegen_, l_val, l_len, l_null);
-//
-//    llvm::Value *r_val = nullptr, *r_len = nullptr, *r_null = nullptr;
-//    right_codegen_val.ValuesForMaterialization(*codegen_, r_val, r_len, r_null);
-//
-//    (*codegen_)->CreateStore(r_val, l_val);
-//    (*codegen_)->CreateStore(r_len, l_len);
-
-//    return;
-  }
-
-//  if (right_type != left_type) {
-//    // TODO[Siva]: Need to check that they can be casted in semantic analysis
-//    rhs_expr = codegen_->Cast.CastTo(
-//        *codegen_,
-//        codegen::type::Type(ast->lhs->GetVarType(udf_context_), false));
-//  }
-
-//  (*codegen_)-/CreateStore(right_codegen_val.GetValue(), left_val);
+//  if (left_type == type::TypeId::VARCHAR) {
   fb_->Append(codegen_->Assign(left_expr, rhs_expr));
+//  }
 }
 
 void UDFCodegen::Visit(BinaryExprAST *ast) {
@@ -303,10 +283,6 @@ void UDFCodegen::Visit(WhileStmtAST *ast) {
 
 void UDFCodegen::Visit(RetStmtAST *ast) {
   ast->expr->Accept(reinterpret_cast<ASTNodeVisitor*>(this));
-//  auto iter = str_to_ident_.find(std::string(GetReturnParamString()));
-//  TERRIER_ASSERT(iter != str_to_ident_.end(), "Return param not found");
-//  auto ret_expr = codegen_->MakeExpr(iter->second);
-//  fb_->Append(codegen_->Assign(ret_expr, dst_));
   auto ret_expr = dst_;
   fb_->Append(codegen_->Return(ret_expr));
 }
@@ -336,9 +312,8 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
   lambda_expr = fn.FinishLambda();
   lambda_expr->SetName(lam_var);
 
-  fb_->Append(codegen_->DeclareVar(lam_var, codegen_->LambdaType(lambda_expr->GetFunctionLitExpr()->TypeRepr()),
-                                     lambda_expr));
-
+  // want to pass something down that will materialize the lambda function for me into lambda_expr and will
+  // also feed in a lambda_expr to the compiler
   execution::exec::ExecutionSettings exec_settings{};
   const std::string dummy_query = "";
   auto exec_query = execution::compiler::CompilationContext::Compile(
@@ -349,6 +324,9 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
   auto decls = exec_query->GetDecls();
 
   aux_decls_.insert(aux_decls_.end(), decls.begin(), decls.end());
+
+  fb_->Append(codegen_->DeclareVar(lam_var, codegen_->LambdaType(lambda_expr->GetFunctionLitExpr()->TypeRepr()),
+                                   lambda_expr));
 
   // make query state
   auto query_state = codegen_->MakeFreshIdentifier("query_state");
