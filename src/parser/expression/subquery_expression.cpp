@@ -25,7 +25,8 @@ std::unique_ptr<AbstractExpression> SubqueryExpression::Copy() const {
   auto parser_select = std::make_unique<SelectStatement>(std::move(select_columns), subselect_->IsSelectDistinct(),
                                                          subselect_->GetSelectTable()->Copy(),
                                                          subselect_->GetSelectCondition(), std::move(group_by),
-                                                         std::move(order_by), std::move(limit), std::move(with_copy));
+                                                         std::move(order_by), std::move(limit), std::move(with_copy),
+                                                         subselect_->IsLateral());
   auto expr = std::make_unique<SubqueryExpression>(std::move(parser_select));
   expr->SetMutableStateForCopy(*this);
   return expr;

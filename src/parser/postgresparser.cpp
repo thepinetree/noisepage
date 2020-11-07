@@ -751,7 +751,8 @@ std::unique_ptr<AbstractExpression> PostgresParser::ValueTransform(ParseResult *
   return result;
 }
 
-std::unique_ptr<SelectStatement> PostgresParser::SelectTransform(ParseResult *parse_result, SelectStmt *root) {
+std::unique_ptr<SelectStatement> PostgresParser::SelectTransform(ParseResult *parse_result, SelectStmt *root,
+                                                                 bool lateral) {
   std::unique_ptr<SelectStatement> result;
 
   switch (root->op_) {
@@ -776,11 +777,11 @@ std::unique_ptr<SelectStatement> PostgresParser::SelectTransform(ParseResult *pa
 
       result = std::make_unique<SelectStatement>(std::move(target), select_distinct, std::move(from), where,
                                                  std::move(groupby), std::move(orderby), std::move(limit_desc),
-                                                 std::move(with));
+                                                 std::move(with), lateral);
       break;
     }
     case SETOP_UNION: {
-      result = SelectTransform(parse_result, root->larg_);
+      result = SelectTransform(parse_result, root->larg_, lateral);
       result->SetUnionSelect(SelectTransform(parse_result, root->rarg_));
       break;
     }
@@ -1083,7 +1084,7 @@ std::unique_ptr<TableRef> PostgresParser::RangeVarTransform(ParseResult *parse_r
 
 // Postgres.RangeSubselect -> noisepage.TableRef
 std::unique_ptr<TableRef> PostgresParser::RangeSubselectTransform(ParseResult *parse_result, RangeSubselect *root) {
-  auto select = SelectTransform(parse_result, reinterpret_cast<SelectStmt *>(root->subquery_));
+  auto select = SelectTransform(parse_result, reinterpret_cast<SelectStmt *>(root->subquery_), root->lateral_);
   if (select == nullptr) {
     return nullptr;
   }

@@ -218,6 +218,8 @@ class TableRef {
    */
   void Accept(common::ManagedPointer<binder::SqlNodeVisitor> v) { v->Visit(common::ManagedPointer(this)); }
 
+  void SetServesLateral();
+
   /** @return table reference type*/
   TableReferenceType GetTableReferenceType() { return type_; }
 
@@ -257,6 +259,8 @@ class TableRef {
 
   /** @return join */
   common::ManagedPointer<JoinDefinition> GetJoin() { return common::ManagedPointer(join_); }
+
+  bool IsLateral() const;
 
   /**
    * @return the hashed value of this table ref object

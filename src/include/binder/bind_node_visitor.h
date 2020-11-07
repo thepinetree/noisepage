@@ -98,6 +98,7 @@ class BindNodeVisitor final : public SqlNodeVisitor {
   std::unique_ptr<BinderSherpa> sherpa_;
   /** Current context of the query or subquery */
   common::ManagedPointer<BinderContext> context_ = nullptr;
+  std::vector<BinderContext> lateral_contexts_;
 
   /** Catalog accessor */
   const common::ManagedPointer<catalog::CatalogAccessor> catalog_accessor_;

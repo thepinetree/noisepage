@@ -112,7 +112,8 @@ class PostgresParser {
   static std::unique_ptr<AbstractExpression> ValueTransform(ParseResult *parse_result, value val);
 
   // SELECT statements
-  static std::unique_ptr<SelectStatement> SelectTransform(ParseResult *parse_result, SelectStmt *root);
+  static std::unique_ptr<SelectStatement> SelectTransform(ParseResult *parse_result, SelectStmt *root,
+                                                          bool lateral = false);
   // SELECT helpers
   static std::vector<common::ManagedPointer<AbstractExpression>> TargetTransform(ParseResult *parse_result, List *root);
   static std::unique_ptr<TableRef> FromTransform(ParseResult *parse_result, SelectStmt *select_root);

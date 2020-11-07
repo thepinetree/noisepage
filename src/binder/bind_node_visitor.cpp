@@ -870,6 +870,8 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
   SqlNodeVisitor::Visit(node);
   InitTableRef(node);
   ValidateDatabaseName(node->GetDatabaseName());
+  BinderContext context(context_);
+  context_ = common::ManagedPointer(&context);
 
   if (node->GetSelect() != nullptr) {
     if (node->GetAlias().empty())
@@ -891,8 +893,33 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
     node->GetJoin()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
   } else if (!node->GetList().empty()) {
     // Multiple table
-    for (auto &table : node->GetList())
+    bool serving_lateral = false;
+    auto list = node->GetList();
+    for(auto it = list.rbegin(); it != list.rend(); ++it){
+      common::ManagedPointer<parser::TableRef> table = *it;
+      if(serving_lateral) {
+        table->SetServesLateral();
+      }
+      serving_lateral |= table->GetSelect() != nullptr && table->GetSelect()->IsLateral();
+    }
+
+    auto precontext = context_;
+    auto lateralcontext = context_;
+    for (auto &table : node->GetList()) {
+      if(table->IsLateral()){
+        context_ = lateralcontext;
+      }
       table->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
+
+      if(serving_lateral) {
+        lateral_contexts_.back().SetUpperContext(lateralcontext);
+        lateralcontext = common::ManagedPointer(&lateral_contexts_.back());
+      }
+      context_ = precontext;
+    }
+    lateral_contexts_.clear();
+
+
   } else {
     // Single table
     if (catalog_accessor_->GetTableOid(node->GetTableName()) == catalog::INVALID_TABLE_OID) {
@@ -908,6 +935,11 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
       context_->AddRegularTable(catalog_accessor_, node, db_oid_);
     }
   }
+
+  if(node->GetSelect() != nullptr && node->GetSelect()->serves_lateral_){
+    lateral_contexts_.push_back(context);
+  }
+  context_ = context_->GetUpperContext();
 }
 
 void BindNodeVisitor::UnifyOrderByExpression(

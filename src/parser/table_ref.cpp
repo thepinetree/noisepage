@@ -87,6 +87,23 @@ std::unique_ptr<JoinDefinition> JoinDefinition::Copy() {
   return std::make_unique<JoinDefinition>(type_, left_->Copy(), right_->Copy(), condition_);
 }
 
+bool TableRef::IsLateral() const {
+  return select_ != nullptr && select_->IsLateral();
+}
+
+void TableRef::SetServesLateral() {
+  if(GetSelect() != nullptr){
+    GetSelect()->SetServesLateral();
+    return;
+  }
+
+  if(GetJoin() != nullptr){
+    auto join = GetJoin();
+    join->GetLeftTable()->SetServesLateral();
+    join->GetRightTable()->SetServesLateral();
+  }
+}
+
 nlohmann::json TableRef::ToJson() const {
   nlohmann::json j;
   j["type"] = type_;

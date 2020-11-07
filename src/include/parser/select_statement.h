@@ -333,7 +333,8 @@ class SelectStatement : public SQLStatement {
   SelectStatement(std::vector<common::ManagedPointer<AbstractExpression>> select, bool select_distinct,
                   std::unique_ptr<TableRef> from, common::ManagedPointer<AbstractExpression> where,
                   std::unique_ptr<GroupByDescription> group_by, std::unique_ptr<OrderByDescription> order_by,
-                  std::unique_ptr<LimitDescription> limit, std::vector<std::unique_ptr<TableRef>> &&with)
+                  std::unique_ptr<LimitDescription> limit, std::vector<std::unique_ptr<TableRef>> &&with,
+                  bool lateral)
       : SQLStatement(StatementType::SELECT),
         select_(std::move(select)),
         select_distinct_(select_distinct),
@@ -343,7 +344,8 @@ class SelectStatement : public SQLStatement {
         order_by_(std::move(order_by)),
         limit_(std::move(limit)),
         union_select_(nullptr),
-        with_table_(std::move(with)) {}
+        with_table_(std::move(with)),
+        lateral_(lateral) {}
 
   /** Default constructor for deserialization. */
   SelectStatement() = default;
@@ -400,6 +402,14 @@ class SelectStatement : public SQLStatement {
     return common::ManagedPointer<SelectStatement>(union_select_);
   }
 
+  bool IsLateral() {
+    return lateral_;
+  }
+
+  void SetServesLateral() {
+    serves_lateral_ = true;
+  }
+
   /**
    * @return the hashed value of this select statement
    */
@@ -437,6 +447,8 @@ class SelectStatement : public SQLStatement {
   std::unique_ptr<SelectStatement> union_select_;
   int depth_ = -1;
   std::vector<std::unique_ptr<TableRef>> with_table_;
+  bool serves_lateral_{false};
+  bool lateral_;
 
   /** @param select List of select columns */
   void SetSelectColumns(std::vector<common::ManagedPointer<AbstractExpression>> select) { select_ = std::move(select); }
