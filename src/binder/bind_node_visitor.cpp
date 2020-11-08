@@ -877,6 +877,10 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
 
     // Save the previous context
     auto pre_context = context_;
+    BinderContext context(nullptr);
+    if(!node->IsLateral()) {
+      context_ = common::ManagedPointer(&context);
+    }
     node->GetSelect()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
 
     // TODO(WAN): who exactly should save and restore contexts? Restore the previous level context
