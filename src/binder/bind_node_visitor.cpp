@@ -870,8 +870,6 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
   SqlNodeVisitor::Visit(node);
   InitTableRef(node);
   ValidateDatabaseName(node->GetDatabaseName());
-  BinderContext context(context_);
-  context_ = common::ManagedPointer(&context);
 
   if (node->GetSelect() != nullptr) {
     if (node->GetAlias().empty())
@@ -967,9 +965,8 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
   }
 
   if(node->GetSelect() != nullptr && node->GetSelect()->serves_lateral_){
-    lateral_contexts_.push_back(context);
+    lateral_contexts_.push_back(*context_);
   }
-  context_ = context_->GetUpperContext();
 }
 
 void BindNodeVisitor::UnifyOrderByExpression(

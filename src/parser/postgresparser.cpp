@@ -237,8 +237,6 @@ std::unique_ptr<AbstractExpression> PostgresParser::ExprTransform(ParseResult *p
   }
   if (alias != nullptr) {
     expr->SetAlias(parser::AliasType(alias, reinterpret_cast<size_t>(reinterpret_cast<void *>(expr.get()))));
-  } else {
-    expr->SetAlias(parser::AliasType("?column?", reinterpret_cast<size_t>(reinterpret_cast<void *>(expr.get()))));
   }
   return expr;
 }
