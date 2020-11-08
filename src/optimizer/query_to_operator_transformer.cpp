@@ -369,11 +369,20 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::TableRef> 
     node->GetList().at(0)->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
     auto prev_expr = std::move(output_expr_);
     // Build a left deep join tree
+    std::vector<catalog::table_oid_t> lateral_oids;
+    if(node->GetList().at(0)->GetJoin() == nullptr){
+      lateral_oids.push_back(node->GetList().at(0)->GetTableOid());
+    }
     for (size_t i = 1; i < node->GetList().size(); i++) {
       // Start at i = 1 due to the Accept() above
       auto list_elem = node->GetList().at(i);
 
       list_elem->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
+      if(node->IsLateral()){
+        // add node's table oid to vector
+        // add vector to join expr
+        // profit??
+      }
       auto join_expr =
           std::make_unique<OperatorNode>(LogicalInnerJoin::Make().RegisterWithTxnContext(txn_context),
                                          std::vector<std::unique_ptr<AbstractOptimizerNode>>{}, txn_context);
@@ -381,6 +390,10 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::TableRef> 
       join_expr->PushChild(std::move(output_expr_));
       NOISEPAGE_ASSERT(join_expr->GetChildren().size() == 2, "The join expr should have exactly 2 elements");
       prev_expr = std::move(join_expr);
+
+      if(list_elem->GetJoin() == nullptr){
+        lateral_oids.push_back(list_elem->GetTableOid());
+      }
     }
     output_expr_ = std::move(prev_expr);
   } else {

@@ -92,6 +92,7 @@ bool TableRef::IsLateral() const {
 }
 
 void TableRef::SetServesLateral() {
+  serves_lateral_ = true;
   if(GetSelect() != nullptr){
     GetSelect()->SetServesLateral();
     return;

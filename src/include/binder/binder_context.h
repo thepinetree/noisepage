@@ -43,6 +43,9 @@ class BinderContext {
   /** TableMetadata is currently a tuple of database oid, table oid, and schema of the table. */
   using TableMetadata = std::tuple<catalog::db_oid_t, catalog::table_oid_t, catalog::Schema>;
 
+  using NestedTableMetadata = std::pair<catalog::table_oid_t,
+                                        std::unordered_map<parser::AliasType, type::TypeId, parser::AliasType::HashKey>>;
+
   /**
    * Initializes the BinderContext object which has an empty regular table map and an empty nested table map.
    * It also takes in a pointer to the binder context's upper context, and the constructor determines the depth of the
@@ -80,7 +83,7 @@ class BinderContext {
    * @param select_list List of select columns
    * @param col_aliases Aliases to assign to each column in select_list for the temp nested table schema
    */
-  void AddNestedTable(const std::string &table_alias,
+  void AddNestedTable(const std::string &table_alias, catalog::table_oid_t table_oid,
                       const std::vector<common::ManagedPointer<parser::AbstractExpression>> &select_list,
                       const std::vector<parser::AliasType> &col_aliases);
 
@@ -231,7 +234,7 @@ class BinderContext {
   /**
    * Map the table alias to maps which is from table alias to the value type
    */
-  std::unordered_map<std::string, std::unordered_map<parser::AliasType, type::TypeId, parser::AliasType::HashKey>>
+  std::unordered_map<std::string, NestedTableMetadata>
       nested_table_alias_map_;
 
   /**

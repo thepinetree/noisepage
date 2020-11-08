@@ -105,6 +105,8 @@ class BindNodeVisitor final : public SqlNodeVisitor {
   const catalog::db_oid_t db_oid_;
   std::vector<std::string> cte_table_name_;
 
+  size_t oid_counter_{0};
+
   static void InitTableRef(common::ManagedPointer<parser::TableRef> node);
 
   /**

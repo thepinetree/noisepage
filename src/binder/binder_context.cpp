@@ -87,10 +87,11 @@ void BinderContext::AddNewTable(const std::string &new_table_name,
   for (auto &col : new_columns) {
     column_alias_map[parser::AliasType(col->GetColumnName())] = col->GetValueType();
   }
-  nested_table_alias_map_[new_table_name] = column_alias_map;
+  nested_table_alias_map_[new_table_name] = NestedTableMetadata(catalog::MakeTempOid
+      <catalog::table_oid_t>(nested_table_alias_map_.size()), column_alias_map);
 }
 
-void BinderContext::AddNestedTable(const std::string &table_alias,
+void BinderContext::AddNestedTable(const std::string &table_alias, catalog::table_oid_t table_oid,
                                    const std::vector<common::ManagedPointer<parser::AbstractExpression>> &select_list,
                                    const std::vector<parser::AliasType> &col_aliases) {
   if (regular_table_alias_map_.find(table_alias) != regular_table_alias_map_.end() ||
@@ -119,7 +120,9 @@ void BinderContext::AddNestedTable(const std::string &table_alias,
     column_alias_map[alias] = expr->GetReturnValueType();
     i++;
   }
-  nested_table_alias_map_[table_alias] = column_alias_map;
+  NOISEPAGE_ASSERT(catalog::IsTempOid(table_oid), "Not a temporary oid passed in for nested table");
+  nested_table_alias_map_[table_alias] = NestedTableMetadata(table_oid,
+      column_alias_map);
 }
 
 void BinderContext::AddCTETable(const std::string &table_name,
@@ -134,7 +137,9 @@ void BinderContext::AddCTETable(const std::string &table_name,
     nested_column_mappings[col_aliases[i]] = select_list[i]->GetReturnValueType();
   }
 
-  nested_table_alias_map_[table_name] = nested_column_mappings;
+  NOISEPAGE_ASSERT(col_aliases.size() > 0 && col_aliases[0].IsSerialNoValid(), "Invalid serial number on a nested columb alias");
+  nested_table_alias_map_[table_name] = NestedTableMetadata(catalog::MakeTempOid<catalog::table_oid_t>(col_aliases[0].GetSerialNo()),
+      nested_column_mappings);
 }
 
 void BinderContext::AddCTETableAlias(const std::string &cte_table_name, const std::string &table_alias) {
@@ -227,19 +232,21 @@ bool BinderContext::SetColumnPosTuple(common::ManagedPointer<parser::ColumnValue
     }
     // Check nested table
     for (auto &entry : current_context->nested_table_alias_map_) {
-      auto iter = entry.second.find(alias_name);
-      bool get_match = iter != entry.second.end();
-      auto matches = std::count_if(entry.second.begin(), entry.second.end(),
-                                   [=](auto it) { return entry.second.key_eq()(it.first, alias_name); });
+      auto &cols = entry.second.second;
+      auto iter = cols.find(alias_name);
+      bool get_match = iter != cols.end();
+      auto matches = std::count_if(cols.begin(), cols.end(),
+                                   [=](auto it) { return cols.key_eq()(it.first, alias_name); });
       if (get_match) {
         // if there is more than one match, then the requested alias name is ambiguous
         if (!find_matched && (matches == 1)) {
           // First match
           find_matched = true;
           expr->SetTableName(entry.first);
-          expr->SetReturnValueType(entry.second[alias_name]);
+          expr->SetReturnValueType(cols[alias_name]);
           expr->SetColumnName(col_name);
           expr->SetColumnOID(catalog::MakeTempOid<catalog::col_oid_t>(iter->first.GetSerialNo()));
+          expr->SetTableOID(entry.second.first);
         } else {
           throw BINDER_EXCEPTION(fmt::format("Ambiguous column name \"{}\"", col_name),
                                  common::ErrorCode::ERRCODE_AMBIGUOUS_COLUMN);
@@ -277,8 +284,9 @@ bool BinderContext::CheckNestedTableColumn(const std::string &alias, const std::
   while (current_context != nullptr) {
     auto iter = current_context->nested_table_alias_map_.find(alias);
     if (iter != current_context->nested_table_alias_map_.end()) {
-      auto col_iter = iter->second.find(parser::AliasType(col_name));
-      if (col_iter == iter->second.end()) {
+      auto &cols = iter->second.second;
+      auto col_iter = cols.find(parser::AliasType(col_name));
+      if (col_iter == cols.end()) {
         throw BINDER_EXCEPTION(fmt::format("Cannot find column \"{}\"", col_name),
                                common::ErrorCode::ERRCODE_UNDEFINED_COLUMN);
       }
@@ -287,6 +295,7 @@ bool BinderContext::CheckNestedTableColumn(const std::string &alias, const std::
       expr->SetColumnName(col_name);
       expr->SetTableName(alias);
       expr->SetColumnOID(catalog::MakeTempOid<catalog::col_oid_t>(col_iter->first.GetSerialNo()));
+      expr->SetTableOID(iter->second.first);
       return true;
     }
     current_context = current_context->GetUpperContext();
@@ -332,7 +341,7 @@ void BinderContext::GenerateAllColumnExpressions(
     // If a target is not specified, continue generating column value expressions
     for (auto &entry : nested_table_alias_map_) {
       auto &table_alias = entry.first;
-      auto &cols = entry.second;
+      auto &cols = entry.second.second;
 
       // TODO(tanujnay112) make the nested_table_alias_map hold ordered maps
       // this is to order the generated columns in the same order that they appear in the nested table

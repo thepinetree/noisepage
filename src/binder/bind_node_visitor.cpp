@@ -886,11 +886,32 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
 
     // TableRef is not a CTE
     if (node->GetCteType() == parser::CTEType::INVALID) {
-      context_->AddNestedTable(node->GetAlias(), node->GetSelect()->GetSelectColumns(), {});
+      auto table_oid = catalog::MakeTempOid<catalog::table_oid_t>(++oid_counter_);
+      context_->AddNestedTable(node->GetAlias(), table_oid, node->GetSelect()->GetSelectColumns(), {});
+      node->SetTableOid(table_oid);
     }
   } else if (node->GetJoin() != nullptr) {
     // Join
+    auto table_oid = catalog::MakeTempOid<catalog::table_oid_t>(++oid_counter_);
+//    node->GetJoin()->GetLeftTable()->SetServesLateral();
+//    node->GetJoin()->GetRightTable()->SetServesLateral();
+
     node->GetJoin()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
+//    parser::TableStarExpression left_star_expr(node->GetJoin()->GetLeftTable()->GetAlias());
+//    parser::TableStarExpression right_star_expr(node->GetJoin()->GetRightTable()->GetAlias());
+
+//    std::vector<common::ManagedPointer<parser::AbstractExpression>> columns;
+//    auto right_context = lateral_contexts_.back();
+//    lateral_contexts_.pop_back();
+//    auto left_context = lateral_contexts_.back();
+//    lateral_contexts_.pop_back();
+//    left_context.GenerateAllColumnExpressions(common::ManagedPointer(&left_star_expr), sherpa_->GetParseResult(),
+//                                           common::ManagedPointer(&columns));
+//    right_context.GenerateAllColumnExpressions(common::ManagedPointer(&right_star_expr), sherpa_->GetParseResult(),
+//                                           common::ManagedPointer(&columns));
+
+//    context_->AddNestedTable(node->GetAlias(), table_oid, columns, {});
+    node->SetTableOid(table_oid);
   } else if (!node->GetList().empty()) {
     // Multiple table
     bool serving_lateral = false;
@@ -917,16 +938,24 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
       }
       context_ = precontext;
     }
-    lateral_contexts_.clear();
 
+    if(serving_lateral) {
+      for (auto &table : node->GetList()) {
+        if(table->GetServesLateral()){
+          lateral_contexts_.pop_back();
+        }
+      }
+    }
 
   } else {
     // Single table
-    if (catalog_accessor_->GetTableOid(node->GetTableName()) == catalog::INVALID_TABLE_OID) {
+    auto table_oid = catalog_accessor_->GetTableOid(node->GetTableName());
+    if (table_oid == catalog::INVALID_TABLE_OID) {
       // table not in catalog, check if table referred is the cte table
       if (std::find(cte_table_name_.begin(), cte_table_name_.end(), node->GetTableName()) != cte_table_name_.end()) {
         // copy cte table's schema for this alias
         context_->AddCTETableAlias(node->GetTableName(), node->GetAlias());
+        table_oid = catalog::MakeTempOid<catalog::table_oid_t>(++oid_counter_);
       } else {
         throw BINDER_EXCEPTION(fmt::format("relation \"{}\" does not exist", node->GetTableName()),
                                common::ErrorCode::ERRCODE_UNDEFINED_TABLE);
@@ -934,6 +963,7 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
     } else {
       context_->AddRegularTable(catalog_accessor_, node, db_oid_);
     }
+    node->SetTableOid(table_oid);
   }
 
   if(node->GetSelect() != nullptr && node->GetSelect()->serves_lateral_){

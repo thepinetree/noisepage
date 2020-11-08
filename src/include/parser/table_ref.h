@@ -220,6 +220,8 @@ class TableRef {
 
   void SetServesLateral();
 
+  bool GetServesLateral() const { return serves_lateral_; }
+
   /** @return table reference type*/
   TableReferenceType GetTableReferenceType() { return type_; }
 
@@ -259,6 +261,10 @@ class TableRef {
 
   /** @return join */
   common::ManagedPointer<JoinDefinition> GetJoin() { return common::ManagedPointer(join_); }
+
+  catalog::table_oid_t GetTableOid() const { return table_oid_; }
+
+  void SetTableOid(catalog::table_oid_t table_oid) { table_oid_ = table_oid; }
 
   bool IsLateral() const;
 
@@ -308,6 +314,10 @@ class TableRef {
 
   std::vector<std::unique_ptr<TableRef>> list_;
   std::unique_ptr<JoinDefinition> join_;
+
+  catalog::table_oid_t table_oid_;
+
+  bool serves_lateral_{false};
 };
 
 DEFINE_JSON_HEADER_DECLARATIONS(TableRef);
