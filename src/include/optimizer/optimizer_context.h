@@ -223,6 +223,32 @@ class OptimizerContext {
     NOISEPAGE_ASSERT(ret, "Root expr should always be inserted");
   }
 
+  void AddLateralEntries(const std::vector<catalog::table_oid_t> &table_ids, ExprMap &&expr_map) {
+    for(auto id : table_ids){
+      lateral_waiters_[id] = std::make_pair<ExprMap, std::vector<parser::LateralValueExpression*>>(std::move(expr_map), {});
+    }
+  }
+
+  void AddLateralWaiter(catalog::table_oid_t table, parser::LateralValueExpression *expr) {
+    auto iter = lateral_waiters_.find(table);
+    NOISEPAGE_ASSERT(iter != lateral_waiters_.end(), "Asked for lateral table_oid that isn't available");
+    iter->second.second.push_back(expr);
+  }
+
+  const std::vector<parser::LateralValueExpression*> &GetLateralWaiters(catalog::table_oid_t oid) const {
+    return lateral_waiters_.find(oid)->second.second;
+  }
+
+  LateralWaitersSet &GetLateralWaitersSet() {
+    return lateral_waiters_;
+  }
+
+  void ClearLateralWaiters(const std::vector<catalog::table_oid_t> &table_ids) {
+    for(auto id : table_ids){
+      lateral_waiters_.erase(id);
+    }
+  }
+
  private:
   Memo memo_;
   RuleSet rule_set_;
@@ -233,6 +259,7 @@ class OptimizerContext {
   transaction::TransactionContext *txn_{};
   std::vector<OptimizationContext *> track_list_;
   std::unordered_map<catalog::table_oid_t, catalog::Schema> cte_schemas_;
+  LateralWaitersSet lateral_waiters_;
 };
 
 }  // namespace optimizer

@@ -353,9 +353,10 @@ bool InnerIndexJoin::operator==(const BaseOperatorNodeContents &r) {
 //===--------------------------------------------------------------------===//
 BaseOperatorNodeContents *InnerNLJoin::Copy() const { return new InnerNLJoin(*this); }
 
-Operator InnerNLJoin::Make(std::vector<AnnotatedExpression> &&join_predicates) {
+Operator InnerNLJoin::Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> &&lateral_oids) {
   auto *join = new InnerNLJoin();
   join->join_predicates_ = std::move(join_predicates);
+  join->lateral_oids_ = std::move(lateral_oids);
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
@@ -367,6 +368,10 @@ common::hash_t InnerNLJoin::Hash() const {
       hash = common::HashUtil::SumHashes(hash, expr->Hash());
     else
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
+  }
+
+  for(auto oid : lateral_oids_){
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
   }
   return hash;
 }

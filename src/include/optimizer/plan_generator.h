@@ -51,7 +51,7 @@ class PlanGenerator : public OperatorVisitor {
   /**
    * Constructor
    */
-  PlanGenerator();
+  PlanGenerator(LateralWaitersSet &laterals);
 
   /**
    * Converts an operator node into a plan node.
@@ -419,6 +419,9 @@ class PlanGenerator : public OperatorVisitor {
    * Transaction Context executing under
    */
   transaction::TransactionContext *txn_;
+
+  // for laterals, maps from temp_oid to plan node
+  LateralWaitersSet &laterals_;
 };
 
 }  // namespace optimizer

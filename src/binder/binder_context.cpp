@@ -14,6 +14,7 @@
 #include "common/error/exception.h"
 #include "parser/expression/column_value_expression.h"
 #include "parser/expression/constant_value_expression.h"
+#include "parser/expression/lateral_value_expression.h"
 #include "parser/expression/table_star_expression.h"
 #include "parser/postgresparser.h"
 #include "parser/table_ref.h"
@@ -309,6 +310,7 @@ void BinderContext::GenerateAllColumnExpressions(
     common::ManagedPointer<std::vector<common::ManagedPointer<parser::AbstractExpression>>> exprs) {
   bool target_specified = table_star->IsTargetTableSpecified();
   bool target_found = false;
+
   for (auto &entry : regular_table_alias_list_) {
     // If a target is specified, check that the entry matches the target table
     if (target_specified && entry != table_star->GetTargetTable()) {
@@ -334,6 +336,63 @@ void BinderContext::GenerateAllColumnExpressions(
       parse_result->AddExpression(std::move(unique_tv_expr));
       auto new_tv_expr = common::ManagedPointer(parse_result->GetExpressions().back());
       exprs->push_back(new_tv_expr);
+    }
+  }
+
+  if(target_specified){
+    auto current_context = common::ManagedPointer(this);
+    while(current_context != nullptr) {
+      auto &nested_map = current_context->nested_table_alias_map_;
+      auto iter = nested_map.find(table_star->GetTargetTable());
+      if (iter != nested_map.end()) {
+        auto &table_alias = table_star->GetTargetTable();
+        auto &cols = iter->second.second;
+
+        // TODO(tanujnay112) make the nested_table_alias_map hold ordered maps
+        // this is to order the generated columns in the same order that they appear in the nested table
+        // the serial number of their aliases signifies this ordering
+        std::vector<std::pair<parser::AliasType, type::TypeId>> cols_vector(cols.begin(), cols.end());
+        std::sort(cols_vector.begin(), cols_vector.end(),
+                  [](const std::pair<parser::AliasType, type::TypeId> &A,
+                     const std::pair<parser::AliasType, type::TypeId> &B) {
+                    return A.first.GetSerialNo() < B.first.GetSerialNo();
+                  });
+//        if(current_context == this) {
+          for (auto &col_entry : cols_vector) {
+            auto tv_expr =
+                new parser::ColumnValueExpression(std::string(table_alias), std::string(col_entry.first.GetName()));
+            tv_expr->SetReturnValueType(col_entry.second);
+            tv_expr->DeriveExpressionName();
+            tv_expr->SetColumnOID(catalog::MakeTempOid<catalog::col_oid_t>(col_entry.first.GetSerialNo()));
+            tv_expr->SetDepth(depth_);
+            tv_expr->SetTableOID(iter->second.first);
+
+            auto unique_tv_expr =
+                std::unique_ptr<parser::AbstractExpression>(reinterpret_cast<parser::AbstractExpression *>(tv_expr));
+            parse_result->AddExpression(std::move(unique_tv_expr));
+            auto new_tv_expr = common::ManagedPointer(parse_result->GetExpressions().back());
+            exprs->push_back(new_tv_expr);
+
+//            if(current_context != this) {
+//              tv_expr->MarkLateral();
+//              auto lateral_expr =
+//                  new parser::LateralValueExpression(iter->second.first,
+//                                                     catalog::MakeTempOid<catalog::col_oid_t>(col_entry.first.GetSerialNo()),
+//                                                     col_entry.second, nullptr);
+//            tv_expr->DeriveExpressionName();
+//            tv_expr->SetDepth(depth_);
+
+//              auto unique_lateral_expr =
+//                  std::unique_ptr<parser::AbstractExpression>(reinterpret_cast<parser::AbstractExpression *>(lateral_expr));
+//              parse_result->AddExpression(std::move(unique_lateral_expr));
+
+            // All derived columns do not have bound oids, thus keep them as INVALID_OIDs
+//            tv_expr->SetLateralExpression(lateral_expr);
+//          }
+        }
+        return;
+      }
+      current_context = current_context->GetUpperContext();
     }
   }
 
@@ -373,6 +432,11 @@ void BinderContext::GenerateAllColumnExpressions(
     throw BINDER_EXCEPTION(fmt::format("Invalid table reference {}", table_star->GetTargetTable()),
                            common::ErrorCode::ERRCODE_UNDEFINED_TABLE);
   }
+}
+
+void BinderContext::RemoveColumnAllExpressions(common::ManagedPointer<parser::TableStarExpression> table_star){
+  NOISEPAGE_ASSERT(table_star->IsTargetTableSpecified(), "Can't use this remove method without a target");
+  nested_table_alias_map_.erase(table_star->GetTargetTable());
 }
 
 common::ManagedPointer<BinderContext::TableMetadata> BinderContext::GetTableMapping(const std::string &table_name) {

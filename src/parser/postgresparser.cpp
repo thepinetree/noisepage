@@ -837,6 +837,14 @@ std::unique_ptr<TableRef> PostgresParser::FromTransform(ParseResult *parse_resul
           refs.emplace_back(RangeSubselectTransform(parse_result, reinterpret_cast<RangeSubselect *>(node)));
           break;
         }
+        case T_JoinExpr: {
+          auto join = JoinTransform(parse_result, reinterpret_cast<JoinExpr *>(node));
+          if (join != nullptr) {
+            refs.emplace_back(TableRef::CreateTableRefByJoin(std::move(join)));
+            break;
+          }
+          // fall through and fail
+        }
         default: {
           PARSER_LOG_AND_THROW("FromTransform", "FromType", node->type);
         }

@@ -11,6 +11,7 @@
 #include "common/managed_pointer.h"
 #include "common/strong_typedef.h"
 #include "parser/expression/abstract_expression.h"
+#include "parser/expression/lateral_value_expression.h"
 #include "parser/expression_defs.h"
 
 namespace noisepage::optimizer {
@@ -258,5 +259,8 @@ using ExprMap =
  * (checking whether an AbstractExpression already exists in a collection).
  */
 using ExprSet = std::unordered_set<common::ManagedPointer<parser::AbstractExpression>, ExprHasher, ExprEqualCmp>;
+
+using LateralWaitersSet = std::unordered_map<catalog::table_oid_t,
+                                             std::pair<ExprMap, std::vector<parser::LateralValueExpression*>>>;
 
 }  // namespace noisepage::optimizer

@@ -566,10 +566,10 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::SelectStatement> node
 
     if (select_element->GetExpressionType() == parser::ExpressionType::TABLE_STAR) {
       // If there is a STAR expression but there is no corresponding table specified, Postgres throws a syntax error.
-      if (node->GetSelectTable() == nullptr) {
-        throw BINDER_EXCEPTION("SELECT * with no tables specified is not valid",
-                               common::ErrorCode::ERRCODE_SYNTAX_ERROR);
-      }
+//      if (node->GetSelectTable() == nullptr) {
+//        throw BINDER_EXCEPTION("SELECT * with no tables specified is not valid",
+//                               common::ErrorCode::ERRCODE_SYNTAX_ERROR);
+//      }
       context_->GenerateAllColumnExpressions(select_element.CastManagedPointerTo<parser::TableStarExpression>(),
                                              sherpa_->GetParseResult(), common::ManagedPointer(&new_select_list));
       continue;
@@ -721,6 +721,7 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::ColumnValueExpression
                                common::ErrorCode::ERRCODE_UNDEFINED_TABLE);
       }
     }
+
   }
 
   // The schema is authoritative on what the type of this ColumnValueExpression should be, UNLESS
@@ -898,56 +899,69 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
 //    node->GetJoin()->GetLeftTable()->SetServesLateral();
 //    node->GetJoin()->GetRightTable()->SetServesLateral();
 
+    // make a new context
     node->GetJoin()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
-//    parser::TableStarExpression left_star_expr(node->GetJoin()->GetLeftTable()->GetAlias());
-//    parser::TableStarExpression right_star_expr(node->GetJoin()->GetRightTable()->GetAlias());
+    parser::TableStarExpression left_star(node->GetJoin()->GetLeftTable()->GetAlias());
+    parser::TableStarExpression right_star(node->GetJoin()->GetRightTable()->GetAlias());
+    std::vector<common::ManagedPointer<parser::AbstractExpression>> columns;
+    context_->GenerateAllColumnExpressions(common::ManagedPointer(&left_star), sherpa_->GetParseResult(), common::ManagedPointer(&columns));
+    context_->RemoveColumnAllExpressions(common::ManagedPointer(&left_star));
+    context_->AddNestedTable(left_star.GetTargetTable(), table_oid, columns, {});
 
-//    std::vector<common::ManagedPointer<parser::AbstractExpression>> columns;
-//    auto right_context = lateral_contexts_.back();
-//    lateral_contexts_.pop_back();
-//    auto left_context = lateral_contexts_.back();
-//    lateral_contexts_.pop_back();
-//    left_context.GenerateAllColumnExpressions(common::ManagedPointer(&left_star_expr), sherpa_->GetParseResult(),
-//                                           common::ManagedPointer(&columns));
-//    right_context.GenerateAllColumnExpressions(common::ManagedPointer(&right_star_expr), sherpa_->GetParseResult(),
-//                                           common::ManagedPointer(&columns));
+    columns.clear();
 
-//    context_->AddNestedTable(node->GetAlias(), table_oid, columns, {});
+    context_->GenerateAllColumnExpressions(common::ManagedPointer(&right_star), sherpa_->GetParseResult(), common::ManagedPointer(&columns));
+    context_->RemoveColumnAllExpressions(common::ManagedPointer(&right_star));
+    context_->AddNestedTable(right_star.GetTargetTable(), table_oid, columns, {});
+
+//    std::vector<common::ManagedPointer<parser::AbstractExpression>> new_columns;
+//    for(auto tve : columns){
+//      auto cve = tve.CastManagedPointerTo<parser::ColumnValueExpression>();
+//      parser::ColumnValueExpression *new_col = new parser::ColumnValueExpression(
+//          node->GetAlias(), cve->GetColumnName(), cve->GetDatabaseOid(), cve->GetTableOid(), cve->GetColumnOid(),
+//          cve->GetReturnValueType());
+//      new_columns.push_back(common::ManagedPointer(reinterpret_cast<parser::AbstractExpression*>(new_col)));
+//    }
+//    context_->AddNestedTable(node->GetAlias(), table_oid, new_columns, {});
+//
+//    context_->RemoveColumnAllExpressions(common::ManagedPointer(&left_star));
+//    context_->RemoveColumnAllExpressions(common::ManagedPointer(&right_star));
+
     node->SetTableOid(table_oid);
   } else if (!node->GetList().empty()) {
     // Multiple table
-    bool serving_lateral = false;
+//    bool serving_lateral = false;
     auto list = node->GetList();
-    for(auto it = list.rbegin(); it != list.rend(); ++it){
-      common::ManagedPointer<parser::TableRef> table = *it;
-      if(serving_lateral) {
-        table->SetServesLateral();
-      }
-      serving_lateral |= table->GetSelect() != nullptr && table->GetSelect()->IsLateral();
-    }
+//    for(auto it = list.rbegin(); it != list.rend(); ++it){
+//      common::ManagedPointer<parser::TableRef> table = *it;
+//      if(serving_lateral) {
+//        table->SetServesLateral();
+//      }
+//      serving_lateral |= table->GetSelect() != nullptr && table->GetSelect()->IsLateral();
+//    }
 
-    auto precontext = context_;
-    auto lateralcontext = context_;
+//    auto precontext = context_;
+//    auto lateralcontext = context_;
     for (auto &table : node->GetList()) {
-      if(table->IsLateral()){
-        context_ = lateralcontext;
-      }
+//      if(table->IsLateral()){
+//        context_ = lateralcontext;
+//      }
       table->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
 
-      if(serving_lateral) {
-        lateral_contexts_.back().SetUpperContext(lateralcontext);
-        lateralcontext = common::ManagedPointer(&lateral_contexts_.back());
-      }
-      context_ = precontext;
+//      if(serving_lateral) {
+//        lateral_contexts_.back().SetUpperContext(lateralcontext);
+//        lateralcontext = common::ManagedPointer(&lateral_contexts_.back());
+//      }
+//      context_ = precontext;
     }
 
-    if(serving_lateral) {
-      for (auto &table : node->GetList()) {
-        if(table->GetServesLateral()){
-          lateral_contexts_.pop_back();
-        }
-      }
-    }
+//    if(serving_lateral) {
+//      for (auto &table : node->GetList()) {
+//        if(table->GetServesLateral()){
+//          lateral_contexts_.pop_back();
+//        }
+//      }
+//    }
 
   } else {
     // Single table

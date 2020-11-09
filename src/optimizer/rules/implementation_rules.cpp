@@ -566,8 +566,9 @@ void LogicalInnerJoinToPhysicalInnerNLJoin::Transform(common::ManagedPointer<Abs
   std::vector<std::unique_ptr<AbstractOptimizerNode>> child;
   child.emplace_back(children[0]->Copy());
   child.emplace_back(children[1]->Copy());
+  std::vector<catalog::table_oid_t> lateral_oids = inner_join->GetLateralOids();
   auto result = std::make_unique<OperatorNode>(
-      InnerNLJoin::Make(std::move(join_preds)).RegisterWithTxnContext(context->GetOptimizerContext()->GetTxn()),
+      InnerNLJoin::Make(std::move(join_preds), std::move(lateral_oids)).RegisterWithTxnContext(context->GetOptimizerContext()->GetTxn()),
       std::move(child), context->GetOptimizerContext()->GetTxn());
   transformed->emplace_back(std::move(result));
 }

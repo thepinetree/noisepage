@@ -110,7 +110,9 @@ void RewritePushImplicitFilterThroughJoin::Transform(common::ManagedPointer<Abst
     std::vector<std::unique_ptr<AbstractOptimizerNode>> c;
     c.emplace_back(std::move(left_branch));
     c.emplace_back(std::move(right_branch));
-    auto output = std::make_unique<OperatorNode>(LogicalInnerJoin::Make(std::move(join_predicates))
+    auto output = std::make_unique<OperatorNode>(LogicalInnerJoin::Make(std::move(join_predicates), join_op_expr->Contents()
+                                                                                                        ->GetContentsAs<LogicalInnerJoin>()
+                                                                                                            ->GetLateralOids())
                                                      .RegisterWithTxnContext(context->GetOptimizerContext()->GetTxn()),
                                                  std::move(c), context->GetOptimizerContext()->GetTxn());
     transformed->emplace_back(std::move(output));

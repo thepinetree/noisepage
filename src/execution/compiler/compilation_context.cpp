@@ -18,6 +18,7 @@
 #include "execution/compiler/expression/constant_translator.h"
 #include "execution/compiler/expression/derived_value_translator.h"
 #include "execution/compiler/expression/function_translator.h"
+#include "execution/compiler/expression/lateral_value_translator.h"
 #include "execution/compiler/expression/null_check_translator.h"
 #include "execution/compiler/expression/param_value_translator.h"
 #include "execution/compiler/expression/star_translator.h"
@@ -333,6 +334,11 @@ void CompilationContext::Prepare(const parser::AbstractExpression &expression) {
     case parser::ExpressionType::COLUMN_VALUE: {
       const auto &column_value = dynamic_cast<const parser::ColumnValueExpression &>(expression);
       translator = std::make_unique<ColumnValueTranslator>(column_value, this);
+      break;
+    }
+    case parser::ExpressionType::LATERAL_VALUE: {
+      const auto &lateral_value = dynamic_cast<const parser::LateralValueExpression &>(expression);
+      translator = std::make_unique<LateralValueTranslator>(lateral_value, this);
       break;
     }
     case parser::ExpressionType::COMPARE_EQUAL:

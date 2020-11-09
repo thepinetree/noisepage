@@ -543,6 +543,13 @@ Operator LogicalInnerJoin::Make(std::vector<AnnotatedExpression> &&join_predicat
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
+Operator LogicalInnerJoin::Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> lateral_oids) {
+  auto *join = new LogicalInnerJoin();
+  join->join_predicates_ = join_predicates;
+  join->lateral_oids_ = lateral_oids;
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
+}
+
 common::hash_t LogicalInnerJoin::Hash() const {
   common::hash_t hash = BaseOperatorNodeContents::Hash();
   for (auto &pred : join_predicates_) {
@@ -552,6 +559,10 @@ common::hash_t LogicalInnerJoin::Hash() const {
     } else {
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
     }
+  }
+
+  for(auto &oid : lateral_oids_) {
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
   }
   return hash;
 }

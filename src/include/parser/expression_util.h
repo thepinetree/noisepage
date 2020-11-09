@@ -18,6 +18,7 @@
 #include "parser/expression/constant_value_expression.h"
 #include "parser/expression/derived_value_expression.h"
 #include "parser/expression/function_expression.h"
+#include "parser/expression/lateral_value_expression.h"
 #include "parser/expression/operator_expression.h"
 #include "parser/expression/parameter_value_expression.h"
 
@@ -222,6 +223,20 @@ class ExpressionUtil {
       return nullptr;
     }
 
+//    if(expr->GetExpressionType() == ExpressionType::COLUMN_VALUE){
+//      auto cve = expr.CastManagedPointerTo<parser::ColumnValueExpression>();
+////      NOISEPAGE_ASSERT(lateral_map.find(cve->GetTableOid()) != lateral_map.end(), "Didn't find table oid in lateral map");
+//      auto iter = lateral_map.find(cve->GetTableOid());
+////      cve->SetSourcePlan(lateral_map.find(cve->GetTableOid())->second);
+//      if(iter != lateral_map.end()){
+//        auto lateral = std::make_unique<LateralValueExpression>(cve->GetTableOid(), catalog::col_oid_t(iter->second.first[expr]),
+//                                                                expr->GetReturnValueType(),
+//                                                        nullptr);
+//        iter->second.second.push_back(lateral.get());
+//        return std::move(lateral);
+//      }
+//    }
+
     std::vector<std::unique_ptr<AbstractExpression>> children;
     for (size_t i = 0; i < expr->GetChildrenSize(); i++) {
       auto child_expr = expr->GetChild(i);
@@ -241,7 +256,6 @@ class ExpressionUtil {
           did_insert = true;
           break;
         }
-
         tuple_idx++;
       }
 
@@ -386,17 +400,32 @@ class ExpressionUtil {
    * @returns Evaluated AbstractExpression
    */
   static std::unique_ptr<AbstractExpression> EvaluateExpression(const std::vector<optimizer::ExprMap> &expr_maps,
-                                                                common::ManagedPointer<AbstractExpression> expr) {
+                                                                common::ManagedPointer<AbstractExpression> expr,
+                                                                optimizer::LateralWaitersSet &lateral_map) {
     // To evaluate the return type, we need a bottom up approach.
     if (expr.Get() == nullptr) {
       return nullptr;
+    }
+
+    if(expr->GetExpressionType() == ExpressionType::COLUMN_VALUE){
+      auto cve = expr.CastManagedPointerTo<parser::ColumnValueExpression>();
+//      NOISEPAGE_ASSERT(lateral_map.find(cve->GetTableOid()) != lateral_map.end(), "Didn't find table oid in lateral map");
+      auto iter = lateral_map.find(cve->GetTableOid());
+//      cve->SetSourcePlan(lateral_map.find(cve->GetTableOid())->second);
+      if(iter != lateral_map.end()){
+        auto lateral = std::make_unique<LateralValueExpression>(cve->GetTableOid(), catalog::col_oid_t(iter->second.first[expr]),
+                                                                expr->GetReturnValueType(),
+                                                        nullptr);
+        iter->second.second.push_back(lateral.get());
+        return std::move(lateral);
+      }
     }
 
     // Evaluate all children and store new children pointers
     size_t children_size = expr->GetChildrenSize();
     std::vector<std::unique_ptr<AbstractExpression>> children;
     for (size_t i = 0; i < children_size; i++) {
-      children.push_back(EvaluateExpression(expr_maps, expr->GetChild(i)));
+      children.push_back(EvaluateExpression(expr_maps, expr->GetChild(i), lateral_map));
     }
 
     if (expr->GetExpressionType() == ExpressionType::COLUMN_VALUE) {
@@ -470,13 +499,13 @@ class ExpressionUtil {
       // Evaluate against WhenClause condition + result and store new
       std::vector<CaseExpression::WhenClause> clauses;
       for (size_t i = 0; i < case_expr->GetWhenClauseSize(); i++) {
-        auto cond = EvaluateExpression(expr_maps, case_expr->GetWhenClauseCondition(i));
-        auto result = EvaluateExpression(expr_maps, case_expr->GetWhenClauseResult(i));
+        auto cond = EvaluateExpression(expr_maps, case_expr->GetWhenClauseCondition(i), lateral_map);
+        auto result = EvaluateExpression(expr_maps, case_expr->GetWhenClauseResult(i), lateral_map);
         clauses.emplace_back(CaseExpression::WhenClause{std::move(cond), std::move(result)});
       }
 
       // Create and return new CaseExpression that is evaluated
-      auto def_cond = EvaluateExpression(expr_maps, case_expr->GetDefaultClause());
+      auto def_cond = EvaluateExpression(expr_maps, case_expr->GetDefaultClause(), lateral_map);
       auto type = case_expr->GetReturnValueType();
       return std::make_unique<CaseExpression>(type, std::move(clauses), std::move(def_cond));
     }

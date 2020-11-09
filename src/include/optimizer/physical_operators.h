@@ -549,7 +549,7 @@ class InnerNLJoin : public OperatorNodeContents<InnerNLJoin> {
    * @param join_predicates predicates for join
    * @return an InnerNLJoin operator
    */
-  static Operator Make(std::vector<AnnotatedExpression> &&join_predicates);
+  static Operator Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> &&lateral_oids);
 
   /**
    * Copy
@@ -566,11 +566,15 @@ class InnerNLJoin : public OperatorNodeContents<InnerNLJoin> {
    */
   const std::vector<AnnotatedExpression> &GetJoinPredicates() const { return join_predicates_; }
 
+  const std::vector<catalog::table_oid_t> &GetLateralOids() const { return lateral_oids_; }
+
  private:
   /**
    * Predicates for join
    */
   std::vector<AnnotatedExpression> join_predicates_;
+
+  std::vector<catalog::table_oid_t> lateral_oids_;
 };
 
 /**

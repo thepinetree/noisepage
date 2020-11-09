@@ -88,7 +88,9 @@ std::unique_ptr<JoinDefinition> JoinDefinition::Copy() {
 }
 
 bool TableRef::IsLateral() const {
-  return select_ != nullptr && select_->IsLateral();
+  return (select_ != nullptr && select_->IsLateral()) || (join_ != nullptr
+                                                          && (join_->GetLeftTable()->IsLateral()
+                                                              || join_->GetRightTable()->IsLateral()));
 }
 
 void TableRef::SetServesLateral() {

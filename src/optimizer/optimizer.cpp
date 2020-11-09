@@ -19,6 +19,8 @@
 #include "planner/plannodes/cte_scan_plan_node.h"
 #include "planner/plannodes/output_schema.h"
 
+#include "optimizer/physical_operators.h"
+
 namespace noisepage::optimizer {
 
 void Optimizer::Reset() { context_ = std::make_unique<OptimizerContext>(common::ManagedPointer(cost_model_)); }
@@ -162,13 +164,25 @@ std::unique_ptr<planner::AbstractPlanNode> Optimizer::ChooseBestPlan(
   // root plan. Also keep propagate expression to column offset mapping
   std::vector<std::unique_ptr<planner::AbstractPlanNode>> children_plans;
   std::vector<ExprMap> children_expr_map;
+  auto *op = new OperatorNode(gexpr->Contents(), {}, txn);
+  if(gexpr->Contents()->GetOpType() == OpType::INNERNLJOIN){
+    auto join_op = op->Contents()->GetContentsAs<InnerNLJoin>();
+    if(!join_op->GetLateralOids().empty()) {
+      ExprMap child_expr_map;
+      for (unsigned offset = 0; offset < input_cols[0].size(); ++offset) {
+        NOISEPAGE_ASSERT(input_cols[0][offset] != nullptr, "invalid input column found");
+        child_expr_map[input_cols[0][offset]] = offset;
+      }
+      context_->AddLateralEntries(join_op->GetLateralOids(), std::move(child_expr_map));
+    }
+  }
+
   for (size_t i = 0; i < child_groups.size(); ++i) {
     ExprMap child_expr_map;
     for (unsigned offset = 0; offset < input_cols[i].size(); ++offset) {
       NOISEPAGE_ASSERT(input_cols[i][offset] != nullptr, "invalid input column found");
       child_expr_map[input_cols[i][offset]] = offset;
     }
-
     auto child_plan = ChooseBestPlan(txn, accessor, child_groups[i], required_input_props[i], input_cols[i]);
     NOISEPAGE_ASSERT(child_plan != nullptr, "child should have derived a non-null plan...");
 
@@ -177,12 +191,17 @@ std::unique_ptr<planner::AbstractPlanNode> Optimizer::ChooseBestPlan(
   }
 
   // Derive root plan
-  auto *op = new OperatorNode(gexpr->Contents(), {}, txn);
 
-  PlanGenerator generator;
+  PlanGenerator generator(context_->GetLateralWaitersSet());
   auto plan = generator.ConvertOpNode(txn, accessor, op, required_props, required_cols, output_cols,
                                       std::move(children_plans), std::move(children_expr_map));
+  NOISEPAGE_ASSERT(plan != nullptr, "got a null plan");
   OPTIMIZER_LOG_TRACE("Finish Choosing best plan for group " + std::to_string(id.UnderlyingValue()));
+
+//  if(gexpr->Contents()->GetOpType() == OpType::INNERNLJOIN) {
+//    auto join_op = op->Contents()->GetContentsAs<InnerNLJoin>();
+//    context_->ClearLateralWaiters(join_op->GetLateralOids());
+//  }
 
   if (op->Contents()->GetOpType() == OpType::CTESCAN && !child_groups.empty()) {
     NOISEPAGE_ASSERT(child_groups.size() <= 2, "CTE should not have more than 2 children.");

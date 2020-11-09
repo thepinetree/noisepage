@@ -213,6 +213,8 @@ class BinderContext {
       common::ManagedPointer<parser::ParseResult> parse_result,
       common::ManagedPointer<std::vector<common::ManagedPointer<parser::AbstractExpression>>> exprs);
 
+  void RemoveColumnAllExpressions(common::ManagedPointer<parser::TableStarExpression> table_star);
+
   /**
    * Return the binder context's metadata for the provided @p table_name.
    * @param table_name the name of the table to look up

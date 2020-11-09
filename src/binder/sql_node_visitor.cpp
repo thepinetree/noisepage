@@ -9,6 +9,7 @@
 #include "parser/expression/default_value_expression.h"
 #include "parser/expression/derived_value_expression.h"
 #include "parser/expression/function_expression.h"
+#include "parser/expression/lateral_value_expression.h"
 #include "parser/expression/operator_expression.h"
 #include "parser/expression/parameter_value_expression.h"
 #include "parser/expression/star_expression.h"
@@ -42,6 +43,9 @@ void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::DerivedValueEx
   expr->AcceptChildren(common::ManagedPointer(this));
 }
 void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::FunctionExpression> expr) {
+  expr->AcceptChildren(common::ManagedPointer(this));
+}
+void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::LateralValueExpression> expr) {
   expr->AcceptChildren(common::ManagedPointer(this));
 }
 void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::OperatorExpression> expr) {

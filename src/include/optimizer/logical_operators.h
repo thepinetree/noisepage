@@ -476,6 +476,8 @@ class LogicalInnerJoin : public OperatorNodeContents<LogicalInnerJoin> {
    */
   static Operator Make(std::vector<AnnotatedExpression> &&join_predicates);
 
+  static Operator Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> lateral_oids_);
+
   /**
    * Copy
    * @returns copy of this
@@ -491,11 +493,14 @@ class LogicalInnerJoin : public OperatorNodeContents<LogicalInnerJoin> {
    */
   const std::vector<AnnotatedExpression> &GetJoinPredicates() const { return join_predicates_; }
 
+  const std::vector<catalog::table_oid_t> &GetLateralOids() const { return lateral_oids_; }
+
  private:
   /**
    * Join predicates
    */
   std::vector<AnnotatedExpression> join_predicates_;
+  std::vector<catalog::table_oid_t> lateral_oids_;
 };
 
 /**

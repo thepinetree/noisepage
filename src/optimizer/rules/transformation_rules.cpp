@@ -36,9 +36,9 @@ LogicalInnerJoinCommutativity::LogicalInnerJoinCommutativity() {
 
 bool LogicalInnerJoinCommutativity::Check(common::ManagedPointer<AbstractOptimizerNode> plan,
                                           OptimizationContext *context) const {
-  (void)context;
   (void)plan;
-  return true;
+  auto join_op = plan->Contents()->GetContentsAs<LogicalInnerJoin>();
+  return join_op->GetLateralOids().empty();
 }
 
 void LogicalInnerJoinCommutativity::Transform(common::ManagedPointer<AbstractOptimizerNode> input,
