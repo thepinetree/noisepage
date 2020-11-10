@@ -626,9 +626,12 @@ void PlanGenerator::Visit(const InnerHashJoin *op) {
   builder.SetJoinType(planner::LogicalJoinType::INNER);
   output_plan_ = builder.Build();
 
-//  for(auto lateral_oid : op->GetLateralOids()){
-//    oid_to_plannode_[lateral_oid] = std::make_pair(output_plan_.get(), children_expr_map_[0]);
-//  }
+  for(auto lateral_oid : op->GetLateralOids()){
+    for(auto expr : laterals_[lateral_oid].second) {
+      expr->source_plan_ = output_plan_;
+    }
+    laterals_.erase(lateral_oid);
+  }
 }
 
 void PlanGenerator::Visit(const LeftHashJoin *op) {
@@ -661,6 +664,13 @@ void PlanGenerator::Visit(const LeftHashJoin *op) {
   builder.SetJoinPredicate(common::ManagedPointer(join_predicate));
   builder.SetJoinType(planner::LogicalJoinType::LEFT);
   output_plan_ = builder.Build();
+
+  for(auto lateral_oid : op->GetLateralOids()){
+    for(auto expr : laterals_[lateral_oid].second) {
+      expr->source_plan_ = output_plan_;
+    }
+    laterals_.erase(lateral_oid);
+  }
 }
 
 void PlanGenerator::Visit(UNUSED_ATTRIBUTE const RightHashJoin *op) {

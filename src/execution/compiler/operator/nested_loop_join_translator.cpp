@@ -24,8 +24,17 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
 
   // Prepare join condition.
   if (const auto join_predicate = plan.GetJoinPredicate(); join_predicate != nullptr) {
+    compilation_context->SetCurrentOp(this);
     compilation_context->Prepare(*join_predicate);
   }
+}
+
+void NestedLoopJoinTranslator::RegisterNeedValue(const OperatorTranslator *requester,
+                                                 uint32_t child_idx, uint32_t attr_idx) {
+  if(requester->GetPipeline() == GetPipeline()){
+    return;
+  }
+  UNREACHABLE("Can't do laterals over different pipelines :/");
 }
 
 void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {

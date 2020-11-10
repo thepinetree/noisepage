@@ -622,8 +622,10 @@ void LogicalInnerJoinToPhysicalInnerHashJoin::Transform(
   child.emplace_back(children[0]->Copy());
   child.emplace_back(children[1]->Copy());
   if (!left_keys.empty()) {
+    auto lateral_oids = inner_join->GetLateralOids();
     auto result = std::make_unique<OperatorNode>(
-        InnerHashJoin::Make(std::move(join_preds), std::move(left_keys), std::move(right_keys))
+        InnerHashJoin::Make(std::move(join_preds), std::move(left_keys), std::move(right_keys),
+                            std::move(lateral_oids))
             .RegisterWithTxnContext(context->GetOptimizerContext()->GetTxn()),
         std::move(child), context->GetOptimizerContext()->GetTxn());
     transformed->emplace_back(std::move(result));
@@ -736,9 +738,11 @@ void LogicalLeftJoinToPhysicalLeftHashJoin::Transform(common::ManagedPointer<Abs
   std::vector<std::unique_ptr<AbstractOptimizerNode>> child;
   child.emplace_back(children[0]->Copy());
   child.emplace_back(children[1]->Copy());
+
+  std::vector<catalog::table_oid_t> laterals = left_join->GetLateralOids();
   if (!left_keys.empty()) {
     auto result = std::make_unique<OperatorNode>(
-        LeftHashJoin::Make(std::move(join_preds), std::move(left_keys), std::move(right_keys))
+        LeftHashJoin::Make(std::move(join_preds), std::move(left_keys), std::move(right_keys), std::move(laterals))
             .RegisterWithTxnContext(context->GetOptimizerContext()->GetTxn()),
         std::move(child), context->GetOptimizerContext()->GetTxn());
     transformed->emplace_back(std::move(result));

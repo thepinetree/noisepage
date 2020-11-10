@@ -583,9 +583,10 @@ Operator LogicalLeftJoin::Make() {
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
-Operator LogicalLeftJoin::Make(std::vector<AnnotatedExpression> &&join_predicates) {
+Operator LogicalLeftJoin::Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> lateral_oids) {
   auto *join = new LogicalLeftJoin();
   join->join_predicates_ = join_predicates;
+  join->lateral_oids_ = lateral_oids;
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
@@ -598,6 +599,9 @@ common::hash_t LogicalLeftJoin::Hash() const {
     } else {
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
     }
+  }
+  for(auto &oid : lateral_oids_) {
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
   }
   return hash;
 }

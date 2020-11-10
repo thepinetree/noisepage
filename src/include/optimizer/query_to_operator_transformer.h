@@ -181,6 +181,7 @@ class QueryToOperatorTransformer : public binder::SqlNodeVisitor {
   std::vector<parser::CTEType> cte_type_;
   std::vector<catalog::Schema> cte_schemas_;
   std::vector<catalog::table_oid_t> cte_oids_;
+  catalog::table_oid_t lateral_oid_;
 
   /**
    * A set of predicates the current operator generated, we use them to generate filter operator

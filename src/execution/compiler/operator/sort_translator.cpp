@@ -39,6 +39,7 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan, Compilation
   compilation_context->Prepare(*plan.GetChild(0), &build_pipeline_);
 
   // Prepare the sort-key expressions.
+  compilation_context->SetCurrentOp(this);
   for (const auto &[expr, _] : plan.GetSortKeys()) {
     (void)_;
     compilation_context->Prepare(*expr);

@@ -103,6 +103,9 @@ class Optimizer : public AbstractOptimizer {
    */
   void ExecuteTaskStack(OptimizerTaskStack *task_stack, group_id_t root_group_id, OptimizationContext *root_context);
 
+  void PopulateLateralMappings(GroupExpression *gexpr, std::vector<common::ManagedPointer<parser::AbstractExpression>>
+      &input_cols);
+
   /**
    * Invoke a single DFS pass through the entire plan
    * tree to assign the CTE leader node and also provide each

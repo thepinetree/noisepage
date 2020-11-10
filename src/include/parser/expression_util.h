@@ -413,7 +413,19 @@ class ExpressionUtil {
       auto iter = lateral_map.find(cve->GetTableOid());
 //      cve->SetSourcePlan(lateral_map.find(cve->GetTableOid())->second);
       if(iter != lateral_map.end()){
-        auto lateral = std::make_unique<LateralValueExpression>(cve->GetTableOid(), catalog::col_oid_t(iter->second.first[expr]),
+        optimizer::ExprMap::iterator map_it = iter->second.first.begin();
+        while (map_it != iter->second.first.end()){
+          auto &cand = map_it->first;
+          if(cand->GetExpressionType() == ExpressionType::COLUMN_VALUE){
+            auto cand_cve = cand.CastManagedPointerTo<parser::ColumnValueExpression>();
+            if(cand_cve->GetTableOid() == cve->GetTableOid() && (cand_cve->GetColumnOid() == cve->GetColumnOid())){
+              break;
+            }
+          }
+          map_it++;
+        }
+        NOISEPAGE_ASSERT(map_it != iter->second.first.end(), "could not find lateral expression in expression map");
+        auto lateral = std::make_unique<LateralValueExpression>(cve->GetTableOid(), catalog::col_oid_t(map_it->second),
                                                                 expr->GetReturnValueType(),
                                                         nullptr);
         iter->second.second.push_back(lateral.get());

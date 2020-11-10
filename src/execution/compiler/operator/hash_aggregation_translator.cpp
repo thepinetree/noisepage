@@ -31,6 +31,7 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
                    "Expected hash-based aggregation plan node");
   NOISEPAGE_ASSERT(plan.GetChildrenSize() == 1, "Hash aggregations should only have one child");
 
+  compilation_context->SetCurrentOp(this);
   for (size_t agg_term_idx = 0; agg_term_idx < plan.GetAggregateTerms().size(); agg_term_idx++) {
     const auto &agg_term = plan.GetAggregateTerms()[agg_term_idx];
     compilation_context->Prepare(*agg_term->GetChild(0));
@@ -57,11 +58,13 @@ HashAggregationTranslator::HashAggregationTranslator(const planner::AggregatePla
       this, build_pipeline_.IsParallel() ? Pipeline::Parallelism::Parallel : Pipeline::Parallelism::Serial);
 
   // Prepare all grouping and aggregate expressions.
+  compilation_context->SetCurrentOp(this);
   for (const auto group_by_term : plan.GetGroupByTerms()) {
     compilation_context->Prepare(*group_by_term);
   }
 
   // If there's a having clause, prepare it, too.
+  compilation_context->SetCurrentOp(this);
   if (const auto having_clause = plan.GetHavingClausePredicate(); having_clause != nullptr) {
     compilation_context->Prepare(*having_clause);
   }

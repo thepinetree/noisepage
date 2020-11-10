@@ -381,6 +381,9 @@ bool InnerNLJoin::operator==(const BaseOperatorNodeContents &r) {
   const InnerNLJoin &node = *dynamic_cast<const InnerNLJoin *>(&r);
   if (join_predicates_.size() != node.join_predicates_.size()) return false;
   if (join_predicates_ != node.join_predicates_) return false;
+  for (size_t i = 0; i < lateral_oids_.size(); i++) {
+    if (lateral_oids_[i] != node.lateral_oids_[i]) return false;
+  }
   return true;
 }
 
@@ -459,11 +462,13 @@ BaseOperatorNodeContents *InnerHashJoin::Copy() const { return new InnerHashJoin
 
 Operator InnerHashJoin::Make(std::vector<AnnotatedExpression> &&join_predicates,
                              std::vector<common::ManagedPointer<parser::AbstractExpression>> &&left_keys,
-                             std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys) {
+                             std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys,
+                             std::vector<catalog::table_oid_t> &&lateral_oids) {
   auto *join = new InnerHashJoin();
   join->join_predicates_ = std::move(join_predicates);
   join->left_keys_ = std::move(left_keys);
   join->right_keys_ = std::move(right_keys);
+  join->lateral_oids_ = std::move(lateral_oids);
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
@@ -477,6 +482,9 @@ common::hash_t InnerHashJoin::Hash() const {
       hash = common::HashUtil::SumHashes(hash, expr->Hash());
     else
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
+  }
+  for(auto oid : lateral_oids_){
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
   }
   return hash;
 }
@@ -493,6 +501,10 @@ bool InnerHashJoin::operator==(const BaseOperatorNodeContents &r) {
   }
   for (size_t i = 0; i < right_keys_.size(); i++) {
     if (*(right_keys_[i]) != *(node.right_keys_[i])) return false;
+  }
+
+  for (size_t i = 0; i < lateral_oids_.size(); i++) {
+    if (lateral_oids_[i] != node.lateral_oids_[i]) return false;
   }
   return true;
 }
@@ -549,11 +561,13 @@ BaseOperatorNodeContents *LeftHashJoin::Copy() const { return new LeftHashJoin(*
 
 Operator LeftHashJoin::Make(std::vector<AnnotatedExpression> &&join_predicates,
                             std::vector<common::ManagedPointer<parser::AbstractExpression>> &&left_keys,
-                            std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys) {
+                            std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys,
+                            std::vector<catalog::table_oid_t> &&lateral_oids) {
   auto *join = new LeftHashJoin();
   join->join_predicates_ = std::move(join_predicates);
   join->left_keys_ = std::move(left_keys);
   join->right_keys_ = std::move(right_keys);
+  join->lateral_oids_ = std::move(lateral_oids);
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
@@ -567,6 +581,9 @@ common::hash_t LeftHashJoin::Hash() const {
       hash = common::HashUtil::SumHashes(hash, expr->Hash());
     else
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
+  }
+  for (auto oid : lateral_oids_){
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
   }
   return hash;
 }

@@ -126,6 +126,10 @@ class CompilationContext {
   /** @return Query Id associated with the query */
   query_id_t GetQueryId() const { return query_id_t{unique_id_}; }
 
+  void SetCurrentOp(OperatorTranslator *current_op) { current_op_ = current_op; }
+
+  OperatorTranslator *GetCurrentOp() { return current_op_; }
+
  private:
   // Private to force use of static Compile() function.
   explicit CompilationContext(ExecutableQuery *query, catalog::CatalogAccessor *accessor, CompilationMode mode,
@@ -176,6 +180,8 @@ class CompilationContext {
 
   // Whether pipeline metrics are enabled.
   bool pipeline_metrics_enabled_;
+
+  OperatorTranslator *current_op_;
 };
 
 }  // namespace noisepage::execution::compiler

@@ -517,7 +517,7 @@ class LogicalLeftJoin : public OperatorNodeContents<LogicalLeftJoin> {
    * @param join_predicates conditions of the join
    * @return a LeftJoin operator
    */
-  static Operator Make(std::vector<AnnotatedExpression> &&join_predicates);
+  static Operator Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> laterals);
 
   /**
    * Copy
@@ -534,11 +534,15 @@ class LogicalLeftJoin : public OperatorNodeContents<LogicalLeftJoin> {
    */
   const std::vector<AnnotatedExpression> &GetJoinPredicates() const { return join_predicates_; }
 
+  const std::vector<catalog::table_oid_t> &GetLateralOids() const { return lateral_oids_; }
+
  private:
   /**
    * Join predicates
    */
   std::vector<AnnotatedExpression> join_predicates_;
+
+  std::vector<catalog::table_oid_t> lateral_oids_;
 };
 
 /**

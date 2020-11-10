@@ -39,6 +39,7 @@ HashJoinTranslator::HashJoinTranslator(const planner::HashJoinPlanNode &plan, Co
   compilation_context->Prepare(*plan.GetChild(1), pipeline);
 
   // Prepare join predicate, left, and right hash keys.
+  compilation_context->SetCurrentOp(this);
   compilation_context->Prepare(*plan.GetJoinPredicate());
   for (const auto left_hash_key : plan.GetLeftHashKeys()) {
     compilation_context->Prepare(*left_hash_key);

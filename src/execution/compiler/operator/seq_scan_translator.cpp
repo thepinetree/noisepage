@@ -30,6 +30,7 @@ SeqScanTranslator::SeqScanTranslator(const planner::SeqScanPlanNode &plan, Compi
   pipeline->RegisterSource(this, Pipeline::Parallelism::Parallel);
   // If there's a predicate, prepare the expression and register a filter manager.
   if (HasPredicate()) {
+    compilation_context->SetCurrentOp(this);
     compilation_context->Prepare(*plan.GetScanPredicate());
 
     ast::Expr *fm_type = GetCodeGen()->BuiltinType(ast::BuiltinType::FilterManager);

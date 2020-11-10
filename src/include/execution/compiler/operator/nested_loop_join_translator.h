@@ -23,6 +23,8 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
   NestedLoopJoinTranslator(const planner::NestedLoopJoinPlanNode &plan, CompilationContext *compilation_context,
                            Pipeline *pipeline);
 
+  void RegisterNeedValue(const OperatorTranslator *requester, uint32_t child_idx, uint32_t attr_idx) override;
+
   /**
    * Generate the join condition from the two child inputs.
    * @param context The context of the work.

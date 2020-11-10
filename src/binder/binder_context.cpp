@@ -189,6 +189,10 @@ void BinderContext::SetColumnPosTuple(const std::string &col_name,
   expr->SetColumnOID(column_object.Oid());
   expr->SetColumnName(col_name);
   expr->SetReturnValueType(column_object.Type());
+
+  if(expr->GetAliasName().empty()){
+    expr->SetAlias(parser::AliasType(col_name, column_object.Oid().UnderlyingValue()));
+  }
 }
 
 void BinderContext::SetTableName(common::ManagedPointer<parser::ColumnValueExpression> expr,
@@ -330,6 +334,7 @@ void BinderContext::GenerateAllColumnExpressions(
       tv_expr->SetTableOID(std::get<1>(table_data));
       tv_expr->SetColumnOID(col_obj.Oid());
       tv_expr->SetDepth(depth_);
+      tv_expr->SetAlias(parser::AliasType(col_obj.Name(), std::get<1>(table_data).UnderlyingValue()));
 
       auto unique_tv_expr =
           std::unique_ptr<parser::AbstractExpression>(reinterpret_cast<parser::AbstractExpression *>(tv_expr));

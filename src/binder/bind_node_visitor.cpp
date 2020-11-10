@@ -889,18 +889,20 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
 
     // TableRef is not a CTE
     if (node->GetCteType() == parser::CTEType::INVALID) {
-      auto table_oid = catalog::MakeTempOid<catalog::table_oid_t>(++oid_counter_);
+      auto table_oid = catalog::MakeTempOid<catalog::table_oid_t>(catalog_accessor_->GetNewTempOid());
       context_->AddNestedTable(node->GetAlias(), table_oid, node->GetSelect()->GetSelectColumns(), {});
       node->SetTableOid(table_oid);
     }
   } else if (node->GetJoin() != nullptr) {
     // Join
-    auto table_oid = catalog::MakeTempOid<catalog::table_oid_t>(++oid_counter_);
 //    node->GetJoin()->GetLeftTable()->SetServesLateral();
 //    node->GetJoin()->GetRightTable()->SetServesLateral();
 
     // make a new context
     node->GetJoin()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
+
+    auto table_oid = node->GetJoin()->GetLeftTable()->GetTableOid();
+
     parser::TableStarExpression left_star(node->GetJoin()->GetLeftTable()->GetAlias());
     parser::TableStarExpression right_star(node->GetJoin()->GetRightTable()->GetAlias());
     std::vector<common::ManagedPointer<parser::AbstractExpression>> columns;
@@ -971,7 +973,7 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
       if (std::find(cte_table_name_.begin(), cte_table_name_.end(), node->GetTableName()) != cte_table_name_.end()) {
         // copy cte table's schema for this alias
         context_->AddCTETableAlias(node->GetTableName(), node->GetAlias());
-        table_oid = catalog::MakeTempOid<catalog::table_oid_t>(++oid_counter_);
+        table_oid = catalog::MakeTempOid<catalog::table_oid_t>(catalog_accessor_->GetNewTempOid());
       } else {
         throw BINDER_EXCEPTION(fmt::format("relation \"{}\" does not exist", node->GetTableName()),
                                common::ErrorCode::ERRCODE_UNDEFINED_TABLE);

@@ -12,12 +12,17 @@ namespace noisepage::execution::compiler {
 LateralValueTranslator::LateralValueTranslator(const parser::LateralValueExpression &expr,
                                                CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context),
-      compilation_context_(compilation_context) {}
+      compilation_context_(compilation_context) {
+//  const auto &lateral_expr = GetExpressionAs<parser::LateralValueExpression>();
+//  auto source_translator = compilation_context_->LookupTranslator(*lateral_expr.GetSourcePlan());
+//  source_translator->RegisterNeedValue(compilation_context->GetCurrentOp(), lateral_expr.GetColumnOid().UnderlyingValue());
+}
 
 ast::Expr *LateralValueTranslator::DeriveValue(WorkContext *ctx, const ColumnValueProvider *provider) const {
-  const auto &derived_expr = GetExpressionAs<parser::LateralValueExpression>();
-  return compilation_context_->LookupTranslator(*derived_expr.GetSourcePlan())
-      ->GetChildOutput(ctx, 0, derived_expr.GetColumnOid().UnderlyingValue());
+  const auto &lateral_expr = GetExpressionAs<parser::LateralValueExpression>();
+  auto source_translator = compilation_context_->LookupTranslator(*lateral_expr.GetSourcePlan());
+
+  return source_translator->GetChildOutput(ctx, 0, lateral_expr.GetColumnOid().UnderlyingValue());
 }
 
 }  // namespace noisepage::execution::compiler

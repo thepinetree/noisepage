@@ -29,6 +29,7 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
   // Prepare each of the aggregate expressions.
   for (size_t agg_term_idx = 0; agg_term_idx < plan.GetAggregateTerms().size(); agg_term_idx++) {
     const auto &agg_term = plan.GetAggregateTerms()[agg_term_idx];
+    compilation_context->SetCurrentOp(this);
     compilation_context->Prepare(*agg_term->GetChild(0));
     if (agg_term->IsDistinct()) {
       distinct_filters_.emplace(std::make_pair(
@@ -48,6 +49,7 @@ StaticAggregationTranslator::StaticAggregationTranslator(const planner::Aggregat
 
   // If there's a having clause, prepare it, too.
   if (const auto having_clause = plan.GetHavingClausePredicate(); having_clause != nullptr) {
+    compilation_context->SetCurrentOp(this);
     compilation_context->Prepare(*having_clause);
   }
 

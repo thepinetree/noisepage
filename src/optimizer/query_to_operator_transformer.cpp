@@ -277,6 +277,11 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::SelectStat
 
 void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::JoinDefinition> node) {
   OPTIMIZER_LOG_DEBUG("Transforming JoinDefinition to operators ...");
+
+  std::vector<catalog::table_oid_t> laterals;
+  if(node->GetRightTable()->IsLateral() || node->GetLeftTable()->IsLateral()){
+    laterals.push_back(lateral_oid_);
+  }
   // Get left operator
   node->GetLeftTable()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
   auto left_expr = std::move(output_expr_);
@@ -293,7 +298,7 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::JoinDefini
   switch (node->GetJoinType()) {
     case parser::JoinType::INNER: {
       join_expr = std::make_unique<OperatorNode>(
-          LogicalInnerJoin::Make(std::move(join_predicates)).RegisterWithTxnContext(txn_context),
+          LogicalInnerJoin::Make(std::move(join_predicates), laterals).RegisterWithTxnContext(txn_context),
           std::vector<std::unique_ptr<AbstractOptimizerNode>>{}, txn_context);
       join_expr->PushChild(std::move(left_expr));
       join_expr->PushChild(std::move(right_expr));
@@ -309,7 +314,7 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::JoinDefini
     }
     case parser::JoinType::LEFT: {
       join_expr = std::make_unique<OperatorNode>(
-          LogicalLeftJoin::Make(std::move(join_predicates)).RegisterWithTxnContext(txn_context),
+          LogicalLeftJoin::Make(std::move(join_predicates), laterals).RegisterWithTxnContext(txn_context),
           std::vector<std::unique_ptr<AbstractOptimizerNode>>{}, txn_context);
       join_expr->PushChild(std::move(left_expr));
       join_expr->PushChild(std::move(right_expr));
@@ -362,6 +367,7 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::TableRef> 
     output_expr_->PushChild(std::move(child_expr));
   } else if (node->GetJoin() != nullptr) {
     // Explicit Join
+    lateral_oid_ = node->GetTableOid();
     node->GetJoin()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
   } else if (node->GetList().size() > 1) {
     // Multiple tables (Implicit Join)
@@ -374,6 +380,10 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::TableRef> 
     for (size_t i = 1; i < node->GetList().size(); i++) {
       // Start at i = 1 due to the Accept() above
       auto list_elem = node->GetList().at(i);
+
+      if(list_elem->GetJoin() != nullptr){
+        lateral_oid_ = list_elem->GetTableOid();
+      }
 
       list_elem->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
       if(list_elem->IsLateral()){
@@ -399,6 +409,7 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::TableRef> 
 
       lateral_oids.push_back(list_elem->GetTableOid());
     }
+    lateral_oids.clear();
     output_expr_ = std::move(prev_expr);
   } else {
     // Single table

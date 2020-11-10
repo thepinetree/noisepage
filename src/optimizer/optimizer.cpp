@@ -136,6 +136,70 @@ void Optimizer::ElectCTELeader(common::ManagedPointer<planner::AbstractPlanNode>
   }
 }
 
+void Optimizer::PopulateLateralMappings(GroupExpression *gexpr, std::vector<common::ManagedPointer<parser::AbstractExpression>>
+                                                                    &input_cols) {
+  auto op_type = gexpr->Contents()->GetOpType();
+  if(OpType::INNERINDEXJOIN > op_type || OpType::LEFTSEMIHASHJOIN < op_type){
+    // not a join
+    return;
+  }
+  std::vector<catalog::table_oid_t> lateral_oids;
+  switch(gexpr->Contents()->GetOpType()){
+//    case OpType::INNERINDEXJOIN:
+//      lateral_oids =
+//          gexpr->Contents()->GetContentsAs<InnerIndexJoin>()->GetLateralOids();
+//      break;
+    case OpType::INNERNLJOIN:
+      lateral_oids =
+          gexpr->Contents()->GetContentsAs<InnerNLJoin>()->GetLateralOids();
+      break;
+//    case OpType::LEFTNLJOIN:
+//      lateral_oids =
+//          gexpr->Contents()->GetContentsAs<LeftNLJoin>()->GetLateralOids();
+//      break;
+//    case OpType::RIGHTNLJOIN:
+//      lateral_oids =
+//          gexpr->Contents()->GetContentsAs<RightNLJoin>()->GetLateralOids();
+//      break;
+//    case OpType::OUTERNLJOIN:
+//      lateral_oids =
+//          gexpr->Contents()->GetContentsAs<OuterNLJoin>()->GetLateralOids();
+//      break;
+    case OpType::INNERHASHJOIN:
+      lateral_oids =
+          gexpr->Contents()->GetContentsAs<InnerHashJoin>()->GetLateralOids();
+      break;
+    case OpType::LEFTHASHJOIN:
+      lateral_oids =
+          gexpr->Contents()->GetContentsAs<LeftHashJoin>()->GetLateralOids();
+      break;
+//    case OpType::RIGHTHASHJOIN:
+//      lateral_oids =
+//          gexpr->Contents()->GetContentsAs<RightHashJoin>()->GetLateralOids();
+//      break;
+//    case OpType::OUTERHASHJOIN:
+//      lateral_oids =
+//          gexpr->Contents()->GetContentsAs<OuterHashJoin>()->GetLateralOids();
+//      break;
+//    case OpType::LEFTSEMIHASHJOIN:
+//      lateral_oids =
+//          gexpr->Contents()->GetContentsAs<LeftSemiHashJoin>()->GetLateralOids();
+      break;
+    default:
+      UNREACHABLE("No lateral mappings allowed on non join node");
+
+  }
+//    auto join_op = op->Contents()->GetContentsAs<InnerNLJoin>();
+  if(!lateral_oids.empty()) {
+    ExprMap child_expr_map;
+    for (unsigned offset = 0; offset < input_cols.size(); ++offset) {
+      NOISEPAGE_ASSERT(input_cols[offset] != nullptr, "invalid input column found");
+      child_expr_map[input_cols[offset]] = offset;
+    }
+    context_->AddLateralEntries(lateral_oids, std::move(child_expr_map));
+  }
+}
+
 std::unique_ptr<planner::AbstractPlanNode> Optimizer::ChooseBestPlan(
     transaction::TransactionContext *txn, catalog::CatalogAccessor *accessor, group_id_t id,
     PropertySet *required_props, const std::vector<common::ManagedPointer<parser::AbstractExpression>> &required_cols) {
@@ -164,18 +228,8 @@ std::unique_ptr<planner::AbstractPlanNode> Optimizer::ChooseBestPlan(
   // root plan. Also keep propagate expression to column offset mapping
   std::vector<std::unique_ptr<planner::AbstractPlanNode>> children_plans;
   std::vector<ExprMap> children_expr_map;
-  auto *op = new OperatorNode(gexpr->Contents(), {}, txn);
-  if(gexpr->Contents()->GetOpType() == OpType::INNERNLJOIN){
-    auto join_op = op->Contents()->GetContentsAs<InnerNLJoin>();
-    if(!join_op->GetLateralOids().empty()) {
-      ExprMap child_expr_map;
-      for (unsigned offset = 0; offset < input_cols[0].size(); ++offset) {
-        NOISEPAGE_ASSERT(input_cols[0][offset] != nullptr, "invalid input column found");
-        child_expr_map[input_cols[0][offset]] = offset;
-      }
-      context_->AddLateralEntries(join_op->GetLateralOids(), std::move(child_expr_map));
-    }
-  }
+
+  PopulateLateralMappings(gexpr, input_cols[0]);
 
   for (size_t i = 0; i < child_groups.size(); ++i) {
     ExprMap child_expr_map;
@@ -191,17 +245,12 @@ std::unique_ptr<planner::AbstractPlanNode> Optimizer::ChooseBestPlan(
   }
 
   // Derive root plan
-
+  auto *op = new OperatorNode(gexpr->Contents(), {}, txn);
   PlanGenerator generator(context_->GetLateralWaitersSet());
   auto plan = generator.ConvertOpNode(txn, accessor, op, required_props, required_cols, output_cols,
                                       std::move(children_plans), std::move(children_expr_map));
   NOISEPAGE_ASSERT(plan != nullptr, "got a null plan");
   OPTIMIZER_LOG_TRACE("Finish Choosing best plan for group " + std::to_string(id.UnderlyingValue()));
-
-//  if(gexpr->Contents()->GetOpType() == OpType::INNERNLJOIN) {
-//    auto join_op = op->Contents()->GetContentsAs<InnerNLJoin>();
-//    context_->ClearLateralWaiters(join_op->GetLateralOids());
-//  }
 
   if (op->Contents()->GetOpType() == OpType::CTESCAN && !child_groups.empty()) {
     NOISEPAGE_ASSERT(child_groups.size() <= 2, "CTE should not have more than 2 children.");

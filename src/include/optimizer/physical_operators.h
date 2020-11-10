@@ -689,7 +689,8 @@ class InnerHashJoin : public OperatorNodeContents<InnerHashJoin> {
    */
   static Operator Make(std::vector<AnnotatedExpression> &&join_predicates,
                        std::vector<common::ManagedPointer<parser::AbstractExpression>> &&left_keys,
-                       std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys);
+                       std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys,
+                       std::vector<catalog::table_oid_t> &&lateral_oids);
 
   /**
    * Copy
@@ -716,6 +717,8 @@ class InnerHashJoin : public OperatorNodeContents<InnerHashJoin> {
    */
   const std::vector<AnnotatedExpression> &GetJoinPredicates() const { return join_predicates_; }
 
+  const std::vector<catalog::table_oid_t> &GetLateralOids() const { return lateral_oids_; }
+
  private:
   /**
    * Left join keys
@@ -731,6 +734,9 @@ class InnerHashJoin : public OperatorNodeContents<InnerHashJoin> {
    * Predicate for join
    */
   std::vector<AnnotatedExpression> join_predicates_;
+
+  std::vector<catalog::table_oid_t> lateral_oids_;
+
 };
 
 /**
@@ -803,7 +809,8 @@ class LeftHashJoin : public OperatorNodeContents<LeftHashJoin> {
    */
   static Operator Make(std::vector<AnnotatedExpression> &&join_predicates,
                        std::vector<common::ManagedPointer<parser::AbstractExpression>> &&left_keys,
-                       std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys);
+                       std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys,
+                       std::vector<catalog::table_oid_t> &&lateral_oids);
 
   /**
    * Copy
@@ -830,6 +837,8 @@ class LeftHashJoin : public OperatorNodeContents<LeftHashJoin> {
    */
   const std::vector<AnnotatedExpression> &GetJoinPredicates() const { return join_predicates_; }
 
+  const std::vector<catalog::table_oid_t> &GetLateralOids() const { return lateral_oids_; }
+
  private:
   /**
    * Left join keys
@@ -845,6 +854,8 @@ class LeftHashJoin : public OperatorNodeContents<LeftHashJoin> {
    * Predicate for join
    */
   std::vector<AnnotatedExpression> join_predicates_;
+
+  std::vector<catalog::table_oid_t> lateral_oids_;
 };
 
 /**
