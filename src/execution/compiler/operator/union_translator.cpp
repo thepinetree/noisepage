@@ -18,8 +18,8 @@ UnionTranslator::UnionTranslator(const planner::UnionPlanNode &plan,
     pipeline->UpdateParallelism(Pipeline::Parallelism::Serial);
     compilation_context->Prepare(*plan.GetChild(0), &left_pipeline_);
     compilation_context->Prepare(*plan.GetChild(1), &right_pipeline_);
-    left_pipeline_.LinkNestedPipeline(pipeline);
-    right_pipeline_.LinkNestedPipeline(pipeline);
+    left_pipeline_.LinkNestedPipeline(pipeline, this);
+    right_pipeline_.LinkNestedPipeline(pipeline, this);
 }
 
 void UnionTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {

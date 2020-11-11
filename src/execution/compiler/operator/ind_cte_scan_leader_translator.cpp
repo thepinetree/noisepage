@@ -24,12 +24,16 @@ IndCteScanLeaderTranslator::IndCteScanLeaderTranslator(const planner::CteScanPla
       GetCodeGen(), plan.GetCTETableName() + "val", iter_cte_type);
   cte_scan_ptr_entry_ = compilation_context->GetQueryState()->DeclareStateEntry(
       GetCodeGen(), plan.GetCTETableName() + "ptr", GetCodeGen()->PointerType(cte_type));
-
-  pipeline->LinkNestedPipeline(&build_pipeline_);
-  pipeline->LinkNestedPipeline(&base_pipeline_);
   pipeline->UpdateParallelism(Pipeline::Parallelism::Serial);
   compilation_context->Prepare(*(plan.GetChild(1)), &base_pipeline_);
   compilation_context->Prepare(*(plan.GetChild(0)), &build_pipeline_);
+//  build_pipeline_.LinkNestedPipeline(pipeline);
+//  base_pipeline_.LinkNestedPipeline(pipeline);
+//  build_pipeline_.LinkSourcePipeline(&base_pipeline_);
+  pipeline->LinkSourcePipeline(&base_pipeline_);
+  pipeline->LinkSourcePipeline(&build_pipeline_);
+  pipeline->LinkNestedPipeline(&build_pipeline_, this);
+//  pipeline->LinkSourcePipeline(&build_pipeline_);
 }
 
 void IndCteScanLeaderTranslator::TearDownQueryState(FunctionBuilder *function) const {
@@ -49,10 +53,10 @@ void IndCteScanLeaderTranslator::PerformPipelineWork(WorkContext *context, Funct
   }
 
   if (&context->GetPipeline() != &build_pipeline_) {
-    auto calls = base_pipeline_.CallRunPipelineFunction();
-    for (auto call : calls) {
-      function->Append(call);
-    }
+//    auto calls = base_pipeline_.CallRunPipelineFunction();
+//    for (auto call : calls) {
+//      function->Append(call);
+//    }
     GenInductiveLoop(context, function);
     context->Push(function);
     return;
@@ -67,7 +71,7 @@ void IndCteScanLeaderTranslator::PerformPipelineWork(WorkContext *context, Funct
 
   // Insert into table
   GenTableInsert(function);
-  context->Push(function);
+//  GetPipeline()->
 }
 
 void IndCteScanLeaderTranslator::DeclareIndCteScanIterator(FunctionBuilder *builder) const {
@@ -187,10 +191,7 @@ void IndCteScanLeaderTranslator::GenInductiveLoop(WorkContext *context, Function
             nullptr);
   {
     PopulateReadCteScanIterator(builder);
-    auto calls = build_pipeline_.CallRunPipelineFunction();
-    for (auto call : calls) {
-      builder->Append(call);
-    }
+    build_pipeline_.CallNestedRunPipelineFunction(context, this, builder);
   }
   loop.EndLoop();
 

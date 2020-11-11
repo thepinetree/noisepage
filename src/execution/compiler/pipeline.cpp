@@ -166,15 +166,21 @@ util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
 void Pipeline::LinkSourcePipeline(Pipeline *dependency) {
   NOISEPAGE_ASSERT(dependency != nullptr, "Source cannot be null");
   dependencies_.push_back(dependency);
+  if(std::find(dependency->nested_pipelines_.begin(), dependency->nested_pipelines_.end(), this)
+      != dependency->nested_pipelines_.end()){
+    std::remove(dependency->nested_pipelines_.begin(), dependency->nested_pipelines_.end(), this);
+  }
 }
 
-void Pipeline::LinkNestedPipeline(Pipeline *pipeline) {
+void Pipeline::LinkNestedPipeline(Pipeline *pipeline, const OperatorTranslator *op) {
   NOISEPAGE_ASSERT(pipeline != nullptr, "Nested pipeline cannot be null");
-  pipeline->nested_pipelines_.push_back(this);
+  // if pipeline is in my dependencies let's not do this to avoid circularity
+  if(std::find(dependencies_.begin(), dependencies_.end(), pipeline) == dependencies_.end()) {
+    pipeline->nested_pipelines_.push_back(this);
+  }
   if(!pipeline->nested_) {
     pipeline->nested_ = true;
     // add to pipeline params
-    auto op = pipeline->steps_.back();
     size_t i = 0;
     for (auto &col : op->GetPlan().GetOutputSchema()->GetColumns()) {
       pipeline->extra_pipeline_params_.push_back(codegen_->MakeField(codegen_->MakeIdentifier("row" + std::to_string(i++)),

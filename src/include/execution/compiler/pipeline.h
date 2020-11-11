@@ -120,7 +120,7 @@ class Pipeline {
    * Registers a nested pipeline. These pipelines are invoked from other pipelines and are not added to the main steps
    * @param pipeline The pipeline to nest
    */
-  void LinkNestedPipeline(Pipeline *pipeline);
+  void LinkNestedPipeline(Pipeline *pipeline, const OperatorTranslator *op);
 
   /**
    * Store in the provided output vector the set of all dependencies for this pipeline. In other
