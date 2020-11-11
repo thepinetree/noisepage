@@ -237,6 +237,31 @@ common::hash_t OrderBy::Hash() const {
 }
 
 //===--------------------------------------------------------------------===//
+// Union
+//===--------------------------------------------------------------------===//
+BaseOperatorNodeContents *Union::Copy() const { return new Union(*this); }
+
+Operator Union::Make(UnionAliasMap &&columns) {
+  auto *union_op = new Union();
+  union_op->columns_ = std::move(columns);
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(union_op));
+}
+
+bool Union::operator==(const BaseOperatorNodeContents &r) {
+  if (r.GetOpType() != OpType::UNION){
+    return false;
+  }
+  return r.GetContentsAs<Union>()->GetColumns() == GetColumns();
+}
+
+common::hash_t Union::Hash() const {
+  common::hash_t hash = BaseOperatorNodeContents::Hash();
+  // I guess every Union object hashes to the same thing?
+  return hash;
+}
+
+
+//===--------------------------------------------------------------------===//
 // PhysicalLimit
 //===--------------------------------------------------------------------===//
 BaseOperatorNodeContents *Limit::Copy() const { return new Limit(*this); }
@@ -1496,6 +1521,8 @@ template <>
 const char *OperatorNodeContents<Analyze>::name = "Analyze";
 template <>
 const char *OperatorNodeContents<CteScan>::name = "CteScan";
+template <>
+const char *OperatorNodeContents<Union>::name = "Union";
 
 //===--------------------------------------------------------------------===//
 template <>
@@ -1578,5 +1605,7 @@ template <>
 OpType OperatorNodeContents<Analyze>::type = OpType::ANALYZE;
 template <>
 OpType OperatorNodeContents<CteScan>::type = OpType::CTESCAN;
+template <>
+OpType OperatorNodeContents<Union>::type = OpType::UNION;
 
 }  // namespace noisepage::optimizer

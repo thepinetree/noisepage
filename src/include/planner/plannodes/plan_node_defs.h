@@ -66,6 +66,7 @@ enum class PlanNodeType {
   DISTINCT,
   HASH,
   SETOP,
+  UNION,
 
   // Utility
   EXPORT_EXTERNAL_FILE,

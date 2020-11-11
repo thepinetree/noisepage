@@ -29,6 +29,7 @@ class ExecutableQueryFragmentBuilder;
 class ExpressionTranslator;
 class OperatorTranslator;
 class PipelineDriver;
+class WorkContext;
 
 /**
  * A pipeline represents an ordered sequence of relational operators that operate on tuple data
@@ -67,7 +68,7 @@ class Pipeline {
    * @param op The root operator of the pipeline.
    * @param parallelism The operator's requested parallelism.
    */
-  Pipeline(OperatorTranslator *op, Parallelism parallelism);
+  Pipeline(OperatorTranslator *op, Parallelism parallelism, bool consumer = false);
 
   /**
    * Register an operator in this pipeline with a customized parallelism configuration.
@@ -151,6 +152,8 @@ class Pipeline {
    */
   bool IsVectorized() const { return false; }
 
+//  void CloneInto(Pipeline *dest);
+
   /**
    * Typedef used to specify an iterator over the steps in a pipeline.
    */
@@ -185,6 +188,9 @@ class Pipeline {
    * @return A vector of expressions that initialize, run and teardown a nested pipeline
    */
   std::vector<ast::Expr *> CallSingleRunPipelineFunction() const;
+
+  void CallNestedRunPipelineFunction(WorkContext *ctx, const OperatorTranslator *op,
+                                                         FunctionBuilder *function) const;
 
   /**
    * @return A vector of expressions that do the work of running a pipeline function and its dependencies
@@ -222,6 +228,10 @@ class Pipeline {
    * @return a pointer to the OUFeatureVector in the pipeline state
    */
   ast::Expr *OUFeatureVecPtr() const { return oufeatures_.GetPtr(codegen_); }
+
+  ast::Expr *GetNestedInputArg(uint32_t index) const;
+
+  bool IsPrepared() const { return prepared_; }
 
  private:
   // Return the thread-local state initialization and tear-down function names.
@@ -269,9 +279,9 @@ class Pipeline {
   ast::Identifier GetTeardownPipelineFunctionName() const;
   ast::Identifier GetInitPipelineFunctionName() const;
 
-  const StateDescriptor &GetPipelineStateDescriptor() const { return nested_ ? parent_->state_ : state_; }
+  const StateDescriptor &GetPipelineStateDescriptor() const { return state_; }
 
-  StateDescriptor &GetPipelineStateDescriptor() { return nested_ ? parent_->state_ : state_; }
+  StateDescriptor &GetPipelineStateDescriptor() { return state_; }
 
  private:
   // A unique pipeline ID.
@@ -298,12 +308,14 @@ class Pipeline {
   std::vector<Pipeline *> dependencies_;
   // Vector of pipelines that are nested under this pipeline
   std::vector<Pipeline *> nested_pipelines_;
+  std::vector<ast::FieldDecl *> extra_pipeline_params_;
   // Configured parallelism.
   Parallelism parallelism_;
   // Whether to check for parallelism in new pipeline elements.
   bool check_parallelism_;
   // Whether or not this is a nested pipeline
   bool nested_;
+  bool prepared_{false};
 };
 
 }  // namespace noisepage::execution::compiler

@@ -196,7 +196,7 @@ std::unique_ptr<SelectStatement> SelectStatement::Copy() {
         union_select_->group_by_ == nullptr ? nullptr : union_select_->group_by_->Copy(),
         union_select_->order_by_ == nullptr ? nullptr : union_select_->order_by_->Copy(),
         union_select_->limit_ == nullptr ? nullptr : union_select_->limit_->Copy(), std::move(union_new_with_tables),
-        union_select_->lateral_);
+        union_select_->lateral_, union_select_->union_all_);
     select->SetUnionSelect(std::move(union_copy));
   }
   return select;

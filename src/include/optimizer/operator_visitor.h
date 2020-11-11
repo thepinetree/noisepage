@@ -28,6 +28,7 @@ class HashGroupBy;
 class SortGroupBy;
 class Aggregate;
 class CteScan;
+class Union;
 class ExportExternalFile;
 class CreateDatabase;
 class CreateFunction;
@@ -124,9 +125,15 @@ class OperatorVisitor {
   virtual void Visit(const QueryDerivedScan *query_derived_scan) {}
 
   /**
-   * Visit a OrderBy operator
-   * @param order_by operator
+   * Visit a Union operator
+   * @param union operator
    */
+  virtual void Visit(const Union *union_op) {}
+
+  /**
+  * Visit a OrderBy operator
+  * @param order_by operator
+  */
   virtual void Visit(const OrderBy *order_by) {}
 
   /**

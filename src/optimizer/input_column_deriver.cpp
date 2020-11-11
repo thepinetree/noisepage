@@ -136,24 +136,60 @@ void InputColumnDeriver::Visit(const CteScan *op) {
   output_input_cols_ = std::make_pair(std::move(cols), std::move(child_cols));
 }
 
-void InputColumnDeriver::Visit(const LogicalUnion *op) {
+void InputColumnDeriver::Visit(const Union *op) {
   // All aggregate expressions and TVEs in the required columns and internal
-  ExprSet input_cols_set;
+  ExprMap input_cols_map;
+  size_t i = 0;
   for (auto expr : required_cols_) {
-    if (parser::ExpressionUtil::IsAggregateExpression(expr)) {
-      input_cols_set.insert(expr);
-    } else {
-      parser::ExpressionUtil::GetTupleValueExprs(&input_cols_set, expr);
+    if(expr->GetExpressionType() == parser::ExpressionType::VALUE_TUPLE){
+      input_cols_map[expr] = i;
+    }else {
+      parser::ExpressionUtil::GetTupleValueExprs(&input_cols_map, expr);
     }
+    i++;
   }
 
-  std::vector<common::ManagedPointer<parser::AbstractExpression>> cols;
-  for (const auto &expr : input_cols_set) {
-    cols.push_back(expr);
+  auto union_map = op->GetColumns();
+  auto &left_map = union_map.first;
+  auto &right_map = union_map.second;
+  auto left_cols = std::vector<common::ManagedPointer<parser::AbstractExpression>>(input_cols_map.size());
+  auto right_cols = std::vector<common::ManagedPointer<parser::AbstractExpression>>(input_cols_map.size());
+  std::vector<common::ManagedPointer<parser::AbstractExpression>> output_cols(input_cols_map.size());
+//  for(const auto &expr : input_cols_map){
+//    auto l_iter = left_map.find(expr->GetAlias());
+//    NOISEPAGE_ASSERT(l_iter != left_map.end(), "Expression not found in left union map");
+//    left_cols.push_back(l_iter->second);
+//
+//    auto r_iter = right_map.find(expr->GetAlias());
+//    NOISEPAGE_ASSERT(r_iter != right_map.end(), "Expression not found in left union map");
+//    right_cols.push_back(r_iter->second);
+//  }
+
+  for (auto &entry : input_cols_map) {
+//    auto tv_expr = entry.first.CastManagedPointerTo<parser::ColumnValueExpression>();
+    output_cols[entry.second] = entry.first;
+
+    // Get the actual expression
+    auto l_iter = left_map.find(entry.first->GetAlias());
+    NOISEPAGE_ASSERT(l_iter != left_map.end(), "Expression not found in left union map");
+    left_cols[entry.second] = l_iter->second;
+
+    auto r_iter = right_map.find(entry.first->GetAlias());
+    NOISEPAGE_ASSERT(r_iter != right_map.end(), "Expression not found in left union map");
+    right_cols[entry.second] = r_iter->second;
   }
 
-  PT2 child_cols = PT2{cols, cols};
-  output_input_cols_ = std::make_pair(std::move(cols), std::move(child_cols));
+//  std::vector<common::ManagedPointer<parser::AbstractExpression>> cols;
+//  size_t i = 0;
+//  for (auto &expr : output_cols) {
+//    auto dve = new parser::DerivedValueExpression(expr->GetReturnValueType(), -1, i++);
+//    cols.push_back(common::ManagedPointer<parser::AbstractExpression>(dve));
+//    txn_->RegisterCommitAction([=]() { delete dve; });
+//    txn_->RegisterAbortAction([=]() { delete dve; });
+//  }
+
+  PT2 child_cols = {left_cols, right_cols};
+  output_input_cols_ = std::make_pair(std::move(output_cols), std::move(child_cols));
 }
 
 void InputColumnDeriver::Visit(UNUSED_ATTRIBUTE const OrderBy *op) {

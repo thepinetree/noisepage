@@ -64,6 +64,8 @@ std::string BrainUtil::ExecutionOperatingUnitTypeToString(ExecutionOperatingUnit
       return "CREATE_INDEX";
     case ExecutionOperatingUnitType::CREATE_INDEX_MAIN:
       return "CREATE_INDEX_MAIN";
+    case ExecutionOperatingUnitType::UNION:
+      return "UNION";
     default:
       UNREACHABLE("Undefined ExecutionOperatingUnitType encountered");
       break;

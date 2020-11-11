@@ -127,7 +127,8 @@ enum class OpType {
   DROPTRIGGER,
   DROPVIEW,
   ANALYZE,
-  CTESCAN
+  CTESCAN,
+  UNION
 };
 
 /**
@@ -262,5 +263,10 @@ using ExprSet = std::unordered_set<common::ManagedPointer<parser::AbstractExpres
 
 using LateralWaitersSet = std::unordered_map<catalog::table_oid_t,
                                              std::pair<ExprMap, std::vector<parser::LateralValueExpression*>>>;
+
+using UnionAliasMap = std::pair<std::unordered_map<parser::AliasType,
+                                                   common::ManagedPointer<parser::AbstractExpression>, parser::AliasType::HashKey>,
+                                std::unordered_map<parser::AliasType,
+                                                   common::ManagedPointer<parser::AbstractExpression>, parser::AliasType::HashKey>>;
 
 }  // namespace noisepage::optimizer

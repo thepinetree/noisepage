@@ -379,6 +379,44 @@ void LogicalInsertSelectToPhysicalInsertSelect::Transform(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/// LogicalUnionToPhysicalUnion
+///////////////////////////////////////////////////////////////////////////////
+LogicalUnionToPhysicalUnion::LogicalUnionToPhysicalUnion() {
+  type_ = RuleType::UNION_TO_PHYSICAL;
+  match_pattern_ = new Pattern(OpType::LOGICALUNION);
+
+  auto child = new Pattern(OpType::LEAF);
+  auto child2 = new Pattern(OpType::LEAF);
+  match_pattern_->AddChild(child);
+  match_pattern_->AddChild(child2);
+}
+
+bool LogicalUnionToPhysicalUnion::Check(common::ManagedPointer<AbstractOptimizerNode> plan,
+                                                             OptimizationContext *context) const {
+  (void)context;
+  (void)plan;
+  return true;
+}
+
+void LogicalUnionToPhysicalUnion::Transform(
+    common::ManagedPointer<AbstractOptimizerNode> input,
+    std::vector<std::unique_ptr<AbstractOptimizerNode>> *transformed,
+    UNUSED_ATTRIBUTE OptimizationContext *context) const {
+
+  auto child1 = input->GetChildren()[0];
+  auto child2 = input->GetChildren()[1];
+  std::vector<std::unique_ptr<AbstractOptimizerNode>> c;
+  c.emplace_back(child1->Copy());
+  c.emplace_back(child2->Copy());
+  auto union_contents = input->Contents()->GetContentsAs<LogicalUnion>();
+
+  auto result_plan = std::make_unique<OperatorNode>(Union::Make(union_contents->GetColumns()).RegisterWithTxnContext(
+                                                        context->GetOptimizerContext()->GetTxn()), std::move(c),
+                                                    context->GetOptimizerContext()->GetTxn());
+  transformed->emplace_back(std::move(result_plan));
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /// LogicalAggregateAndGroupByToHashGroupBy
 ///////////////////////////////////////////////////////////////////////////////
 LogicalGroupByToPhysicalHashGroupBy::LogicalGroupByToPhysicalHashGroupBy() {

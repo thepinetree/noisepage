@@ -7,6 +7,7 @@
 #include "catalog/catalog_accessor.h"
 #include "common/managed_pointer.h"
 #include "optimizer/operator_visitor.h"
+#include "physical_operators.h"
 #include "transaction/transaction_context.h"
 
 namespace planner {
@@ -102,10 +103,10 @@ class InputColumnDeriver : public OperatorVisitor {
   void Visit(const CteScan *op) override;
 
   /**
-   * Visit function to derive input/output columns for LogicalUnion
-   * @param op LogicalUnion operator to visit
+   * Visit function to derive input/output columns for Union
+   * @param op Union operator to visit
    */
-  void Visit(const LogicalUnion *op) override;
+  void Visit(const Union *op) override;
 
   /**
    * Visit function to derive input/output columns for InnerIndexJoin

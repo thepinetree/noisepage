@@ -104,6 +104,7 @@ enum class ExecutionOperatingUnitType : uint32_t {
    */
   LIMIT,
   CTE_SCAN,
+  UNION,
 
   PARALLEL_MERGE_HASHJOIN,
   PARALLEL_MERGE_AGGBUILD,

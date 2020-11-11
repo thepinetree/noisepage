@@ -46,6 +46,7 @@
 #include "planner/plannodes/order_by_plan_node.h"
 #include "planner/plannodes/projection_plan_node.h"
 #include "planner/plannodes/seq_scan_plan_node.h"
+#include "planner/plannodes/union_plan_node.h"
 #include "planner/plannodes/update_plan_node.h"
 #include "settings/settings_manager.h"
 #include "storage/sql_table.h"
@@ -313,6 +314,24 @@ void PlanGenerator::Visit(const QueryDerivedScan *op) {
                      .SetOutputSchema(std::move(schema))
                      .AddChild(std::move(children_plans_[0]))
                      .Build();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Union
+///////////////////////////////////////////////////////////////////////////////
+void PlanGenerator::Visit(const Union *op) {
+  NOISEPAGE_ASSERT(children_plans_.size() == 2, "Union needs 2 children");
+  std::vector<planner::OutputSchema::Column> columns;
+  size_t i = 0;
+  for(auto &col : output_cols_){
+    std::unique_ptr<parser::AbstractExpression> dve = std::make_unique<parser::DerivedValueExpression>(col->GetReturnValueType(), 0, i++);
+    columns.emplace_back(col->GetAliasName(), col->GetReturnValueType(), std::move(dve));
+  }
+  output_plan_ = planner::UnionPlanNode::Builder()
+                     .SetOutputSchema(std::make_unique<planner::OutputSchema>(std::move(columns)))
+                  .AddChild(std::move(children_plans_[0]))
+                  .AddChild(std::move(children_plans_[1]))
+                  .Build();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

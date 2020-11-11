@@ -262,11 +262,17 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::SelectStat
 
   if (op->GetUnionSelect() != nullptr) {
     auto left_expr = std::move(output_expr_);
+    NOISEPAGE_ASSERT(op->GetSelectColumns().size() == op->GetUnionSelect()->GetSelectColumns().size(), "Mismatched union children");
     op->GetUnionSelect()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
+    UnionAliasMap map;
+    auto right_iter = op->GetUnionSelect()->GetSelectColumns().begin();
+    for(auto &left_col : op->GetSelectColumns()){
+      map.first[left_col->GetAlias()] = left_col;
+      map.second[left_col->GetAlias()] = *right_iter;
+    }
     auto right_expr = std::move(output_expr_);
-    // TODO(tanujnay112): unhardcode the is_all flag when we get parser to take in that info for union
     output_expr_ = std::make_unique<OperatorNode>(
-        LogicalUnion::Make(true, op, op->GetUnionSelect()).RegisterWithTxnContext(txn_context),
+        LogicalUnion::Make(op->IsUnionAll(), std::move(map)).RegisterWithTxnContext(txn_context),
         std::vector<std::unique_ptr<AbstractOptimizerNode>>{}, txn_context);
     output_expr_->PushChild(std::move(left_expr));
     output_expr_->PushChild(std::move(right_expr));

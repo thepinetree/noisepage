@@ -334,7 +334,7 @@ class SelectStatement : public SQLStatement {
                   std::unique_ptr<TableRef> from, common::ManagedPointer<AbstractExpression> where,
                   std::unique_ptr<GroupByDescription> group_by, std::unique_ptr<OrderByDescription> order_by,
                   std::unique_ptr<LimitDescription> limit, std::vector<std::unique_ptr<TableRef>> &&with,
-                  bool lateral)
+                  bool lateral,  bool union_all = true)
       : SQLStatement(StatementType::SELECT),
         select_(std::move(select)),
         select_distinct_(select_distinct),
@@ -345,7 +345,8 @@ class SelectStatement : public SQLStatement {
         limit_(std::move(limit)),
         union_select_(nullptr),
         with_table_(std::move(with)),
-        lateral_(lateral) {}
+        lateral_(lateral),
+        union_all_(union_all) {}
 
   /** Default constructor for deserialization. */
   SelectStatement() = default;
@@ -356,7 +357,21 @@ class SelectStatement : public SQLStatement {
   std::unique_ptr<SelectStatement> Copy();
 
   /** @return select columns */
-  const std::vector<common::ManagedPointer<AbstractExpression>> &GetSelectColumns() { return select_; }
+  const std::vector<common::ManagedPointer<AbstractExpression>> &GetSelectColumns() {
+    return select_;
+  }
+
+//  std::vector<common::ManagedPointer<AbstractExpression>> GetAllSelectColumns() {
+//    std::vector<common::ManagedPointer<AbstractExpression>> columns;
+//    columns.insert(columns.end(), GetSelectColumns().begin(), GetSelectColumns().end());
+//    if(union_ == nullptr){
+//      return columns;
+//    }
+//
+//    auto right = union_select_->GetAllSelectColumns();
+//    columns.insert(columns.end(), right.begin(), right.end());
+//    return right;
+//  }
 
   /** @return true if "SELECT DISTINCT", false otherwise */
   bool IsSelectDistinct() { return select_distinct_; }
@@ -410,6 +425,10 @@ class SelectStatement : public SQLStatement {
     serves_lateral_ = true;
   }
 
+  bool IsUnionAll() {
+    return union_all_;
+  }
+
   /**
    * @return the hashed value of this select statement
    */
@@ -449,6 +468,7 @@ class SelectStatement : public SQLStatement {
   std::vector<std::unique_ptr<TableRef>> with_table_;
   bool serves_lateral_{false};
   bool lateral_;
+  bool union_all_;
 
   /** @param select List of select columns */
   void SetSelectColumns(std::vector<common::ManagedPointer<AbstractExpression>> select) { select_ = std::move(select); }

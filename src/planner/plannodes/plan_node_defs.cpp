@@ -76,6 +76,8 @@ std::string PlanNodeTypeToString(PlanNodeType type) {
       return "CteScan";
     case PlanNodeType::CTESCANLEADER:
       return "CteScanLeader";
+    case PlanNodeType::UNION:
+      return "Union";
     case PlanNodeType::MOCK:
       return "Mock";
   }

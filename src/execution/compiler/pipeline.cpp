@@ -33,7 +33,7 @@ Pipeline::Pipeline(CompilationContext *ctx)
       check_parallelism_(true),
       nested_(false) {}
 
-Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism) : Pipeline(op->GetCompilationContext()) {
+Pipeline::Pipeline(OperatorTranslator *op, Pipeline::Parallelism parallelism, bool consumer) : Pipeline(op->GetCompilationContext()) {
   UpdateParallelism(parallelism);
   RegisterStep(op);
 }
@@ -50,6 +50,14 @@ void Pipeline::RegisterStep(OperatorTranslator *op) {
   }
   steps_.push_back(op);
 }
+
+//void Pipeline::CloneInto(Pipeline *dest) {
+//  for(auto step : steps_){
+//    dest->steps_.push_back(step);
+//  }
+//  for(auto member : state_.)
+//  dest->nested_ = nested_;
+//}
 
 void Pipeline::RegisterSource(PipelineDriver *driver, Pipeline::Parallelism parallelism) {
   driver_ = driver;
@@ -149,6 +157,9 @@ util::RegionVector<ast::FieldDecl *> Pipeline::PipelineParams() const {
   auto &state = GetPipelineStateDescriptor();
   ast::Expr *pipeline_state = codegen_->PointerType(codegen_->MakeExpr(state.GetTypeName()));
   query_params.push_back(codegen_->MakeField(state_var_, pipeline_state));
+//  for(auto field : extra_pipeline_params_){
+//    query_params.push_back(field);
+//  }
   return query_params;
 }
 
@@ -159,15 +170,24 @@ void Pipeline::LinkSourcePipeline(Pipeline *dependency) {
 
 void Pipeline::LinkNestedPipeline(Pipeline *pipeline) {
   NOISEPAGE_ASSERT(pipeline != nullptr, "Nested pipeline cannot be null");
-  if (nested_) {
-    parent_->nested_pipelines_.push_back(pipeline);
-    pipeline->parent_ = parent_;
-  } else {
-    nested_pipelines_.push_back(pipeline);
-    pipeline->parent_ = this;
+  pipeline->nested_pipelines_.push_back(this);
+  if(!pipeline->nested_) {
+    pipeline->nested_ = true;
+    // add to pipeline params
+    auto op = pipeline->steps_.back();
+    size_t i = 0;
+    for (auto &col : op->GetPlan().GetOutputSchema()->GetColumns()) {
+      pipeline->extra_pipeline_params_.push_back(codegen_->MakeField(codegen_->MakeIdentifier("row" + std::to_string(i++)),
+                                                             codegen_->PointerType(codegen_->TplType(sql::GetTypeId(col.GetType())))));
+    }
   }
-
-  pipeline->MarkNested();
+//  if (nested_) {
+//    parent_->nested_pipelines_.push_back(pipeline);
+//    pipeline->parent_ = parent_;
+//  } else {
+//    nested_pipelines_.push_back(pipeline);
+//    pipeline->parent_ = this;
+//  }
 }
 
 void Pipeline::CollectDependencies(std::vector<Pipeline *> *deps) {
@@ -175,10 +195,11 @@ void Pipeline::CollectDependencies(std::vector<Pipeline *> *deps) {
     pipeline->CollectDependencies(deps);
   }
 
+  deps->push_back(this);
+
   for (auto *pipeline : nested_pipelines_) {
     pipeline->CollectDependencies(deps);
   }
-  deps->push_back(this);
 }
 
 void Pipeline::CollectDependencies(std::vector<const Pipeline *> *deps) const {
@@ -200,9 +221,7 @@ void Pipeline::Prepare(const exec::ExecutionSettings &exec_settings) {
   }
 
   // if this pipeline is nested, it doesn't own its pipeline state
-  if (!nested_) {
-    state_.ConstructFinalType(codegen_);
-  }
+  state_.ConstructFinalType(codegen_);
 
   // Finalize the execution mode. We choose serial execution if ANY of the below
   // conditions are satisfied:
@@ -232,6 +251,8 @@ void Pipeline::Prepare(const exec::ExecutionSettings &exec_settings) {
     EXECUTION_LOG_TRACE("Pipeline-{}: parallel={}, vectorized={}, steps=[{}]", id_, IsParallel(), IsVectorized(),
                         result);
   }
+
+  prepared_ = true;
 }
 
 ast::FunctionDecl *Pipeline::GenerateSetupPipelineStateFunction() const {
@@ -270,7 +291,16 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineStateFunction() const {
 ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction() const {
   auto query_state = compilation_context_->GetQueryState();
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Init"));
-  FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
+  auto params = compilation_context_->QueryParams();
+  ast::FieldDecl *p_state_ptr = nullptr;
+  auto &state = GetPipelineStateDescriptor();
+  uint32_t p_state_ind;
+  if(nested_){
+    p_state_ptr = codegen_->MakeField(codegen_->MakeFreshIdentifier("pipeline_state"), codegen_->MakeExpr(state.GetTypeName()));
+    params.push_back(p_state_ptr);
+    p_state_ind = params.size() - 1;
+  }
+  FunctionBuilder builder(codegen_, name, std::move(params), codegen_->Nil());
   {
     CodeGen::CodeScope code_scope(codegen_);
     // var tls = @execCtxGetTLS(exec_ctx)
@@ -279,13 +309,12 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction() const {
     builder.Append(codegen_->DeclareVarWithInit(tls, codegen_->ExecCtxGetTLS(exec_ctx)));
     // @tlsReset(tls, @sizeOf(ThreadState), init, tearDown, queryState)
     ast::Expr *state_ptr = query_state->GetStatePointer(codegen_);
-    auto &state = GetPipelineStateDescriptor();
     if (!nested_) {
       builder.Append(codegen_->TLSReset(codegen_->MakeExpr(tls), state.GetTypeName(),
                                         GetSetupPipelineStateFunctionName(), GetTearDownPipelineStateFunctionName(),
                                         state_ptr));
     } else {
-      auto pipeline_state = codegen_->TLSAccessCurrentThreadState(codegen_->MakeExpr(tls), state.GetTypeName());
+      auto pipeline_state = builder.GetParameterByPosition(p_state_ind);
       builder.Append(codegen_->Call(GetSetupPipelineStateFunctionName(), {state_ptr, pipeline_state}));
     }
   }
@@ -294,6 +323,9 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction() const {
 
 ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
   auto params = PipelineParams();
+  for(auto field : extra_pipeline_params_){
+    params.push_back(field);
+  }
 
   if (IsParallel()) {
     auto additional_params = driver_->GetWorkerParams();
@@ -328,11 +360,31 @@ ast::FunctionDecl *Pipeline::GeneratePipelineWorkFunction() const {
 }
 
 std::vector<ast::Expr *> Pipeline::CallSingleRunPipelineFunction() const {
+  NOISEPAGE_ASSERT(!nested_, "can't call a nested pipeline like this");
   return {
       codegen_->Call(GetInitPipelineFunctionName(), {compilation_context_->GetQueryState()->GetStatePointer(codegen_)}),
       codegen_->Call(GetRunPipelineFunctionName(), {compilation_context_->GetQueryState()->GetStatePointer(codegen_)}),
       codegen_->Call(GetTeardownPipelineFunctionName(),
                      {compilation_context_->GetQueryState()->GetStatePointer(codegen_)})};
+}
+
+void Pipeline::CallNestedRunPipelineFunction(WorkContext *ctx, const OperatorTranslator *op, FunctionBuilder *function) const {
+  std::vector<ast::Expr*> stmts;
+  auto p_state = codegen_->MakeFreshIdentifier("nested_state");
+  auto p_state_ptr = codegen_->AddressOf(p_state);
+
+  std::vector<ast::Expr*> params_vec = {compilation_context_->GetQueryState()->GetStatePointer(codegen_)};
+  params_vec.push_back(p_state_ptr);
+
+  for(size_t i = 0;i < op->GetPlan().GetOutputSchema()->GetColumns().size();i++){
+    params_vec.push_back(codegen_->AddressOf(op->GetOutput(ctx, i)));
+  }
+
+  function->Append(codegen_->DeclareVarNoInit(p_state, codegen_->MakeExpr(GetPipelineStateDescriptor().GetTypeName())));
+  function->Append(codegen_->Call(GetInitPipelineFunctionName(), {compilation_context_->GetQueryState()->GetStatePointer(codegen_), p_state_ptr}));
+  function->Append(codegen_->Call(GetRunPipelineFunctionName(), params_vec));
+  function->Append(codegen_->Call(GetTeardownPipelineFunctionName(), {compilation_context_->GetQueryState()->GetStatePointer(codegen_), p_state_ptr}));
+  return;
 }
 
 std::vector<ast::Expr *> Pipeline::CallRunPipelineFunction() const {
@@ -361,10 +413,24 @@ ast::Identifier Pipeline::GetRunPipelineFunctionName() const {
   return codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
 }
 
+ast::Expr *Pipeline::GetNestedInputArg(uint32_t index) const {
+  NOISEPAGE_ASSERT(nested_, "Asking for input arg on non-nested pipeline");
+  NOISEPAGE_ASSERT(index < extra_pipeline_params_.size(), "Asking for input arg on non-nested pipeline that doesn't exist");
+  return codegen_->UnaryOp(parsing::Token::Type::STAR, codegen_->MakeExpr(extra_pipeline_params_[index]->Name()));
+}
+
 ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
   bool started_tracker = false;
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("Run"));
-  FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
+  auto params = compilation_context_->QueryParams();
+  if(nested_){
+    params.push_back(codegen_->MakeField(state_var_, codegen_->PointerType(state_.GetTypeName())));
+  }
+
+  for(auto field : extra_pipeline_params_){
+    params.push_back(field);
+  }
+  FunctionBuilder builder(codegen_, name, std::move(params), codegen_->Nil());
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen_);
@@ -391,8 +457,17 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
       InjectStartResourceTracker(&builder, false);
       started_tracker = true;
 
+      std::vector<ast::Expr *> args = {builder.GetParameterByPosition(0), codegen_->MakeExpr(state_var_)};
+      if(nested_){
+        size_t i = args.size();
+        ast::Expr *arg = builder.GetParameterByPosition(i++);
+        while(arg != nullptr){
+          args.push_back(arg);
+          arg = builder.GetParameterByPosition(i++);
+        }
+      }
       builder.Append(
-          codegen_->Call(GetWorkFunctionName(), {builder.GetParameterByPosition(0), codegen_->MakeExpr(state_var_)}));
+          codegen_->Call(GetWorkFunctionName(), std::move(args)));
     }
 
     // TODO(abalakum): This shouldn't actually be dependent on order and the loop can be simplified
@@ -412,7 +487,17 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
 
 ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
   auto name = codegen_->MakeIdentifier(CreatePipelineFunctionName("TearDown"));
-  FunctionBuilder builder(codegen_, name, compilation_context_->QueryParams(), codegen_->Nil());
+  auto params = compilation_context_->QueryParams();
+  ast::FieldDecl *p_state_ptr = nullptr;
+  auto &state = GetPipelineStateDescriptor();
+  uint32_t p_state_index;
+  if(nested_){
+    p_state_ptr = codegen_->MakeField(codegen_->MakeFreshIdentifier("pipeline_state"), codegen_->MakeExpr(state.GetTypeName()));
+    params.push_back(p_state_ptr);
+    p_state_index = params.size() - 1;
+  }
+
+  FunctionBuilder builder(codegen_, name, std::move(params), codegen_->Nil());
   {
     // Begin a new code scope for fresh variables.
     CodeGen::CodeScope code_scope(codegen_);
@@ -429,8 +514,8 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
       builder.Append(codegen_->DeclareVarWithInit(tls, codegen_->ExecCtxGetTLS(exec_ctx)));
       auto query_state = compilation_context_->GetQueryState();
       auto state_ptr = query_state->GetStatePointer(codegen_);
-      auto &state = GetPipelineStateDescriptor();
-      auto pipeline_state = codegen_->TLSAccessCurrentThreadState(codegen_->MakeExpr(tls), state.GetTypeName());
+
+      auto pipeline_state = builder.GetParameterByPosition(p_state_index);
       auto call = codegen_->Call(GetTearDownPipelineStateFunctionName(), {state_ptr, pipeline_state});
       builder.Append(codegen_->MakeStmt(call));
     }
@@ -440,9 +525,8 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction() const {
 
 void Pipeline::GeneratePipeline(ExecutableQueryFragmentBuilder *builder) const {
   // Declare the pipeline state.
-  if (!nested_) {
-    builder->DeclareStruct(state_.GetType());
-  }
+  builder->DeclareStruct(state_.GetType());
+//  }
 
   // Generate pipeline state initialization and tear-down functions.
   builder->DeclareFunction(GenerateSetupPipelineStateFunction());

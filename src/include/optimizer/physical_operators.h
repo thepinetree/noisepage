@@ -13,6 +13,7 @@
 #include "common/hash_util.h"
 #include "common/managed_pointer.h"
 #include "optimizer/operator_node_contents.h"
+#include "optimizer/optimizer_defs.h"
 #include "parser/expression_defs.h"
 #include "parser/parser_defs.h"
 #include "parser/statements.h"
@@ -361,6 +362,32 @@ class QueryDerivedScan : public OperatorNodeContents<QueryDerivedScan> {
    */
   std::unordered_map<parser::AliasType, common::ManagedPointer<parser::AbstractExpression>, parser::AliasType::HashKey>
       alias_to_expr_map_;
+};
+
+class Union : public OperatorNodeContents<Union> {
+ public:
+
+  /**
+   * @return return a union operator
+   */
+  static Operator Make(UnionAliasMap &&columns);
+
+  /**
+   * Copy
+   * @returns copy of this
+   */
+  BaseOperatorNodeContents *Copy() const override;
+
+  bool operator==(const BaseOperatorNodeContents &r) override;
+  common::hash_t Hash() const override;
+
+  UnionAliasMap GetColumns() const {
+    return columns_;
+  }
+
+ private:
+  UnionAliasMap columns_;
+
 };
 
 /**

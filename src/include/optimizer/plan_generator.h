@@ -116,6 +116,12 @@ class PlanGenerator : public OperatorVisitor {
   void Visit(const Limit *op) override;
 
   /**
+   * Visitor function for a Union operator
+   * @param op Union operator being visited
+   */
+  void Visit(const Union *op) override;
+
+  /**
    * Visitor function for a InnerIndexJoin operator
    * @param op InnerIndexJoin operator being visited
    */

@@ -13,6 +13,7 @@
 #include "common/hash_util.h"
 #include "common/managed_pointer.h"
 #include "optimizer/operator_node_contents.h"
+#include "optimizer/optimizer_defs.h"
 #include "parser/expression/abstract_expression.h"
 #include "parser/expression_defs.h"
 #include "parser/parser_defs.h"
@@ -1949,8 +1950,7 @@ class LogicalUnion : public OperatorNodeContents<LogicalUnion> {
    * @param right_expr Right child of union
    * @return A new logical union operator
    */
-  static Operator Make(bool is_all, common::ManagedPointer<parser::SelectStatement> left_expr,
-                       common::ManagedPointer<parser::SelectStatement> right_expr);
+  static Operator Make(bool is_all, UnionAliasMap &&columns);
 
   /**
    * Copy
@@ -1965,10 +1965,15 @@ class LogicalUnion : public OperatorNodeContents<LogicalUnion> {
   bool operator==(const BaseOperatorNodeContents &r) override;
   common::hash_t Hash() const override;
 
+  bool GetIsAll() const {
+    return is_all_;
+  }
+
+  UnionAliasMap GetColumns() const { return columns_; }
+
  private:
   bool is_all_;
-  common::ManagedPointer<parser::SelectStatement> left_expr_;
-  common::ManagedPointer<parser::SelectStatement> right_expr_;
+  UnionAliasMap columns_;
 };
 
 /**

@@ -32,6 +32,7 @@ class ProjectionPlanNode;
 class SeqScanPlanNode;
 class UpdatePlanNode;
 class SetOpPlanNode;
+class UnionPlanNode;
 class ResultPlanNode;
 
 /**
@@ -226,6 +227,12 @@ class PlanVisitor {
    * @param plan ResultPlanNode
    */
   virtual void Visit(UNUSED_ATTRIBUTE const ResultPlanNode *plan) {}
+
+  /**
+   * Visit an UnionPlanNode
+   * @param plan UnionPlanNode
+   */
+  virtual void Visit(UNUSED_ATTRIBUTE const UnionPlanNode *plan) {}
 };
 
 }  // namespace noisepage::planner

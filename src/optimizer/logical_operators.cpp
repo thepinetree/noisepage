@@ -1242,25 +1242,27 @@ bool LogicalAnalyze::operator==(const BaseOperatorNodeContents &r) {
 //===--------------------------------------------------------------------===//
 BaseOperatorNodeContents *LogicalUnion::Copy() const { return new LogicalUnion(*this); }
 
-Operator LogicalUnion::Make(bool is_all, common::ManagedPointer<parser::SelectStatement> left_expr,
-                            common::ManagedPointer<parser::SelectStatement> right_expr) {
+Operator LogicalUnion::Make(bool is_all, UnionAliasMap &&columns) {
   auto *op = new LogicalUnion();
-  op->left_expr_ = left_expr;
-  op->right_expr_ = right_expr;
   op->is_all_ = is_all;
+  op->columns_ = std::move(columns);
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(op));
 }
 
 bool LogicalUnion::operator==(const BaseOperatorNodeContents &r) {
   if (r.GetOpType() != OpType::LOGICALUNION) return false;
   const LogicalUnion &node = *dynamic_cast<const LogicalUnion *>(&r);
-  return node.right_expr_ == right_expr_ && node.left_expr_ == left_expr_ && node.is_all_ == is_all_;
+//  if(node.GetColumns().size() != GetColumns().size()){
+//    return false;
+//  }
+//  for(size_t i = 0;i < GetColumns().size();i++){
+//    if(node.GetColumns()[i] != )
+//  }
+  return node.is_all_ == is_all_;
 }
 
 common::hash_t LogicalUnion::Hash() const {
   common::hash_t hash = BaseOperatorNodeContents::Hash();
-  hash = common::HashUtil::CombineHashes(hash, left_expr_->Hash());
-  hash = common::HashUtil::CombineHashes(hash, right_expr_->Hash());
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(is_all_));
   return hash;
 }

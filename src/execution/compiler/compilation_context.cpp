@@ -43,6 +43,7 @@
 #include "execution/compiler/operator/seq_scan_translator.h"
 #include "execution/compiler/operator/sort_translator.h"
 #include "execution/compiler/operator/static_aggregation_translator.h"
+#include "execution/compiler/operator/union_translator.h"
 #include "execution/compiler/operator/update_translator.h"
 #include "execution/compiler/pipeline.h"
 #include "execution/exec/execution_settings.h"
@@ -71,6 +72,7 @@
 #include "planner/plannodes/projection_plan_node.h"
 #include "planner/plannodes/seq_scan_plan_node.h"
 #include "planner/plannodes/set_op_plan_node.h"
+#include "planner/plannodes/union_plan_node.h"
 #include "planner/plannodes/update_plan_node.h"
 #include "spdlog/fmt/fmt.h"
 
@@ -158,6 +160,9 @@ void CompilationContext::GeneratePlan(const planner::AbstractPlanNode &plan) {
   std::vector<Pipeline *> execution_order;
   main_pipeline.CollectDependencies(&execution_order);
   for (auto *pipeline : execution_order) {
+    if(pipeline->IsPrepared()){
+      continue;
+    }
     // Extract and record the translators.
     // Pipelines require obtaining feature IDs, but features don't exist until translators are extracted.
     // Therefore translator extraction must happen before pipelines are generated.
@@ -316,6 +321,11 @@ void CompilationContext::Prepare(const planner::AbstractPlanNode &plan, Pipeline
     case planner::PlanNodeType::CREATE_INDEX: {
       const auto &create_index = dynamic_cast<const planner::CreateIndexPlanNode &>(plan);
       translator = std::make_unique<IndexCreateTranslator>(create_index, this, pipeline);
+      break;
+    }
+    case planner::PlanNodeType::UNION: {
+      const auto &union_node = dynamic_cast<const planner::UnionPlanNode &>(plan);
+      translator = std::make_unique<UnionTranslator>(union_node, this, pipeline);
       break;
     }
     default: {

@@ -80,6 +80,8 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
 
   callbacks->EndPhase(Phase::SemanticAnalysis, this);
 
+  ast::AstPrettyPrint::Dump(std::cout, root_);
+
   // -------------------------------------------------------
   // Phase 3 : Bytecode Generation
   // -------------------------------------------------------
