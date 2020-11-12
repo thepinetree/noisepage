@@ -533,6 +533,8 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::SelectStatement> node
 
       // Finally, visit the inductive case
       ref->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
+
+      ref->GetSelect()->exposed_select_.clear();
     } else {
       ref->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
     }
