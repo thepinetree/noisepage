@@ -266,9 +266,10 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::SelectStat
     op->GetUnionSelect()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
     UnionAliasMap map;
     auto right_iter = op->GetUnionSelect()->GetSelectColumns().begin();
-    for(auto &left_col : op->GetSelectColumns()){
+    for(auto &left_col : op->GetRawSelectColumns()){
       map.first[left_col->GetAlias()] = left_col;
       map.second[left_col->GetAlias()] = *right_iter;
+      right_iter++;
     }
     auto right_expr = std::move(output_expr_);
     output_expr_ = std::make_unique<OperatorNode>(

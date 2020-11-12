@@ -602,6 +602,12 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::SelectStatement> node
         throw BINDER_EXCEPTION("Mismatched schemas in union", common::ErrorCode::ERRCODE_DATATYPE_MISMATCH);
       }
     }
+    for(auto col : node->select_){
+      std::unique_ptr<parser::AbstractExpression> new_col = std::make_unique<parser::ColumnValueExpression>("", "", col->GetReturnValueType(), col->GetAlias(),
+                                                       catalog::INVALID_COLUMN_OID);
+      node->exposed_select_.push_back(common::ManagedPointer(new_col));
+      sherpa_->GetParseResult()->AddExpression(std::move(new_col));
+    }
   }
   node->SetDepth(context_->GetDepth());
 
@@ -905,16 +911,16 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
 
     parser::TableStarExpression left_star(node->GetJoin()->GetLeftTable()->GetAlias());
     parser::TableStarExpression right_star(node->GetJoin()->GetRightTable()->GetAlias());
-    std::vector<common::ManagedPointer<parser::AbstractExpression>> columns;
-    context_->GenerateAllColumnExpressions(common::ManagedPointer(&left_star), sherpa_->GetParseResult(), common::ManagedPointer(&columns));
-    context_->RemoveColumnAllExpressions(common::ManagedPointer(&left_star));
-    context_->AddNestedTable(left_star.GetTargetTable(), table_oid, columns, {});
-
-    columns.clear();
-
-    context_->GenerateAllColumnExpressions(common::ManagedPointer(&right_star), sherpa_->GetParseResult(), common::ManagedPointer(&columns));
-    context_->RemoveColumnAllExpressions(common::ManagedPointer(&right_star));
-    context_->AddNestedTable(right_star.GetTargetTable(), table_oid, columns, {});
+//    std::vector<common::ManagedPointer<parser::AbstractExpression>> columns;
+//    context_->GenerateAllColumnExpressions(common::ManagedPointer(&left_star), sherpa_->GetParseResult(), common::ManagedPointer(&columns));
+//    context_->RemoveColumnAllExpressions(common::ManagedPointer(&left_star));
+//    context_->AddNestedTable(left_star.GetTargetTable(), table_oid, columns, {});
+//
+//    columns.clear();
+//
+//    context_->GenerateAllColumnExpressions(common::ManagedPointer(&right_star), sherpa_->GetParseResult(), common::ManagedPointer(&columns));
+//    context_->RemoveColumnAllExpressions(common::ManagedPointer(&right_star));
+//    context_->AddNestedTable(right_star.GetTargetTable(), table_oid, columns, {});
 
 //    std::vector<common::ManagedPointer<parser::AbstractExpression>> new_columns;
 //    for(auto tve : columns){

@@ -782,7 +782,11 @@ std::unique_ptr<SelectStatement> PostgresParser::SelectTransform(ParseResult *pa
     }
     case SETOP_UNION: {
       result = SelectTransform(parse_result, root->larg_, lateral);
-      result->SetUnionSelect(SelectTransform(parse_result, root->rarg_));
+      common::ManagedPointer<SelectStatement> dest = common::ManagedPointer(result);
+      while(dest->GetUnionSelect() != nullptr) {
+        dest = dest->GetUnionSelect();
+      }
+      dest->SetUnionSelect(SelectTransform(parse_result, root->rarg_, lateral));
       break;
     }
     default: {

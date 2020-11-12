@@ -356,9 +356,17 @@ class SelectStatement : public SQLStatement {
   /** @return a copy of the select statement */
   std::unique_ptr<SelectStatement> Copy();
 
+  const std::vector<common::ManagedPointer<AbstractExpression>> &GetRawSelectColumns() {
+    return select_;
+  }
+
   /** @return select columns */
   const std::vector<common::ManagedPointer<AbstractExpression>> &GetSelectColumns() {
-    return select_;
+     if(union_select_ == nullptr || exposed_select_.empty()) {
+       return select_;
+     }else{
+       return exposed_select_;
+     }
   }
 
 //  std::vector<common::ManagedPointer<AbstractExpression>> GetAllSelectColumns() {
@@ -457,6 +465,7 @@ class SelectStatement : public SQLStatement {
  private:
   friend class binder::BindNodeVisitor;
   std::vector<common::ManagedPointer<AbstractExpression>> select_;
+  std::vector<common::ManagedPointer<AbstractExpression>> exposed_select_;
   bool select_distinct_;
   std::unique_ptr<TableRef> from_;
   common::ManagedPointer<AbstractExpression> where_;

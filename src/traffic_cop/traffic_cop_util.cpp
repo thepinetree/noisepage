@@ -41,23 +41,8 @@ std::unique_ptr<planner::AbstractPlanNode> TrafficCopUtil::Optimize(
     const auto sel_stmt = query->GetStatement(0).CastManagedPointerTo<parser::SelectStatement>();
 
     // Output
-    if(sel_stmt->GetUnionSelect() == nullptr) {
-      output = sel_stmt->GetSelectColumns();  // TODO(Matt): this is making a local copy. Revisit the life cycle and
-      // immutability of all of these Optimizer inputs to reduce copies.
-    }else{
-      for(auto col : sel_stmt->GetSelectColumns()){
-        parser::AbstractExpression *cve = nullptr;
-        if(col->GetExpressionType() == parser::ExpressionType::COLUMN_VALUE) {
-          cve = col->Copy().release();
-        }else{
-          cve = new parser::ColumnValueExpression("", "", col->GetReturnValueType(), col->GetAlias(),
-                                                  catalog::INVALID_COLUMN_OID);
-        }
-        output.push_back(common::ManagedPointer(cve));
-        txn->RegisterAbortAction([=](){ delete cve; });
-        txn->RegisterCommitAction([=](){ delete cve; });
-      }
-    }
+    output = sel_stmt->GetSelectColumns();  // TODO(Matt): this is making a local copy. Revisit the life cycle and
+                                            // immutability of all of these Optimizer inputs to reduce copies.
 
     // PropertySort
     if (sel_stmt->GetSelectOrderBy()) {
