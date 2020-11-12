@@ -896,7 +896,7 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
     // TableRef is not a CTE
     if (node->GetCteType() == parser::CTEType::INVALID) {
       auto table_oid = catalog::MakeTempOid<catalog::table_oid_t>(catalog_accessor_->GetNewTempOid());
-      context_->AddNestedTable(node->GetAlias(), table_oid, node->GetSelect()->GetSelectColumns(), {});
+      context_->AddNestedTable(node->GetAlias(), table_oid, node->GetSelect()->GetSelectColumns(), node->GetCteColumnAliases());
       node->SetTableOid(table_oid);
     }
   } else if (node->GetJoin() != nullptr) {
@@ -909,8 +909,8 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
 
     auto table_oid = node->GetJoin()->GetLeftTable()->GetTableOid();
 
-    parser::TableStarExpression left_star(node->GetJoin()->GetLeftTable()->GetAlias());
-    parser::TableStarExpression right_star(node->GetJoin()->GetRightTable()->GetAlias());
+//    parser::TableStarExpression left_star(node->GetJoin()->GetLeftTable()->GetAlias());
+//    parser::TableStarExpression right_star(node->GetJoin()->GetRightTable()->GetAlias());
 //    std::vector<common::ManagedPointer<parser::AbstractExpression>> columns;
 //    context_->GenerateAllColumnExpressions(common::ManagedPointer(&left_star), sherpa_->GetParseResult(), common::ManagedPointer(&columns));
 //    context_->RemoveColumnAllExpressions(common::ManagedPointer(&left_star));

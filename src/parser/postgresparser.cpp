@@ -844,7 +844,7 @@ std::unique_ptr<TableRef> PostgresParser::FromTransform(ParseResult *parse_resul
         case T_JoinExpr: {
           auto join = JoinTransform(parse_result, reinterpret_cast<JoinExpr *>(node));
           if (join != nullptr) {
-            refs.emplace_back(TableRef::CreateTableRefByJoin(std::move(join)));
+            refs.emplace_back(TableRef::CreateTableRefByJoin(std::move(join), reinterpret_cast<JoinExpr *>(node)->alias_->aliasname_));
             break;
           }
           // fall through and fail
@@ -1082,6 +1082,20 @@ std::string PostgresParser::AliasTransform(Alias *root) {
   return root->aliasname_;
 }
 
+std::vector<AliasType> PostgresParser::ColumnAliasListTransform(Alias *root) {
+  std::vector<AliasType> aliases;
+  if(root == nullptr){
+    return aliases;
+  }
+  size_t i = 0;
+  for (ListCell *cell = root->colnames_->head; cell != nullptr; cell = cell->next) {
+    auto target = reinterpret_cast<Value *>(cell->data.ptr_value);
+    auto column = target->val_.str_;
+    aliases.emplace_back(parser::AliasType(column, i++));
+  }
+  return aliases;
+}
+
 // Postgres.RangeVar -> noisepage.TableRef
 std::unique_ptr<TableRef> PostgresParser::RangeVarTransform(ParseResult *parse_result, RangeVar *root) {
   auto table_name = root->relname_ == nullptr ? "" : root->relname_;
@@ -1090,7 +1104,8 @@ std::unique_ptr<TableRef> PostgresParser::RangeVarTransform(ParseResult *parse_r
 
   auto table_info = std::make_unique<TableInfo>(table_name, schema_name, database_name);
   auto alias = AliasTransform(root->alias_);
-  auto result = TableRef::CreateTableRefByName(alias, std::move(table_info));
+  auto column_aliases = ColumnAliasListTransform(root->alias_);
+  auto result = TableRef::CreateTableRefByName(alias, std::move(table_info), std::move(column_aliases));
   return result;
 }
 
@@ -1101,7 +1116,8 @@ std::unique_ptr<TableRef> PostgresParser::RangeSubselectTransform(ParseResult *p
     return nullptr;
   }
   auto alias = AliasTransform(root->alias_);
-  auto result = TableRef::CreateTableRefBySelect(alias, std::move(select));
+  auto column_aliases = ColumnAliasListTransform(root->alias_);
+  auto result = TableRef::CreateTableRefBySelect(alias, std::move(select), std::move(column_aliases));
   return result;
 }
 

@@ -422,6 +422,7 @@ void BinderContext::GenerateAllColumnExpressions(
         tv_expr->SetReturnValueType(col_entry.second);
         tv_expr->DeriveExpressionName();
         tv_expr->SetColumnOID(catalog::MakeTempOid<catalog::col_oid_t>(col_entry.first.GetSerialNo()));
+        tv_expr->SetTableOID(entry.second.first);
         tv_expr->SetDepth(depth_);
 
         auto unique_tv_expr =
