@@ -238,6 +238,8 @@ class TableRef {
   /** @return column alias names */
   std::vector<AliasType> GetCteColumnAliases() { return cte_col_aliases_; }
 
+  void AddCteColumnAlias(AliasType alias) { cte_col_aliases_.push_back(alias); }
+
   /** @return cte recursive flag */
   parser::CTEType GetCteType() { return cte_type_; }
 

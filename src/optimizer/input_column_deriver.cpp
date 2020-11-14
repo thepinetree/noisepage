@@ -37,7 +37,16 @@ std::pair<PT1, PT2> InputColumnDeriver::DeriveInputColumns(
   return std::move(output_input_cols_);
 }
 
-void InputColumnDeriver::Visit(UNUSED_ATTRIBUTE const TableFreeScan *op) {}
+void InputColumnDeriver::Visit(UNUSED_ATTRIBUTE const TableFreeScan *op) {
+  if(required_cols_.empty()){
+    parser::AbstractExpression *dummy_cve = new parser::ConstantValueExpression(type::TypeId::INTEGER);
+    txn_->RegisterCommitAction([=](){ delete dummy_cve; });
+    txn_->RegisterAbortAction([=](){ delete dummy_cve; });
+    PT2 child_cols;
+    PT1 output_cols = {common::ManagedPointer(dummy_cve)};
+    output_input_cols_ = std::make_pair(std::move(output_cols), std::move(child_cols));
+  }
+}
 
 void InputColumnDeriver::Visit(UNUSED_ATTRIBUTE const SeqScan *) { ScanHelper(); }
 
@@ -540,6 +549,22 @@ void InputColumnDeriver::JoinHelper(const BaseOperatorNodeContents *op) {
     output_cols[expr_idx_pair.second] = expr_idx_pair.first;
   }
 
+//  // need at least one column from each child
+//  if(build_table_cols_set.empty()){
+//    parser::AbstractExpression *dummy_cve = new parser::ConstantValueExpression(type::TypeId::INTEGER);
+//    txn_->RegisterCommitAction([=](){ delete dummy_cve; });
+//    txn_->RegisterAbortAction([=](){ delete dummy_cve; });
+//    build_table_cols_set.insert(common::ManagedPointer(dummy_cve));
+//    NOISEPAGE_ASSERT(!probe_table_cols_set.empty(), "Both probe and build table column sets can't be empty");
+//  }
+//
+//  if(probe_table_cols_set.empty()){
+//    parser::AbstractExpression *dummy_cve = new parser::ConstantValueExpression(type::TypeId::INTEGER);
+//    txn_->RegisterCommitAction([=](){ delete dummy_cve; });
+//    txn_->RegisterAbortAction([=](){ delete dummy_cve; });
+//    probe_table_cols_set.insert(common::ManagedPointer(dummy_cve));
+//  }
+
   // Derive build columns (first element of input column vector)
   std::vector<common::ManagedPointer<parser::AbstractExpression>> build_cols;
   for (auto &col : build_table_cols_set) {
@@ -551,6 +576,9 @@ void InputColumnDeriver::JoinHelper(const BaseOperatorNodeContents *op) {
   for (auto &col : probe_table_cols_set) {
     probe_cols.push_back(col);
   }
+
+//  NOISEPAGE_ASSERT(probe_cols.size() > 0, "empty probe columns");
+//  NOISEPAGE_ASSERT(build_cols.size() > 0, "empty build columns");
 
   PT2 child_cols = PT2{build_cols, probe_cols};
   output_input_cols_ = std::make_pair(std::move(output_cols), std::move(child_cols));

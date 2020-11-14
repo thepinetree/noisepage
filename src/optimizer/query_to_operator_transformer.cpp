@@ -363,7 +363,7 @@ void QueryToOperatorTransformer::Visit(common::ManagedPointer<parser::TableRef> 
     auto table_alias = node->GetAlias();
     std::transform(table_alias.begin(), table_alias.end(), table_alias.begin(), ::tolower);
 
-    auto alias_to_expr_map = ConstructSelectElementMap(node->GetSelect()->GetSelectColumns());
+    auto alias_to_expr_map = ConstructSelectElementMap(node->GetCteColumnAliases(), node->GetSelect()->GetSelectColumns());
 
     node->GetSelect()->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
 
@@ -1040,13 +1040,16 @@ void QueryToOperatorTransformer::SplitPredicates(
 }
 
 std::unordered_map<parser::AliasType, common::ManagedPointer<parser::AbstractExpression>, parser::AliasType::HashKey>
-QueryToOperatorTransformer::ConstructSelectElementMap(
+QueryToOperatorTransformer::ConstructSelectElementMap(const std::vector<parser::AliasType> &aliases,
     const std::vector<common::ManagedPointer<parser::AbstractExpression>> &select_list) {
   std::unordered_map<parser::AliasType, common::ManagedPointer<parser::AbstractExpression>, parser::AliasType::HashKey>
       res;
+  size_t i = 0;
   for (auto &expr : select_list) {
     parser::AliasType alias;
-    if (!expr->GetAlias().Empty()) {
+    if (i < aliases.size()) {
+      alias = aliases[i++];
+    } else if (!expr->GetAlias().Empty()) {
       alias = expr->GetAlias();
     } else if (expr->GetExpressionType() == parser::ExpressionType::COLUMN_VALUE) {
       auto tv_expr = expr.CastManagedPointerTo<parser::ColumnValueExpression>();

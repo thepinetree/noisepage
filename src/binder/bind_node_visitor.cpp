@@ -480,6 +480,8 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::SelectStatement> node
         auto base_case = ref->GetSelect()->GetUnionSelect();
         if (base_case != nullptr) {
           base_case->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
+        }else{
+          throw BINDER_EXCEPTION("Expected base or inductive case on this cte", common::ErrorCode::ERRCODE_SYNTAX_ERROR);
         }
         sel_cols = base_case->GetSelectColumns();
       } else {
@@ -505,7 +507,7 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::SelectStatement> node
       std::vector<parser::AliasType> aliases;
       for (size_t i = 0; i < num_aliases; i++) {
         auto serial_no = catalog_accessor_->GetNewTempOid();
-        columns[i]->SetAlias(parser::AliasType(column_aliases[i].GetName(), serial_no));
+//        columns[i]->SetAlias(parser::AliasType(column_aliases[i].GetName(), serial_no));
         aliases.emplace_back(parser::AliasType(column_aliases[i].GetName(), serial_no));
         ref->cte_col_aliases_[i] = parser::AliasType(column_aliases[i].GetName(), serial_no);
       }
@@ -515,18 +517,18 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::SelectStatement> node
         if (new_alias.Empty()) {
           new_alias = parser::AliasType("?column?", serial_no);
         }
-        columns[i]->SetAlias(new_alias);
+//        columns[i]->SetAlias(new_alias);
         aliases.emplace_back(new_alias);
         ref->cte_col_aliases_.emplace_back(new_alias);
       }
 
-      if (inductive) {
-        size_t i = 0;
-        for (auto &alias : ref->GetCteColumnAliases()) {
-          ref->GetSelect()->GetSelectColumns()[i]->SetAlias(alias);
-          i++;
-        }
-      }
+//      if (inductive) {
+//        size_t i = 0;
+//        for (auto &alias : ref->GetCteColumnAliases()) {
+//          ref->GetSelect()->GetUnionSelect()->GetSelectColumns()[i]->SetAlias(alias);
+//          i++;
+//        }
+//      }
 
       // Add the CTE to the nested_table_alias_map
       context.AddCTETable(ref->GetAlias(), sel_cols, ref->GetCteColumnAliases());
@@ -535,6 +537,14 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::SelectStatement> node
       ref->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
 
       ref->GetSelect()->exposed_select_.clear();
+
+//      if (inductive) {
+//        size_t i = 0;
+//        for (auto &alias : ref->GetCteColumnAliases()) {
+//          ref->GetSelect()->GetSelectColumns()[i]->SetAlias(alias);
+//          i++;
+//        }
+//      }
     } else {
       ref->Accept(common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
     }
@@ -886,7 +896,7 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
 
     // Save the previous context
     auto pre_context = context_;
-    BinderContext context(nullptr);
+    BinderContext context(context_->GetUpperContext());
     if(!node->IsLateral() && (node->GetCteType() == parser::CTEType::INVALID)) {
       context_ = common::ManagedPointer(&context);
     }
@@ -898,6 +908,14 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::TableRef> node) {
     // TableRef is not a CTE
     if (node->GetCteType() == parser::CTEType::INVALID) {
       auto table_oid = catalog::MakeTempOid<catalog::table_oid_t>(catalog_accessor_->GetNewTempOid());
+      for(size_t i = node->GetCteColumnAliases().size();i < node->GetSelect()->GetSelectColumns().size();i++){
+        auto alias = node->GetSelect()->GetSelectColumns()[i]->GetAlias();
+        if(alias.IsSerialNoValid()) {
+          node->AddCteColumnAlias(alias);
+        }else{
+          node->AddCteColumnAlias(parser::AliasType(alias.GetName(), catalog_accessor_->GetNewTempOid()));
+        }
+      }
       context_->AddNestedTable(node->GetAlias(), table_oid, node->GetSelect()->GetSelectColumns(), node->GetCteColumnAliases());
       node->SetTableOid(table_oid);
     }

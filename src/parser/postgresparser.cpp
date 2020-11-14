@@ -1084,7 +1084,7 @@ std::string PostgresParser::AliasTransform(Alias *root) {
 
 std::vector<AliasType> PostgresParser::ColumnAliasListTransform(Alias *root) {
   std::vector<AliasType> aliases;
-  if(root == nullptr){
+  if(root == nullptr || root->colnames_ == nullptr){
     return aliases;
   }
   size_t i = 0;

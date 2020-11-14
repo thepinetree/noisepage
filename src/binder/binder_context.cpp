@@ -103,21 +103,11 @@ void BinderContext::AddNestedTable(const std::string &table_alias, catalog::tabl
 
   std::unordered_map<parser::AliasType, type::TypeId, parser::AliasType::HashKey> column_alias_map;
   size_t i = 0;
-  auto cols = col_aliases.size();
+  NOISEPAGE_ASSERT(col_aliases.size() == select_list.size(), "column aliases and select list differ in size");
   for (auto &expr : select_list) {
-    parser::AliasType alias;
-    if (i < cols) {
-      alias = col_aliases[i];
-    } else if (!expr->GetAliasName().empty()) {
-      alias = expr->GetAlias();
-    } else if (expr->GetExpressionType() == parser::ExpressionType::COLUMN_VALUE) {
-      auto tv_expr = reinterpret_cast<parser::ColumnValueExpression *>(expr.Get());
-      alias = parser::AliasType(tv_expr->GetColumnName());
-    } else {
-      i++;
-      continue;
-    }
+    parser::AliasType alias = col_aliases[i];
 
+    NOISEPAGE_ASSERT(column_alias_map.count(alias) == 0, "Inserting duplicate alias into nested table map");
     column_alias_map[alias] = expr->GetReturnValueType();
     i++;
   }
@@ -371,6 +361,7 @@ void BinderContext::GenerateAllColumnExpressions(
             tv_expr->SetColumnOID(catalog::MakeTempOid<catalog::col_oid_t>(col_entry.first.GetSerialNo()));
             tv_expr->SetDepth(depth_);
             tv_expr->SetTableOID(iter->second.first);
+            tv_expr->SetAlias(col_entry.first);
 
             auto unique_tv_expr =
                 std::unique_ptr<parser::AbstractExpression>(reinterpret_cast<parser::AbstractExpression *>(tv_expr));
@@ -424,6 +415,7 @@ void BinderContext::GenerateAllColumnExpressions(
         tv_expr->SetColumnOID(catalog::MakeTempOid<catalog::col_oid_t>(col_entry.first.GetSerialNo()));
         tv_expr->SetTableOID(entry.second.first);
         tv_expr->SetDepth(depth_);
+        tv_expr->SetAlias(col_entry.first);
 
         auto unique_tv_expr =
             std::unique_ptr<parser::AbstractExpression>(reinterpret_cast<parser::AbstractExpression *>(tv_expr));

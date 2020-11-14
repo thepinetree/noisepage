@@ -154,7 +154,8 @@ class QueryToOperatorTransformer : public binder::SqlNodeVisitor {
    */
   static std::unordered_map<parser::AliasType, common::ManagedPointer<parser::AbstractExpression>,
                             parser::AliasType::HashKey>
-  ConstructSelectElementMap(const std::vector<common::ManagedPointer<parser::AbstractExpression>> &select_list);
+  ConstructSelectElementMap(const std::vector<parser::AliasType> &aliases,
+                            const std::vector<common::ManagedPointer<parser::AbstractExpression>> &select_list);
 
   /**
    * Perform DFS over the expression tree to find leftmost LogicalCTEScanNode and
