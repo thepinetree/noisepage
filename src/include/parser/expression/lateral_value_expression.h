@@ -28,59 +28,63 @@ class LateralValueExpression : public AbstractExpression {
   friend class noisepage::optimizer::OptimizerUtil;
 
  public:
-  /**
-   * @param database_oid database OID
-   * @param table_oid table OID
-   * @param column_oid column OID
-   */
-  LateralValueExpression(catalog::db_oid_t database_oid, catalog::table_oid_t table_oid, catalog::col_oid_t column_oid,
-                         common::ManagedPointer<planner::AbstractPlanNode> source_plan)
-      : AbstractExpression(ExpressionType::LATERAL_VALUE, type::TypeId::INVALID, {}),
-        database_oid_(database_oid),
-        table_oid_(table_oid),
-        column_oid_(column_oid),
-        source_plan_(source_plan){}
+//  /**
+//   * @param database_oid database OID
+//   * @param table_oid table OID
+//   * @param column_oid column OID
+//   */
+//  LateralValueExpression(catalog::db_oid_t database_oid, catalog::table_oid_t table_oid, catalog::col_oid_t column_oid,
+//                         common::ManagedPointer<planner::AbstractPlanNode> source_plan)
+//      : AbstractExpression(ExpressionType::LATERAL_VALUE, type::TypeId::INVALID, {}),
+//        database_oid_(database_oid),
+//        table_oid_(table_oid),
+//        column_oid_(column_oid),
+//        source_plan_(source_plan){}
 
   /**
    * @param table_oid OID of the table.
    * @param column_oid OID of the column.
    * @param type Type of the column.
    */
-  LateralValueExpression(catalog::table_oid_t table_oid, catalog::col_oid_t column_oid, type::TypeId type, common::ManagedPointer<planner::AbstractPlanNode> source_plan)
+  LateralValueExpression(catalog::table_oid_t table_oid, catalog::col_oid_t column_oid, type::TypeId type,
+                         common::ManagedPointer<planner::AbstractPlanNode> source_plan,
+                         std::vector<common::ManagedPointer<parser::LateralValueExpression>> &waiting_vec)
       : AbstractExpression(ExpressionType::LATERAL_VALUE, type, {}), table_oid_(table_oid), column_oid_(column_oid),
-        source_plan_(source_plan) {}
-
-  /**
-   * This constructor is used to construct abstract value expressions used by CTEs
-   * for logical derived get below it to reference aliases.
-   * @param table_name Name of the table
-   * @param col_name name of the column.
-   * @param type Type of the column.
-   * @param alias Alias of the column this is referencing
-   * @param column_oid Oid of the column (it should be a temp oid in this case)
-   */
-  LateralValueExpression(type::TypeId type, AliasType alias, catalog::col_oid_t column_oid, common::ManagedPointer<planner::AbstractPlanNode> source_plan)
-      : AbstractExpression(ExpressionType::LATERAL_VALUE, type, std::move(alias), {}),
-        column_oid_(column_oid), source_plan_(source_plan) {}
-
-  /**
-   * @param table_name table name
-   * @param col_name column name
-   * @param database_oid database OID
-   * @param table_oid table OID
-   * @param column_oid column OID
-   * @param type Type of the column.
-   */
-  LateralValueExpression(catalog::db_oid_t database_oid, catalog::table_oid_t table_oid, catalog::col_oid_t column_oid,
-                         type::TypeId type, common::ManagedPointer<planner::AbstractPlanNode> source_plan)
-      : AbstractExpression(ExpressionType::LATERAL_VALUE, type, {}),
-        database_oid_(database_oid),
-        table_oid_(table_oid),
-        column_oid_(column_oid),
-        source_plan_(source_plan) {}
+        source_plan_(source_plan), waiting_vec_(waiting_vec) {
+    waiting_vec.push_back(common::ManagedPointer(this));
+  }
+//
+//  /**
+//   * This constructor is used to construct abstract value expressions used by CTEs
+//   * for logical derived get below it to reference aliases.
+//   * @param table_name Name of the table
+//   * @param col_name name of the column.
+//   * @param type Type of the column.
+//   * @param alias Alias of the column this is referencing
+//   * @param column_oid Oid of the column (it should be a temp oid in this case)
+//   */
+//  LateralValueExpression(type::TypeId type, AliasType alias, catalog::col_oid_t column_oid, common::ManagedPointer<planner::AbstractPlanNode> source_plan)
+//      : AbstractExpression(ExpressionType::LATERAL_VALUE, type, std::move(alias), {}),
+//        column_oid_(column_oid), source_plan_(source_plan) {}
+//
+//  /**
+//   * @param table_name table name
+//   * @param col_name column name
+//   * @param database_oid database OID
+//   * @param table_oid table OID
+//   * @param column_oid column OID
+//   * @param type Type of the column.
+//   */
+//  LateralValueExpression(catalog::db_oid_t database_oid, catalog::table_oid_t table_oid, catalog::col_oid_t column_oid,
+//                         type::TypeId type, common::ManagedPointer<planner::AbstractPlanNode> source_plan)
+//      : AbstractExpression(ExpressionType::LATERAL_VALUE, type, {}),
+//        database_oid_(database_oid),
+//        table_oid_(table_oid),
+//        column_oid_(column_oid),
+//        source_plan_(source_plan) {}
 
   /** Default constructor for deserialization. */
-  LateralValueExpression() = default;
+//  LateralValueExpression() = default;
 
   /** @return table name */
 //  std::string GetTableName() const { return table_name_; }
@@ -175,6 +179,11 @@ class LateralValueExpression : public AbstractExpression {
   catalog::col_oid_t column_oid_ = catalog::INVALID_COLUMN_OID;
 
   common::ManagedPointer<planner::AbstractPlanNode> source_plan_;
+
+  // TODO(tanujnay112) I hate this but I need to figure out a better way to maintain source_plan_
+  // if I don't have this then in between me adding myself to a LateralWaitersSet map and source_plan_
+  // being later resolved Copy could be called on me, making the source_plan_ resolution useless
+  std::vector<common::ManagedPointer<parser::LateralValueExpression>> &waiting_vec_;
 };
 
 DEFINE_JSON_HEADER_DECLARATIONS(LateralValueExpression);

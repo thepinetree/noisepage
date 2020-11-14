@@ -21,6 +21,7 @@
 #include "parser/expression/lateral_value_expression.h"
 #include "parser/expression/operator_expression.h"
 #include "parser/expression/parameter_value_expression.h"
+#include "parser/expression/type_cast_expression.h"
 
 namespace noisepage::parser {
 
@@ -427,8 +428,9 @@ class ExpressionUtil {
         NOISEPAGE_ASSERT(map_it != iter->second.first.end(), "could not find lateral expression in expression map");
         auto lateral = std::make_unique<LateralValueExpression>(cve->GetTableOid(), catalog::col_oid_t(map_it->second),
                                                                 expr->GetReturnValueType(),
-                                                        nullptr);
-        iter->second.second.push_back(lateral.get());
+                                                        nullptr, iter->second.second);
+//        iter->second.second
+//        iter->second.second.push_back(lateral.get());
         return std::move(lateral);
       }
     }
@@ -520,6 +522,9 @@ class ExpressionUtil {
       auto def_cond = EvaluateExpression(expr_maps, case_expr->GetDefaultClause(), lateral_map);
       auto type = case_expr->GetReturnValueType();
       return std::make_unique<CaseExpression>(type, std::move(clauses), std::move(def_cond));
+    } else if (expr->GetExpressionType() == ExpressionType::OPERATOR_CAST) {
+      NOISEPAGE_ASSERT(children_size == 1, "TypeCastExpression should have exactly 1 child.");
+      return expr->GetChild(0)->Copy();
     }
 
     return expr->CopyWithChildren(std::move(children));

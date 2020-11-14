@@ -7,7 +7,7 @@
 namespace noisepage::parser {
 
 std::unique_ptr<AbstractExpression> LateralValueExpression::Copy() const {
-  auto expr = std::make_unique<LateralValueExpression>(GetDatabaseOid(), GetTableOid(), GetColumnOid(), GetSourcePlan());
+  auto expr = std::make_unique<LateralValueExpression>(GetTableOid(), GetColumnOid(), GetReturnValueType(), GetSourcePlan(), waiting_vec_);
   expr->SetMutableStateForCopy(*this);
   expr->SetDatabaseOID(this->database_oid_);
   expr->SetTableOID(this->table_oid_);

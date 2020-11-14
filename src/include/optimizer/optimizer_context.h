@@ -225,17 +225,18 @@ class OptimizerContext {
 
   void AddLateralEntries(const std::vector<catalog::table_oid_t> &table_ids, ExprMap &&expr_map) {
     for(auto id : table_ids){
-      lateral_waiters_[id] = std::make_pair<ExprMap, std::vector<parser::LateralValueExpression*>>(std::move(expr_map), {});
+      lateral_waiters_[id] = std::make_pair<ExprMap, std::vector<common::ManagedPointer<parser::LateralValueExpression>>>
+          (std::move(expr_map), {});
     }
   }
 
-  void AddLateralWaiter(catalog::table_oid_t table, parser::LateralValueExpression *expr) {
+  void AddLateralWaiter(catalog::table_oid_t table, common::ManagedPointer<parser::LateralValueExpression> expr) {
     auto iter = lateral_waiters_.find(table);
     NOISEPAGE_ASSERT(iter != lateral_waiters_.end(), "Asked for lateral table_oid that isn't available");
     iter->second.second.push_back(expr);
   }
 
-  const std::vector<parser::LateralValueExpression*> &GetLateralWaiters(catalog::table_oid_t oid) const {
+  const std::vector<common::ManagedPointer<parser::LateralValueExpression>> &GetLateralWaiters(catalog::table_oid_t oid) const {
     return lateral_waiters_.find(oid)->second.second;
   }
 

@@ -262,7 +262,7 @@ using ExprMap =
 using ExprSet = std::unordered_set<common::ManagedPointer<parser::AbstractExpression>, ExprHasher, ExprEqualCmp>;
 
 using LateralWaitersSet = std::unordered_map<catalog::table_oid_t,
-                                             std::pair<ExprMap, std::vector<parser::LateralValueExpression*>>>;
+                                             std::pair<ExprMap, std::vector<common::ManagedPointer<parser::LateralValueExpression>>>>;
 
 using UnionAliasMap = std::pair<std::unordered_map<parser::AliasType,
                                                    common::ManagedPointer<parser::AbstractExpression>, parser::AliasType::HashKey>,

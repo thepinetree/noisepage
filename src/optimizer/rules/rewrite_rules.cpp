@@ -154,6 +154,7 @@ void RewritePushExplicitFilterThroughJoin::Transform(common::ManagedPointer<Abst
 
   const auto &left_group_aliases_set = memo.GetGroupByID(left_group_id)->GetTableAliases();
   const auto &right_group_aliases_set = memo.GetGroupByID(right_group_id)->GetTableAliases();
+  auto lateral_oids = join_op_expr->Contents()->GetContentsAs<LogicalInnerJoin>()->GetLateralOids();
   auto &input_join_predicates = join_op_expr->Contents()->GetContentsAs<LogicalInnerJoin>()->GetJoinPredicates();
   auto &filter_predicates = input->Contents()->GetContentsAs<LogicalFilter>()->GetPredicates();
 
@@ -242,7 +243,7 @@ void RewritePushExplicitFilterThroughJoin::Transform(common::ManagedPointer<Abst
                                                 .RegisterWithTxnContext(context->GetOptimizerContext()->GetTxn()),
                                             std::move(c), context->GetOptimizerContext()->GetTxn());
   } else {
-    output = std::make_unique<OperatorNode>(LogicalInnerJoin::Make(std::move(join_predicates))
+    output = std::make_unique<OperatorNode>(LogicalInnerJoin::Make(std::move(join_predicates), std::move(lateral_oids))
                                                 .RegisterWithTxnContext(context->GetOptimizerContext()->GetTxn()),
                                             std::move(c), context->GetOptimizerContext()->GetTxn());
   }
