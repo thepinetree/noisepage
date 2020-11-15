@@ -65,9 +65,9 @@ void BindNodeVisitor::BindNameToNode(
 std::unordered_map<std::string, size_t> BindNodeVisitor::BindAndGetUDFParams(common::ManagedPointer<parser::ParseResult> parse_result,
                                                             common::ManagedPointer<parser::udf::UDFASTContext> udf_ast_context)
 {
-  TERRIER_ASSERT(parse_result != nullptr, "We shouldn't be trying to bind something without a ParseResult.");
+  NOISEPAGE_ASSERT(parse_result != nullptr, "We shouldn't be trying to bind something without a ParseResult.");
   sherpa_ = std::make_unique<BinderSherpa>(parse_result, nullptr, nullptr);
-  TERRIER_ASSERT(sherpa_->GetParseResult()->GetStatements().size() == 1, "Binder can only bind one at a time.");
+  NOISEPAGE_ASSERT(sherpa_->GetParseResult()->GetStatements().size() == 1, "Binder can only bind one at a time.");
   udf_ast_context_ = udf_ast_context;
   sherpa_->GetParseResult()->GetStatement(0)->Accept(
       common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());

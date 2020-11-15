@@ -6,11 +6,11 @@
 #include "execution/compiler/codegen.h"
 #include "execution/functions/function_context.h"
 
-namespace terrier::catalog{
+namespace noisepage::catalog{
  class CatalogAccessor;
 }
 
-namespace terrier::parser::udf {
+namespace noisepage::parser::udf {
 using namespace execution::compiler;
 
 class AbstractAST;
@@ -81,4 +81,4 @@ class UDFCodegen : ASTNodeVisitor {
   catalog::db_oid_t db_oid_;
   bool needs_exec_ctx_{false};
 };
-}  // namespace terrier::parser::udf
+}  // namespace noisepage::parser::udf

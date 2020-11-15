@@ -1,5 +1,5 @@
 /*
- * This file is adapted from the Apache Arrow project for the Terrier project. It
+ * This file is adapted from the Apache Arrow project for the Noisepage project. It
  * is originally adapted from the Google Flatbuffers.
  */
 

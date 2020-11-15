@@ -9,7 +9,7 @@
 
 namespace noisepage::optimizer {
 
-class HyperLogLogTests : public TerrierTest {
+class HyperLogLogTests : public NoisepageTest {
  public:
   /**
    * Check that the estimate is within our error bounds

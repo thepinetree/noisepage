@@ -21,7 +21,7 @@
 
 namespace noisepage::parser {
 
-class ParserTestBase : public TerrierTest {
+class ParserTestBase : public NoisepageTest {
  protected:
   /**
    * Initialization

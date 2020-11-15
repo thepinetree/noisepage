@@ -53,7 +53,7 @@ class ProjectedRowDeepEqualHash {
 using TupleMultiSet =
     std::unordered_map<storage::ProjectedRow *, uint32_t, ProjectedRowDeepEqualHash, ProjectedRowDeepEqual>;
 
-struct BlockCompactorTest : public ::noisepage::TerrierTest {
+struct BlockCompactorTest : public ::noisepage::NoisepageTest {
   storage::BlockStore block_store_{5000, 5000};
   std::default_random_engine generator_;
   storage::RecordBufferSegmentPool buffer_pool_{100000, 100000};

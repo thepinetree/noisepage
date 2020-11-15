@@ -14,7 +14,7 @@
 
 namespace noisepage::planner {
 
-class OutputSchemaTests : public TerrierTest {
+class OutputSchemaTests : public NoisepageTest {
  public:
   /**
    * Constructs a dummy AbstractExpression predicate

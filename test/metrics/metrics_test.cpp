@@ -22,7 +22,7 @@ namespace noisepage::metrics {
 /**
  * @brief Test the correctness of database metric
  */
-class MetricsTests : public TerrierTest {
+class MetricsTests : public NoisepageTest {
  public:
   std::unique_ptr<DBMain> db_main_;
   storage::SqlTable *sql_table_;

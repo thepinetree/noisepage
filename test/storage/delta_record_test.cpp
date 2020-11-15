@@ -12,7 +12,7 @@
 
 namespace noisepage {
 
-struct DeltaRecordTests : public TerrierTest {
+struct DeltaRecordTests : public NoisepageTest {
   std::default_random_engine generator_;
   std::uniform_int_distribution<uint64_t> timestamp_dist_{0, ULONG_MAX};
 

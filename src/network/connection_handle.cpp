@@ -32,7 +32,7 @@ class ConnectionHandleStateMachineTransition {
     switch (transition) {
       case Transition::NEED_READ:           return {ConnState::READ, TryRead};
       case Transition::NEED_READ_TIMEOUT:   return {ConnState::READ, WaitForReadWithTimeout};
-      case Transition::NEED_RESULT:         return {ConnState::PROCESS, WaitForTerrier};
+      case Transition::NEED_RESULT:         return {ConnState::PROCESS, WaitForNoisepage};
       case Transition::PROCEED:             return {ConnState::WRITE, TryWrite};
       case Transition::TERMINATE:           return {ConnState::CLOSING, TryCloseConnection};
       case Transition::WAKEUP:              return {ConnState::PROCESS, GetResult};
@@ -99,8 +99,8 @@ class ConnectionHandleStateMachineTransition {
     return Transition::NONE;
   }
 
-  /** Stop listening to network events. This is used when control is completely ceded to Terrier, hence the name. */
-  static Transition WaitForTerrier(const common::ManagedPointer<ConnectionHandle> handle) {
+  /** Stop listening to network events. This is used when control is completely ceded to Noisepage, hence the name. */
+  static Transition WaitForNoisepage(const common::ManagedPointer<ConnectionHandle> handle) {
     handle->StopReceivingNetworkEvent();
     return Transition::NONE;
   }

@@ -58,7 +58,7 @@ std::unique_ptr<parser::ParseResult> PostgresParser::BuildParseTree(const std::s
     throw exception;
   }
 
-  // Transform the Postgres parse tree to a Terrier representation.
+  // Transform the Postgres parse tree to a Noisepage representation.
   auto parse_result = std::make_unique<ParseResult>();
   try {
     ListTransform(parse_result.get(), result.tree, query_string);
@@ -2076,7 +2076,7 @@ std::unique_ptr<VariableSetStatement> PostgresParser::VariableSetTransform(Parse
   return result;
 }
 
-// Postgres.SelectStmt.withClause -> terrier.TableRef
+// Postgres.SelectStmt.withClause -> noisepage.TableRef
 std::vector<std::unique_ptr<TableRef>> PostgresParser::WithTransform(ParseResult *parse_result, WithClause *root) {
   // Postgres parses 'SELECT;' to nullptr
   std::vector<std::unique_ptr<TableRef>> ctes;

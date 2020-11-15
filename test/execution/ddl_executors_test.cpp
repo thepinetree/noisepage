@@ -24,7 +24,7 @@
 
 namespace noisepage::execution::sql::test {
 
-class DDLExecutorsTests : public TerrierTest {
+class DDLExecutorsTests : public NoisepageTest {
  public:
   void SetUp() override {
     db_main_ = noisepage::DBMain::Builder().SetUseGC(true).SetUseCatalog(true).Build();

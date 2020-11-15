@@ -21,7 +21,7 @@ class UpdateStatement;
 namespace noisepage::parser {
 
 /**
- * PostgresParser obtains and transforms the Postgres parse tree into our Terrier parse tree.
+ * PostgresParser obtains and transforms the Postgres parse tree into our Noisepage parse tree.
  * In the future, we definitely want to replace this with our own parser.
  */
 class PostgresParser {

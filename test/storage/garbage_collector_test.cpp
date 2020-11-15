@@ -82,7 +82,7 @@ class GarbageCollectorDataTableTestObject {
   bool select_result_;
 };
 
-struct GarbageCollectorTests : public ::noisepage::TerrierTest {
+struct GarbageCollectorTests : public ::noisepage::NoisepageTest {
   storage::BlockStore block_store_{100, 100};
   storage::RecordBufferSegmentPool buffer_pool_{10000, 10000};
   std::default_random_engine generator_;

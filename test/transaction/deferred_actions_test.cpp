@@ -15,7 +15,7 @@
 
 namespace noisepage {
 
-class DeferredActionsTest : public TerrierTest {
+class DeferredActionsTest : public NoisepageTest {
  protected:
   void SetUp() override {
     db_main_ = noisepage::DBMain::Builder().SetUseGC(true).Build();

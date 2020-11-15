@@ -7,7 +7,7 @@
 #include "libpg_query/pg_query.h"
 #include "nlohmann/json.hpp"
 
-namespace terrier::parser::udf {
+namespace noisepage::parser::udf {
 using namespace nlohmann;
 
 const std::string kFunctionList = "FunctionList";
@@ -63,7 +63,7 @@ std::unique_ptr<FunctionAST> PLpgSQLParser::ParsePLpgSQL(std::vector<std::string
   json ast_json;
   ss >> ast_json;
   const auto function_list = ast_json[kFunctionList];
-  TERRIER_ASSERT(function_list.is_array(), "Function list is not an array");
+  NOISEPAGE_ASSERT(function_list.is_array(), "Function list is not an array");
   if (function_list.size() != 1) {
     PARSER_LOG_DEBUG("PL/pgSQL error : Function list size %u", function_list.size());
     throw PARSER_EXCEPTION("Function list has size other than 1");
@@ -87,7 +87,7 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseFunction(const nlohmann::json &bloc
   std::vector<std::unique_ptr<StmtAST>> stmts;
 
   PARSER_LOG_DEBUG("Parsing Declarations");
-  TERRIER_ASSERT(decl_list.is_array(), "Declaration list is not an array");
+  NOISEPAGE_ASSERT(decl_list.is_array(), "Declaration list is not an array");
   for (uint32_t i = 1; i < decl_list.size(); i++) {
     stmts.push_back(ParseDecl(decl_list[i]));
   }
@@ -100,7 +100,7 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseFunction(const nlohmann::json &bloc
 
 std::unique_ptr<StmtAST> PLpgSQLParser::ParseBlock(const nlohmann::json &block) {
   // TODO(boweic): Support statements size other than 1
-  TERRIER_ASSERT(block.is_array(), "Block isn't array");
+  NOISEPAGE_ASSERT(block.is_array(), "Block isn't array");
   if (block.size() == 0) {
     throw PARSER_EXCEPTION("PL/pgSQL parser : Empty block is not supported");
   }
@@ -110,7 +110,7 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseBlock(const nlohmann::json &block) 
   for (uint32_t i = 0; i < block.size(); i++) {
     const auto stmt = block[i];
     const auto stmt_names = stmt.items().begin();
-//    TERRIER_ASSERT(stmt_names->size() == 1, "Bad statement size");
+//    NOISEPAGE_ASSERT(stmt_names->size() == 1, "Bad statement size");
     PARSER_LOG_DEBUG("Statement : {}", stmt_names.key());
 
     if (stmt_names.key() == kPLpgSQL_stmt_return) {
@@ -140,7 +140,7 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseBlock(const nlohmann::json &block) 
     } else {
       throw PARSER_EXCEPTION("Statement type not supported");
     }
-    TERRIER_ASSERT(stmts.back() != nullptr, "It broke");
+    NOISEPAGE_ASSERT(stmts.back() != nullptr, "It broke");
   }
 
   std::unique_ptr<SeqStmtAST> seq_stmt_ast(new SeqStmtAST(std::move(stmts)));
@@ -152,7 +152,7 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseDecl(const nlohmann::json &decl) {
   for (auto& it : decl.items()) {
     std::cout << it.key() << " : " << it.value() << "\n";
   }
-//  TERRIER_ASSERT(decl_names->size() >= 1, "Bad declaration names membership size");
+//  NOISEPAGE_ASSERT(decl_names->size() >= 1, "Bad declaration names membership size");
   PARSER_LOG_DEBUG("Declaration : {}", decl_names.key());
 
   if (decl_names.key() == kPLpgSQL_var) {
@@ -186,14 +186,14 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseDecl(const nlohmann::json &decl) {
       return std::unique_ptr<DeclStmtAST>(
           new DeclStmtAST(var_name, type::TypeId::VARCHAR, std::move(initial)));
     } else {
-      TERRIER_ASSERT(false, "Unsupported ");
+      NOISEPAGE_ASSERT(false, "Unsupported ");
 //      udf_ast_context_->SetVariableType(var_name, type::TypeId::INVALID);
 //      return std::unique_ptr<DeclStmtAST>(
 //          new DeclStmtAST(var_name, type::TypeId::INVALID));
     }
   } else if (decl_names.key() == kPLpgSQL_row) {
     auto var_name = decl[kPLpgSQL_row][kRefname].get<std::string>();
-    TERRIER_ASSERT(var_name == "*internal*", "Unexpected refname");
+    NOISEPAGE_ASSERT(var_name == "*internal*", "Unexpected refname");
     // TODO[Siva]: Support row types later
     udf_ast_context_->SetVariableType(var_name, type::TypeId::INVALID);
     return std::unique_ptr<DeclStmtAST>(
@@ -267,14 +267,14 @@ std::unique_ptr<ExprAST> PLpgSQLParser::ParseExprSQL(
   if (stmt_list == nullptr) {
     return nullptr;
   }
-  TERRIER_ASSERT(stmt_list->GetStatements().size() == 1, "Bad number of statements");
+  NOISEPAGE_ASSERT(stmt_list->GetStatements().size() == 1, "Bad number of statements");
   auto stmt = stmt_list->GetStatement(0);
-  TERRIER_ASSERT(stmt->GetType() == parser::StatementType::SELECT, "Unsupported statement type");
-  TERRIER_ASSERT(stmt.CastManagedPointerTo<parser::SelectStatement>()->GetSelectTable() ==
+  NOISEPAGE_ASSERT(stmt->GetType() == parser::StatementType::SELECT, "Unsupported statement type");
+  NOISEPAGE_ASSERT(stmt.CastManagedPointerTo<parser::SelectStatement>()->GetSelectTable() ==
       nullptr, "Unsupported SQL Expr in UDF");
   auto &select_list =
       stmt.CastManagedPointerTo<parser::SelectStatement>()->GetSelectColumns();
-  TERRIER_ASSERT(select_list.size() == 1, "Unsupported number of select columns in udf");
+  NOISEPAGE_ASSERT(select_list.size() == 1, "Unsupported number of select columns in udf");
   return PLpgSQLParser::ParseExpr(select_list[0]);
 }
 
@@ -305,4 +305,4 @@ std::unique_ptr<ExprAST> PLpgSQLParser::ParseExpr(
   }
   throw PARSER_EXCEPTION("PL/pgSQL parser : Expression type not supported");
 }
-}  // namespace terrier::parser::udf
+}  // namespace noisepage::parser::udf

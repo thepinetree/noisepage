@@ -305,7 +305,7 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
 //
 //void BytecodeGenerator::VisitLambdaCallExpr(ast::CallExpr *call){
 //  bool caller_wants_result = GetExecutionResult() != nullptr;
-//  TERRIER_ASSERT(!caller_wants_result || GetExecutionResult()->IsRValue(), "Calls can only be R-Values!");
+//  NOISEPAGE_ASSERT(!caller_wants_result || GetExecutionResult()->IsRValue(), "Calls can only be R-Values!");
 //  std::vector<LocalVar> params;
 //
 //  auto lambda_fn = call->As<ast::LambdaCallExpr>();
@@ -345,7 +345,7 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
 //
 //  // Emit call
 //  const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
-//  TERRIER_ASSERT(func_id != FunctionInfo::K_INVALID_FUNC_ID, "Function not found!");
+//  NOISEPAGE_ASSERT(func_id != FunctionInfo::K_INVALID_FUNC_ID, "Function not found!");
 //  GetEmitter()->EmitCall(func_id, params);
 //}
 
@@ -369,7 +369,7 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   }
 
   if(local.IsInvalid()){
-    TERRIER_ASSERT(GetCurrentFunction()->is_lambda_, "Not a lambda and variable not found");
+    NOISEPAGE_ASSERT(GetCurrentFunction()->is_lambda_, "Not a lambda and variable not found");
 
     //TODO modularize this fetch of capture struct
     auto params = GetCurrentFunction()->func_type_->GetParams();
@@ -394,7 +394,7 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
       }
     }
   }
-  TERRIER_ASSERT(!local.IsInvalid(), "Local not found");
+  NOISEPAGE_ASSERT(!local.IsInvalid(), "Local not found");
 
   if (GetExecutionResult()->IsLValue()) {
     GetExecutionResult()->SetDestination(local);
@@ -3910,7 +3910,7 @@ void BytecodeGenerator::VisitMapTypeRepr(ast::MapTypeRepr *node) {
 }
 
 void BytecodeGenerator::VisitLambdaTypeRepr(ast::LambdaTypeRepr *node) {
-  TERRIER_ASSERT(false, "Should not visit type-representation nodes!");
+  NOISEPAGE_ASSERT(false, "Should not visit type-representation nodes!");
 }
 
 FunctionInfo *BytecodeGenerator::AllocateFunc(const std::string &func_name, ast::FunctionType *const func_type) {

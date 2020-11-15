@@ -633,7 +633,7 @@ class FunctionType : public Type {
   bool IsLambda() const { return is_lambda_; }
 
   ast::StructType *GetCapturesType() const {
-    TERRIER_ASSERT(is_lambda_, "Getting capture type from not lambda");
+    NOISEPAGE_ASSERT(is_lambda_, "Getting capture type from not lambda");
     return captures_;
   }
 
@@ -657,7 +657,7 @@ class FunctionType : public Type {
   explicit FunctionType(util::RegionVector<Field> &&params, Type *ret, bool is_lambda);
 
  private:
-  friend class terrier::execution::sema::Sema;
+  friend class noisepage::execution::sema::Sema;
   util::RegionVector<Field> params_;
   Type *ret_;
   bool is_lambda_;

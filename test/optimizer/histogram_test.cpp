@@ -9,7 +9,7 @@
 
 namespace noisepage::optimizer {
 
-class HistogramTests : public TerrierTest {};
+class HistogramTests : public NoisepageTest {};
 
 // 100k values with uniform distribution from 1 to 100.
 // NOLINTNEXTLINE

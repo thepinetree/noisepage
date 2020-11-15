@@ -49,7 +49,7 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
     return decl_.fn_decl_;
   }
 
-  TERRIER_ASSERT(ret == nullptr || statements_->IsEmpty() || !statements_->GetLast()->IsReturnStmt(),
+  NOISEPAGE_ASSERT(ret == nullptr || statements_->IsEmpty() || !statements_->GetLast()->IsReturnStmt(),
                  "Double-return at end of function. You should either call FunctionBuilder::Finish() "
                  "with an explicit return expression, or use the factory to manually append a return "
                  "statement and call FunctionBuilder::Finish() with a null return.");
@@ -74,7 +74,7 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
 }
 
 ast::LambdaExpr *FunctionBuilder::FinishLambda(ast::Expr *ret) {
-  TERRIER_ASSERT(is_lambda_, "Asking to finish a lambda function that's not actually a lambda function");
+  NOISEPAGE_ASSERT(is_lambda_, "Asking to finish a lambda function that's not actually a lambda function");
   if (decl_.lambda_expr_ != nullptr) {
     return decl_.lambda_expr_;
   }

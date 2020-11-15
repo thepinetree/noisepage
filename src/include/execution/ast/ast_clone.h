@@ -3,7 +3,7 @@
 #include "execution/ast/ast_node_factory.h"
 #include "execution/ast/context.h"
 
-namespace terrier::execution::ast {
+namespace noisepage::execution::ast {
 
 class AstNode;
 
@@ -21,4 +21,4 @@ class AstClone {
                         Context *old_context, Context *new_context);
 };
 
-}  // namespace terrier::execution::ast
+}  // namespace noisepage::execution::ast

@@ -22,7 +22,7 @@
 #define LOG_TEST_LOG_FILE_NAME "./test_log_test.log"
 
 namespace noisepage::storage {
-class WriteAheadLoggingTests : public TerrierTest {
+class WriteAheadLoggingTests : public NoisepageTest {
  protected:
   std::default_random_engine generator_;
   std::unique_ptr<DBMain> db_main_;

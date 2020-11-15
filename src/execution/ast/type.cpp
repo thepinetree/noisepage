@@ -108,7 +108,7 @@ bool FunctionType::IsEqual(const FunctionType *other) {
 }
 
 void FunctionType::RegisterCapture() {
-  TERRIER_ASSERT(captures_ != nullptr, "no capture given?");
+  NOISEPAGE_ASSERT(captures_ != nullptr, "no capture given?");
   params_.emplace_back(GetContext()->GetIdentifier("captures"), captures_);
 }
 

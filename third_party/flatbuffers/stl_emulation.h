@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * This file is adapted from the Apache Arrow project for the Terrier project. It
+ * This file is adapted from the Apache Arrow project for the Noisepage project. It
  * is originally adapted from the Google Flatbuffers.
  */
 

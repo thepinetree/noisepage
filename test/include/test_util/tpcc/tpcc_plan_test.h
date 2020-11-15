@@ -22,7 +22,7 @@ namespace tpcc {
 class Database;
 };
 
-class TpccPlanTest : public TerrierTest {
+class TpccPlanTest : public NoisepageTest {
  public:
   static void CheckIndexScan(TpccPlanTest *test, parser::SelectStatement *sel_stmt, catalog::table_oid_t tbl_oid,
                              std::unique_ptr<planner::AbstractPlanNode> plan);

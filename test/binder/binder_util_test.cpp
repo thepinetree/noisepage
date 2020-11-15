@@ -8,7 +8,7 @@
 #include "test_util/test_harness.h"
 
 namespace noisepage {
-class BinderUtilTest : public TerrierTest {};
+class BinderUtilTest : public NoisepageTest {};
 
 /**
  * Exercise the BinderUtil CheckAndTryPromoteType function

@@ -14,7 +14,7 @@
 
 namespace noisepage::execution {
 
-class TplTest : public noisepage::TerrierTest {
+class TplTest : public noisepage::NoisepageTest {
  public:
   TplTest() { CpuInfo::Instance(); }
 

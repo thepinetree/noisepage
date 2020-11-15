@@ -21,7 +21,7 @@
 
 namespace noisepage::trafficcop {
 
-class TrafficCopTests : public TerrierTest {
+class TrafficCopTests : public NoisepageTest {
  protected:
   void SetUp() override {
     std::unordered_map<settings::Param, settings::ParamInfo> param_map;

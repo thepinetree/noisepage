@@ -52,7 +52,7 @@
 
 namespace noisepage {
 
-class OperatorTransformerTest : public TerrierTest {
+class OperatorTransformerTest : public NoisepageTest {
  protected:
   std::string default_database_name_ = "test_db";
   catalog::db_oid_t db_oid_;

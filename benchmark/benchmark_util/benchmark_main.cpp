@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// Modified from the Apache Arrow project for the Terrier project.
+// Modified from the Apache Arrow project for the Noisepage project.
 
 #include "benchmark/benchmark.h"
 #include "benchmark_util/benchmark_config.h"

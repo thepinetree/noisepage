@@ -14,7 +14,7 @@ namespace noisepage {
  * kernel flags or possibly running the tests as root). I keep the test around as an easy sanity check via break points
  * to make sure perf counters give us the data we want on a given system.
  */
-class PerfMonitorTests : public TerrierTest {};
+class PerfMonitorTests : public NoisepageTest {};
 
 template <bool inherit, typename perf_counters>
 static void CreateAndDestroyCatalog(perf_counters *const counters) {

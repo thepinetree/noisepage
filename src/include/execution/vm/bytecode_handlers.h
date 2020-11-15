@@ -171,7 +171,7 @@ VM_OP_HOT void OpAssign4(int32_t *dest, int32_t src) { *dest = src; }
 
 VM_OP_HOT void OpAssign8(int64_t *dest, int64_t src) { *dest = src; }
 
-VM_OP_HOT void OpAssignN(terrier::byte *dest, const terrier::byte *const src, uint32_t len) {
+VM_OP_HOT void OpAssignN(noisepage::byte *dest, const noisepage::byte *const src, uint32_t len) {
   std::memcpy(dest, src, len);
 }
 
@@ -1420,8 +1420,8 @@ VM_OP_WARM void OpSorterIteratorSkipRows(noisepage::execution::sql::SorterIterat
 
 VM_OP void OpSorterIteratorFree(noisepage::execution::sql::SorterIterator *iter);
 
-VM_OP void OpPushParamContext(terrier::execution::exec::ExecutionContext **new_ctx,
-                                  terrier::execution::exec::ExecutionContext *ctx);
+VM_OP void OpPushParamContext(noisepage::execution::exec::ExecutionContext **new_ctx,
+                                  noisepage::execution::exec::ExecutionContext *ctx);
 
 // ---------------------------------------------------------
 // Output
@@ -2103,9 +2103,9 @@ GEN_SCALAR_PARAM_GET(String, StringVal)
 
 // Parameter calls
 #define GEN_SCALAR_PARAM_ADD(Name, SqlType)                                                          \
-  VM_OP_HOT void OpAddParam##Name(terrier::execution::exec::ExecutionContext *exec_ctx,              \
-                                  terrier::execution::sql::SqlType *ret) {                           \
-    exec_ctx->AddParam<terrier::execution::sql::SqlType>(ret);                                       \
+  VM_OP_HOT void OpAddParam##Name(noisepage::execution::exec::ExecutionContext *exec_ctx,              \
+                                  noisepage::execution::sql::SqlType *ret) {                           \
+    exec_ctx->AddParam<noisepage::execution::sql::SqlType>(ret);                                       \
   }
 
 GEN_SCALAR_PARAM_ADD(Bool, BoolVal)
@@ -2120,11 +2120,11 @@ GEN_SCALAR_PARAM_ADD(TimestampVal, TimestampVal)
 GEN_SCALAR_PARAM_ADD(String, StringVal)
 #undef GEN_SCALAR_PARAM_ADD
 
-VM_OP_HOT void OpStartNewParams(terrier::execution::exec::ExecutionContext *exec_ctx) {
+VM_OP_HOT void OpStartNewParams(noisepage::execution::exec::ExecutionContext *exec_ctx) {
   exec_ctx->StartParams();
 }
 
-VM_OP_HOT void OpFinishParams(terrier::execution::exec::ExecutionContext *exec_ctx) {
+VM_OP_HOT void OpFinishParams(noisepage::execution::exec::ExecutionContext *exec_ctx) {
   exec_ctx->PopParams();
 }
 

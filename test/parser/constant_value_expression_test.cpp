@@ -9,7 +9,7 @@
 
 namespace noisepage::parser {
 
-class CVETests : public TerrierTest {
+class CVETests : public NoisepageTest {
  public:
   std::default_random_engine generator_;
   const uint32_t num_iterations_ = 10000;

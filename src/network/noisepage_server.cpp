@@ -14,7 +14,7 @@
 
 namespace noisepage::network {
 
-TerrierServer::TerrierServer(common::ManagedPointer<ProtocolInterpreterProvider> protocol_provider,
+NoisepageServer::NoisepageServer(common::ManagedPointer<ProtocolInterpreterProvider> protocol_provider,
                              common::ManagedPointer<ConnectionHandleFactory> connection_handle_factory,
                              common::ManagedPointer<common::DedicatedThreadRegistry> thread_registry,
                              const uint16_t port, const uint16_t connection_thread_count, std::string socket_directory)
@@ -35,8 +35,8 @@ TerrierServer::TerrierServer(common::ManagedPointer<ProtocolInterpreterProvider>
   signal(SIGPIPE, SIG_IGN);
 }
 
-template <TerrierServer::SocketType type>
-void TerrierServer::RegisterSocket() {
+template <NoisepageServer::SocketType type>
+void NoisepageServer::RegisterSocket() {
   static_assert(type == NETWORKED_SOCKET || type == UNIX_DOMAIN_SOCKET, "There should only be two socket types.");
 
   constexpr auto conn_backlog = common::Settings::CONNECTION_BACKLOG;
@@ -132,7 +132,7 @@ void TerrierServer::RegisterSocket() {
   NETWORK_LOG_INFO("Listening on {} socket with port {} [PID={}]", socket_description, port_, ::getpid());
 }
 
-void TerrierServer::RunServer() {
+void NoisepageServer::RunServer() {
   // Initialize thread support for libevent as libevent will be invoked from multiple ConnectionHandlerTask threads.
   evthread_use_pthreads();
 
@@ -154,14 +154,14 @@ void TerrierServer::RunServer() {
   }
 }
 
-void TerrierServer::StopServer() {
+void NoisepageServer::StopServer() {
   // Stop the dispatcher task and close the socket's file descriptor.
   const bool is_task_stopped UNUSED_ATTRIBUTE =
       thread_registry_->StopTask(this, dispatcher_task_.CastManagedPointerTo<common::DedicatedThreadTask>());
   NOISEPAGE_ASSERT(is_task_stopped, "Failed to stop ConnectionDispatcherTask.");
 
   // Close the network socket
-  TerrierClose(network_socket_fd_);
+  NoisepageClose(network_socket_fd_);
 
   // Close the Unix domain socket if it exists
   if (unix_domain_socket_fd_ >= 0) {

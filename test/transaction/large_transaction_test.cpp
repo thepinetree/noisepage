@@ -5,7 +5,7 @@
 #include "transaction/deferred_action_manager.h"
 
 namespace noisepage {
-class LargeTransactionTests : public TerrierTest {
+class LargeTransactionTests : public NoisepageTest {
  public:
   void RunTest(const LargeDataTableTestConfiguration &config) {
     for (uint32_t iteration = 0; iteration < config.NumIterations(); iteration++) {

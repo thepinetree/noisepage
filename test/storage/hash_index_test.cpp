@@ -23,7 +23,7 @@
 
 namespace noisepage::storage::index {
 
-class HashIndexTests : public TerrierTest {
+class HashIndexTests : public NoisepageTest {
  private:
   catalog::Schema table_schema_;
   catalog::IndexSchema unique_schema_;

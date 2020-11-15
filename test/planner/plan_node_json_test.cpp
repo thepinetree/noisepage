@@ -47,7 +47,7 @@
 
 namespace noisepage::planner {
 
-class PlanNodeJsonTest : public TerrierTest {
+class PlanNodeJsonTest : public NoisepageTest {
  public:
   /**
    * Constructs a dummy OutputSchema object with a single column

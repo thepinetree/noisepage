@@ -13,7 +13,7 @@
 
 namespace noisepage::messenger {
 
-class MessengerTests : public TerrierTest {
+class MessengerTests : public NoisepageTest {
  protected:
   /** A generic function that takes no arguments and returns no output. */
   using VoidFn = std::function<void(void)>;

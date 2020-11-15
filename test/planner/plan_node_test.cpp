@@ -21,7 +21,7 @@
 
 namespace noisepage::planner {
 
-class PlanNodeTest : public TerrierTest {
+class PlanNodeTest : public NoisepageTest {
  public:
   static std::unique_ptr<OutputSchema> BuildOneColumnSchema(std::string name, const type::TypeId type) {
     auto pred = std::make_unique<parser::ConstantValueExpression>(type::TypeId::BOOLEAN, execution::sql::BoolVal(true));

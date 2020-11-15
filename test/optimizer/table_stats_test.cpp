@@ -7,7 +7,7 @@
 #include "test_util/test_harness.h"
 
 namespace noisepage::optimizer {
-class TableStatsTests : public TerrierTest {
+class TableStatsTests : public NoisepageTest {
  protected:
   ColumnStats column_stats_obj_1_;
   ColumnStats column_stats_obj_2_;

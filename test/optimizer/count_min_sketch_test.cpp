@@ -12,7 +12,7 @@
 
 namespace noisepage::optimizer {
 
-class CountMinSketchTests : public TerrierTest {};
+class CountMinSketchTests : public NoisepageTest {};
 
 // Basic CM-Sketch testing with integer datatype.
 // NOLINTNEXTLINE

@@ -12,7 +12,7 @@
 
 namespace noisepage::settings {
 
-class SettingsTests : public TerrierTest {
+class SettingsTests : public NoisepageTest {
  protected:
   std::unique_ptr<DBMain> db_main_;
   common::ManagedPointer<SettingsManager> settings_manager_;

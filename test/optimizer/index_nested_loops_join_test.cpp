@@ -33,7 +33,7 @@
 
 namespace noisepage::optimizer {
 
-struct IdxJoinTest : public TerrierTest {
+struct IdxJoinTest : public NoisepageTest {
   const uint64_t optimizer_timeout_ = 1000000;
 
   void CompileAndRun(std::unique_ptr<planner::AbstractPlanNode> *plan, network::Statement *stmt) {
@@ -78,7 +78,7 @@ struct IdxJoinTest : public TerrierTest {
   }
 
   void SetUp() override {
-    TerrierTest::SetUp();
+    NoisepageTest::SetUp();
 
     db_main_ = noisepage::DBMain::Builder()
                    .SetUseGC(true)
@@ -122,7 +122,7 @@ struct IdxJoinTest : public TerrierTest {
         }
   }
 
-  void TearDown() override { TerrierTest::TearDown(); }
+  void TearDown() override { NoisepageTest::TearDown(); }
 
   network::ConnectionContext context_;
   common::ManagedPointer<catalog::Catalog> catalog_;

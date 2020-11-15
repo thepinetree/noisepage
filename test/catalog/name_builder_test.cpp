@@ -4,7 +4,7 @@
 
 namespace noisepage {
 
-struct NameBuilderTests : public TerrierTest {};
+struct NameBuilderTests : public NoisepageTest {};
 
 TEST_F(NameBuilderTests, ForeignKeyTest) {
   auto table_name = "foo";

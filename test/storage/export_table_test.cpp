@@ -25,7 +25,7 @@
 
 namespace noisepage {
 
-struct ExportTableTest : public ::noisepage::TerrierTest {
+struct ExportTableTest : public ::noisepage::NoisepageTest {
   // This function decodes a utf-8 string from a csv file char by char
   // Example:
   //             \xc8\x99\r&x""

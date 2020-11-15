@@ -1,6 +1,6 @@
 #pragma once
 
-namespace terrier::parser::udf {
+namespace noisepage::parser::udf {
 class AbstractAST;
 class StmtAST;
 class ExprAST;
@@ -39,4 +39,4 @@ class ASTNodeVisitor {
   virtual void Visit(SQLStmtAST *){};
   virtual void Visit(DynamicSQLStmtAST *){};
 };
-}  // namespace terrier::parser::udf
+}  // namespace noisepage::parser::udf

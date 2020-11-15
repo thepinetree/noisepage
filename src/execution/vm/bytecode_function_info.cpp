@@ -72,7 +72,7 @@ LocalVar FunctionInfo::GetReturnValueLocal() const {
 
 //LocalVar FunctionInfo::GetCapturesLocal() const {
 //  // This invocation only makes sense if the function actually returns a value
-//  TERRIER_ASSERT(!func_type_->GetReturnType()->IsNilType(),
+//  NOISEPAGE_ASSERT(!func_type_->GetReturnType()->IsNilType(),
 //                 "Cannot lookup local slot for function that does not have return value");
 //  return LocalVar(GetParamsCount(), LocalVar::AddressMode::Address);
 //}

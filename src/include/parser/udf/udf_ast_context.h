@@ -2,7 +2,7 @@
 
 #include "type/type_id.h"
 
-namespace terrier::parser::udf {
+namespace noisepage::parser::udf {
 class UDFASTContext {
  public:
   UDFASTContext() {}
@@ -25,7 +25,7 @@ class UDFASTContext {
   void AddVariable(std::string name) { local_variables_.push_back(name); }
 
   const std::string &GetVariableAtIndex(int index) {
-    TERRIER_ASSERT(local_variables_.size() >= index, "Bad var");
+    NOISEPAGE_ASSERT(local_variables_.size() >= index, "Bad var");
     return local_variables_[index-1];
   }
 
@@ -34,4 +34,4 @@ class UDFASTContext {
   std::vector<std::string> local_variables_;
 };
 
-}  // namespace terrier::parser::udf
+}  // namespace noisepage::parser::udf

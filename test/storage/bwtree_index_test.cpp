@@ -26,7 +26,7 @@
 
 namespace noisepage::storage::index {
 
-class BwTreeIndexTests : public TerrierTest {
+class BwTreeIndexTests : public NoisepageTest {
  private:
   catalog::Schema table_schema_;
   catalog::IndexSchema unique_schema_;

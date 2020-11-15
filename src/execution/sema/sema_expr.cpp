@@ -182,7 +182,7 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
                                                                     type->As<ast::BuiltinType>()->GetKind())
                                                   ->GetTplName())));
     }else{
-      TERRIER_ASSERT(false, "UNSUPPORTED CAPTURED TYPE");
+      NOISEPAGE_ASSERT(false, "UNSUPPORTED CAPTURED TYPE");
     }
     type_repr->SetType(type->PointerTo());
     ast::FieldDecl *field = factory->NewFieldDecl(SourcePosition(), name, type_repr);

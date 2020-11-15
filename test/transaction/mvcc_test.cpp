@@ -83,7 +83,7 @@ class MVCCDataTableTestObject {
   bool select_result_;
 };
 
-class MVCCTests : public ::noisepage::TerrierTest {
+class MVCCTests : public ::noisepage::NoisepageTest {
  public:
   storage::BlockStore block_store_{100, 100};
   storage::RecordBufferSegmentPool buffer_pool_{10000, 10000};

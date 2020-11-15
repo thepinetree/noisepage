@@ -7,11 +7,11 @@
 
 namespace noisepage {
 
-class TerrierTest : public ::testing::Test {
+class NoisepageTest : public ::testing::Test {
  public:
-  TerrierTest() { LoggersUtil::Initialize(); }
+  NoisepageTest() { LoggersUtil::Initialize(); }
 
-  ~TerrierTest() override { LoggersUtil::ShutDown(); }
+  ~NoisepageTest() override { LoggersUtil::ShutDown(); }
 };
 
 }  // namespace noisepage

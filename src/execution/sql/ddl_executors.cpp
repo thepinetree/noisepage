@@ -47,8 +47,8 @@ bool DDLExecutors::CreateNamespaceExecutor(const common::ManagedPointer<planner:
 bool DDLExecutors::CreateFunctionExecutor(const common::ManagedPointer<planner::CreateFunctionPlanNode> node,
                                            const common::ManagedPointer<catalog::CatalogAccessor> accessor) {
   // Request permission from the Catalog to see if this a valid namespace name
-  TERRIER_ASSERT(node->GetUDFLanguage() == parser::PLType::PL_PGSQL, "Unsupported language");
-  TERRIER_ASSERT(node->GetFunctionBody().size() >= 1, "Unsupported function body?");
+  NOISEPAGE_ASSERT(node->GetUDFLanguage() == parser::PLType::PL_PGSQL, "Unsupported language");
+  NOISEPAGE_ASSERT(node->GetFunctionBody().size() >= 1, "Unsupported function body?");
 
   // I don't like how we have to separate the two here
   std::vector<type::TypeId > param_type_ids;
@@ -131,7 +131,7 @@ bool DDLExecutors::CreateFunctionExecutor(const common::ManagedPointer<planner::
     type_check.Run(file);
     EXECUTION_LOG_ERROR("Errors: \n {}", type_check.GetErrorReporter()->SerializeErrors());
     execution::ast::AstPrettyPrint::Dump(std::cout, file);
-//    TERRIER_ASSERT(!bad, "bad function");
+//    NOISEPAGE_ASSERT(!bad, "bad function");
   }
 
   auto udf_context = new functions::FunctionContext(node->GetFunctionName(),

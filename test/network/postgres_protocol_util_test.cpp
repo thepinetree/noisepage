@@ -7,7 +7,7 @@
 
 namespace noisepage::network {
 
-class PostgresProtocolUtilTests : public TerrierTest {};
+class PostgresProtocolUtilTests : public NoisepageTest {};
 
 // NOLINTNEXTLINE
 TEST_F(PostgresProtocolUtilTests, TypeConversionTest) {

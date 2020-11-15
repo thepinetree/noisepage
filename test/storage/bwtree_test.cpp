@@ -14,7 +14,7 @@ namespace noisepage {
  * These tests are adapted from https://github.com/wangziqi2013/BwTree/tree/master/test
  * Please do not use these as a model for other tests within this repository.
  */
-struct BwTreeTests : public TerrierTest {
+struct BwTreeTests : public NoisepageTest {
   const uint32_t num_threads_ =
       MultiThreadTestUtil::HardwareConcurrency() + (MultiThreadTestUtil::HardwareConcurrency() % 2);
 };

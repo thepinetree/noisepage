@@ -9,7 +9,7 @@
 //#include "parser/udf/udf_codegen.h"
 //#include "udf/udf_util.h"
 //
-//namespace terrier::parser::udf {
+//namespace noisepage::parser::udf {
 //
 ////// Codegen for FunctionAST
 ////llvm::Function *FunctionAST::Codegen(peloton::codegen::CodeGen &codegen,
@@ -21,4 +21,4 @@
 ////  return fb.GetFunction();
 ////}
 //
-//}  // namespace terrier::parser::udf
+//}  // namespace noisepage::parser::udf

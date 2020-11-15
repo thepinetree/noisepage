@@ -14,7 +14,7 @@
 
 #include "execution/sql/value.h"
 
-namespace terrier::parser::udf {
+namespace noisepage::parser::udf {
 
 // AbstractAST - Base class for all AST nodes.
 class AbstractAST {
@@ -215,4 +215,4 @@ class FunctionAST : public AbstractAST {
 
 std::unique_ptr<ExprAST> LogError(const char *str);
 
-}  // namespace terrier::parser::udf
+}  // namespace noisepage::parser::udf

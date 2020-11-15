@@ -99,7 +99,7 @@ class FunctionContext {
   * @return returns the main functiondecl of this udf (to be used only if not builtin)
   */
   common::ManagedPointer<ast::FunctionDecl> GetMainFunctionDecl() const {
-    TERRIER_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
+    NOISEPAGE_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
     return common::ManagedPointer<ast::FunctionDecl>(
         reinterpret_cast<ast::FunctionDecl*>(file_->Declarations().back()));
   }
@@ -108,12 +108,12 @@ class FunctionContext {
    * @return returns the file with the functiondecl and supporting decls (to be used only if not builtin)
    */
   ast::File *GetFile() const {
-    TERRIER_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
+    NOISEPAGE_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
     return file_;
   }
 
   ast::Context *GetASTContext() const {
-    TERRIER_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
+    NOISEPAGE_ASSERT(!IsBuiltin(), "Getting a non-builtin from a builtin function");
     return ast_context_.get();
   }
 

@@ -12,7 +12,7 @@
 
 namespace noisepage::optimizer {
 
-class TopKElementsTests : public TerrierTest {
+class TopKElementsTests : public NoisepageTest {
   void SetUp() override {
 #if NOISEPAGE_USE_LOGGER
     optimizer::optimizer_logger->set_level(spdlog::level::info);

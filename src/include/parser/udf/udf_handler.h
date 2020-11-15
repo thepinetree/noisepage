@@ -17,7 +17,7 @@
 #include "type/type_id.h"
 
 
-namespace terrier::udf {
+namespace noisepage::udf {
 
 using arg_type = type::TypeId;
 
@@ -25,4 +25,4 @@ class UDFHandler {
 
 };
 
-}  // namespace terrier::udf
+}  // namespace noisepage::udf

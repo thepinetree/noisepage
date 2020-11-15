@@ -22,7 +22,7 @@ namespace noisepage::tpcc {
  * The behavior in these tests mimics that of /benchmark/integration/tpcc_benchmark.cpp. If something changes here, it
  * should probably change there as well.
  */
-class TPCCTests : public TerrierTest {
+class TPCCTests : public NoisepageTest {
  public:
   void SetUp() final {
     unlink(LOG_TEST_LOG_FILE_NAME);

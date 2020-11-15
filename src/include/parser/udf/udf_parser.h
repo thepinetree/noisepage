@@ -11,7 +11,7 @@
 #include "parser/udf/udf_ast_context.h"
 #include "parser/postgresparser.h"
 
-namespace terrier::parser::udf {
+namespace noisepage::parser::udf {
 
 
 class FunctionAST;
@@ -34,7 +34,7 @@ class PLpgSQLParser {
   std::unique_ptr<StmtAST> ParseSQL(const nlohmann::json &sql_stmt);
   std::unique_ptr<StmtAST> ParseDynamicSQL(const nlohmann::json &sql_stmt);
   // Feed the expression (as a sql string) to our parser then transform the
-  // terrier expression into ast node
+  // noisepage expression into ast node
   std::unique_ptr<ExprAST> ParseExprSQL(const std::string expr_sql_str);
   std::unique_ptr<ExprAST> ParseExpr(common::ManagedPointer<parser::AbstractExpression>);
 
@@ -44,4 +44,4 @@ class PLpgSQLParser {
 //  common::ManagedPointer<parser::PostgresParser> sql_parser_;
   std::unordered_map<std::string, type::TypeId> symbol_table_;
 };
-}  // namespace terrier::parser::udf
+}  // namespace noisepage::parser::udf

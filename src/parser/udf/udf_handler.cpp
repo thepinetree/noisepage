@@ -3,6 +3,6 @@
 
 #include "parser/udf/udf_parser.h"
 
-namespace terrier::udf {
+namespace noisepage::udf {
 
-}  // namespace terrier::udf
+}  // namespace noisepage::udf

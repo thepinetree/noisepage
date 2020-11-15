@@ -224,7 +224,7 @@ void SettingsManager::ConstructParamMap(                                        
    * param_map.emplace(
    *     noisepage::settings::Param::port,
    *     noisepage::settings::ParamInfo(port, parser::ConstantValueExpression(type::TypeID::INTEGER,
-   *     execution::sql::Integer(FLAGS_port)), "Terrier port (default: 15721)",
+   *     execution::sql::Integer(FLAGS_port)), "Noisepage port (default: 15721)",
    *     parser::ConstantValueExpression(type::TypeID::INTEGER, execution::sql::Integer(15721)),
    *     is_mutable));
    */

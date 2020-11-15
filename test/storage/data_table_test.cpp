@@ -163,7 +163,7 @@ class RandomDataTableTestObject {
   byte *select_buffer_ = common::AllocationUtil::AllocateAligned(redo_initializer_.ProjectedRowSize());
 };
 
-struct DataTableTests : public TerrierTest {
+struct DataTableTests : public NoisepageTest {
   storage::BlockStore block_store_{100, 100};
   storage::RecordBufferSegmentPool buffer_pool_{500000, 50000};
   std::default_random_engine generator_;

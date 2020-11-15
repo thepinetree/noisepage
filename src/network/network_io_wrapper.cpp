@@ -28,7 +28,7 @@ Transition NetworkIoWrapper::FlushAllWrites() {
 }
 
 Transition NetworkIoWrapper::Close() {
-  TerrierClose(sock_fd_);
+  NoisepageClose(sock_fd_);
   return Transition::PROCEED;
 }
 

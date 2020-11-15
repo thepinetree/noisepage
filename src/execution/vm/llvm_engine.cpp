@@ -217,7 +217,7 @@ llvm::Type *LLVMEngine::TypeMap::GetLLVMType(const ast::Type *type) {
       break;
     }
     default : {
-      TERRIER_ASSERT(false, "shouldn't be here");
+      NOISEPAGE_ASSERT(false, "shouldn't be here");
       break;
     }
   }

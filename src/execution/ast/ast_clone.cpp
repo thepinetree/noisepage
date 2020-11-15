@@ -14,7 +14,7 @@
 #include "execution/ast/type.h"
 
 
-namespace terrier::execution::ast {
+namespace noisepage::execution::ast {
 
  class AstCloneImpl : public AstVisitor<AstCloneImpl, AstNode*> {
  public:
@@ -204,7 +204,7 @@ AstNode *AstCloneImpl::VisitLitExpr(LitExpr *node) {
       break;
     }
   }
-  TERRIER_ASSERT(literal != nullptr, "Unknown literal kind");
+  NOISEPAGE_ASSERT(literal != nullptr, "Unknown literal kind");
   return literal;
 }
 
@@ -269,4 +269,4 @@ AstNode *AstClone::Clone(AstNode *node, AstNodeFactory *factory, std::string pre
   return cloner.Run();
 }
 
-}  // namespace terrier::execution::ast
+}  // namespace noisepage::execution::ast

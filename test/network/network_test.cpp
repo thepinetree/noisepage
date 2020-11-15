@@ -37,7 +37,7 @@ class FakeCommandFactory : public PostgresCommandFactory {
  * This test should be refactored to use DBMain, since there's a bunch of redundant setup here. However we don't have a
  * way to inject a new CommandFactory.
  */
-class NetworkTests : public TerrierTest {
+class NetworkTests : public NoisepageTest {
  protected:
   trafficcop::TrafficCop *tcop_;
   catalog::Catalog *catalog_;
@@ -48,7 +48,7 @@ class NetworkTests : public TerrierTest {
   transaction::TransactionManager *txn_manager_;
 
   storage::GarbageCollector *gc_;
-  std::unique_ptr<TerrierServer> server_;
+  std::unique_ptr<NoisepageServer> server_;
   std::unique_ptr<ConnectionHandleFactory> handle_factory_;
   common::DedicatedThreadRegistry thread_registry_ = common::DedicatedThreadRegistry(DISABLED);
   uint16_t port_ = 15721;
@@ -85,7 +85,7 @@ class NetworkTests : public TerrierTest {
 
     try {
       handle_factory_ = std::make_unique<ConnectionHandleFactory>(common::ManagedPointer(tcop_));
-      server_ = std::make_unique<TerrierServer>(
+      server_ = std::make_unique<NoisepageServer>(
           common::ManagedPointer<ProtocolInterpreterProvider>(&protocol_provider_),
           common::ManagedPointer(handle_factory_.get()), common::ManagedPointer(&thread_registry_), port_,
           connection_thread_count_, socket_directory_);
@@ -100,7 +100,7 @@ class NetworkTests : public TerrierTest {
 
   void TearDown() override {
     server_->StopServer();
-    NETWORK_LOG_DEBUG("Terrier has shut down");
+    NETWORK_LOG_DEBUG("Noisepage has shut down");
     catalog_->TearDown();
 
     // Run the GC to clean up transactions

@@ -3,7 +3,7 @@
 
 namespace noisepage {
 
-int TerrierClose(int fd);
+int NoisepageClose(int fd);
 
-std::string TerrierErrorMessage();
+std::string NoisepageErrorMessage();
 }  // namespace noisepage

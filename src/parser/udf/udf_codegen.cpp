@@ -23,7 +23,7 @@
 
 #include "planner/plannodes/abstract_plan_node.h"
 
-namespace terrier::parser::udf{
+namespace noisepage::parser::udf{
 
 UDFCodegen::UDFCodegen(catalog::CatalogAccessor *accessor, FunctionBuilder *fb,
     parser::udf::UDFASTContext *udf_ast_context, CodeGen *codegen, catalog::db_oid_t db_oid)
@@ -61,7 +61,7 @@ catalog::type_oid_t UDFCodegen::GetCatalogTypeOidFromSQLType(execution::ast::Bui
     }
     default:
       return accessor_->GetTypeOidFromTypeId(type::TypeId::INVALID);
-      TERRIER_ASSERT(false, "Unsupported param type");
+      NOISEPAGE_ASSERT(false, "Unsupported param type");
   }
 }
 
@@ -78,12 +78,12 @@ void UDFCodegen::Visit(CallExprAST *ast) {
     args_ast.push_back(dst_);
     args_ast_region_vec.push_back(dst_);
     auto *builtin = dst_->GetType()->SafeAs<execution::ast::BuiltinType>();
-    TERRIER_ASSERT(builtin != nullptr, "Not builtin parameter");
-    TERRIER_ASSERT(builtin->IsSqlValueType(), "Param is not SQL Value Type");
+    NOISEPAGE_ASSERT(builtin != nullptr, "Not builtin parameter");
+    NOISEPAGE_ASSERT(builtin->IsSqlValueType(), "Param is not SQL Value Type");
     arg_types.push_back(GetCatalogTypeOidFromSQLType(builtin->GetKind()));
   }
   auto proc_oid = accessor_->GetProcOid(ast->callee, arg_types);
-  TERRIER_ASSERT(proc_oid != catalog::INVALID_PROC_OID, "Invalid call");
+  NOISEPAGE_ASSERT(proc_oid != catalog::INVALID_PROC_OID, "Invalid call");
   auto context = accessor_->GetProcCtxPtr(proc_oid);
   if(context->IsBuiltin()){
     fb_->Append(codegen_->MakeStmt(codegen_->CallBuiltin(context->GetBuiltin(), std::move(args_ast))));
@@ -141,7 +141,7 @@ void UDFCodegen::Visit(FunctionAST *ast) {
 
 void UDFCodegen::Visit(VariableExprAST *ast) {
     auto it = str_to_ident_.find(ast->name);
-    TERRIER_ASSERT(it != str_to_ident_.end(), "variable not declared");
+    NOISEPAGE_ASSERT(it != str_to_ident_.end(), "variable not declared");
     dst_ = codegen_->MakeExpr(it->second);
   }
 
@@ -183,7 +183,7 @@ void UDFCodegen::Visit(AssignStmtAST *ast) {
   udf_ast_context_->GetVariableType(ast->lhs->name, &left_type);
 
   auto it = str_to_ident_.find(ast->lhs->name);
-  TERRIER_ASSERT(it != str_to_ident_.end(), "Variable not found");
+  NOISEPAGE_ASSERT(it != str_to_ident_.end(), "Variable not found");
   auto left_codegen_ident = it->second;
 
   auto *left_expr = codegen_->MakeExpr(left_codegen_ident);
@@ -199,40 +199,40 @@ void UDFCodegen::Visit(BinaryExprAST *ast) {
     execution::parsing::Token::Type op_token;
     bool compare = false;
     switch(ast->op){
-      case terrier::parser::ExpressionType::OPERATOR_DIVIDE:
+      case noisepage::parser::ExpressionType::OPERATOR_DIVIDE:
         op_token = execution::parsing::Token::Type::SLASH;
         break;
-      case terrier::parser::ExpressionType::OPERATOR_PLUS:
+      case noisepage::parser::ExpressionType::OPERATOR_PLUS:
         op_token = execution::parsing::Token::Type::PLUS;
         break;
-      case terrier::parser::ExpressionType::OPERATOR_MINUS:
+      case noisepage::parser::ExpressionType::OPERATOR_MINUS:
         op_token = execution::parsing::Token::Type::MINUS;
         break;
-      case terrier::parser::ExpressionType::OPERATOR_MULTIPLY:
+      case noisepage::parser::ExpressionType::OPERATOR_MULTIPLY:
         op_token = execution::parsing::Token::Type::STAR;
         break;
-      case terrier::parser::ExpressionType::OPERATOR_MOD:
+      case noisepage::parser::ExpressionType::OPERATOR_MOD:
         op_token = execution::parsing::Token::Type::PERCENT;
         break;
-      case terrier::parser::ExpressionType::CONJUNCTION_OR:
+      case noisepage::parser::ExpressionType::CONJUNCTION_OR:
         op_token = execution::parsing::Token::Type::OR;
         break;
-      case terrier::parser::ExpressionType::CONJUNCTION_AND:
+      case noisepage::parser::ExpressionType::CONJUNCTION_AND:
         op_token = execution::parsing::Token::Type::AND;
         break;
-      case terrier::parser::ExpressionType::COMPARE_GREATER_THAN:
+      case noisepage::parser::ExpressionType::COMPARE_GREATER_THAN:
         compare = true;
         op_token = execution::parsing::Token::Type::GREATER;
         break;
-      case terrier::parser::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
+      case noisepage::parser::ExpressionType::COMPARE_GREATER_THAN_OR_EQUAL_TO:
         compare = true;
         op_token = execution::parsing::Token::Type::GREATER_EQUAL;
         break;
-      case terrier::parser::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
+      case noisepage::parser::ExpressionType::COMPARE_LESS_THAN_OR_EQUAL_TO:
         compare = true;
         op_token = execution::parsing::Token::Type::LESS_EQUAL;
         break;
-      case terrier::parser::ExpressionType::COMPARE_LESS_THAN:
+      case noisepage::parser::ExpressionType::COMPARE_LESS_THAN:
         compare = true;
         op_token = execution::parsing::Token::Type::LESS;
         break;
@@ -303,7 +303,7 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
   // make lambda that just writes into this
   auto count_var = str_to_ident_.find(ast->var_name)->second;
   auto lam_var = codegen_->MakeFreshIdentifier("lamb");
-  TERRIER_ASSERT(plan->GetOutputSchema()->GetColumns().size() == 1, "Can't support non scalars yet!");
+  NOISEPAGE_ASSERT(plan->GetOutputSchema()->GetColumns().size() == 1, "Can't support non scalars yet!");
 
   execution::util::RegionVector<execution::ast::FieldDecl *> params(codegen_->GetAstContext()->GetRegion());
   auto input_param = codegen_->MakeFreshIdentifier("input");
@@ -351,7 +351,7 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
     // TODO(order these dudes)
     type::TypeId type;
     auto ret = udf_ast_context_->GetVariableType(entry->first, &type);
-    TERRIER_ASSERT(ret, "didn't find param in udf ast context");
+    NOISEPAGE_ASSERT(ret, "didn't find param in udf ast context");
 
     execution::ast::Builtin builtin;
     switch (type) {

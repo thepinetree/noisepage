@@ -19,10 +19,10 @@
 
 namespace noisepage::optimizer {
 
-struct OptimizerContextTest : public TerrierTest {
-  void SetUp() override { TerrierTest::SetUp(); }
+struct OptimizerContextTest : public NoisepageTest {
+  void SetUp() override { NoisepageTest::SetUp(); }
 
-  void TearDown() override { TerrierTest::TearDown(); }
+  void TearDown() override { NoisepageTest::TearDown(); }
 };
 
 // NOLINTNEXTLINE

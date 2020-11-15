@@ -22,7 +22,7 @@
 
 namespace noisepage {
 
-struct CatalogTests : public TerrierTest {
+struct CatalogTests : public NoisepageTest {
   void SetUp() override {
     db_main_ = noisepage::DBMain::Builder().SetUseGC(true).SetUseCatalog(true).Build();
     txn_manager_ = db_main_->GetTransactionLayer()->GetTransactionManager();

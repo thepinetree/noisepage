@@ -26,7 +26,7 @@ using std::vector;
 
 namespace noisepage {
 
-class BinderCorrectnessTest : public TerrierTest {
+class BinderCorrectnessTest : public NoisepageTest {
  protected:
   std::string default_database_name_ = "test_db";
   catalog::db_oid_t db_oid_;

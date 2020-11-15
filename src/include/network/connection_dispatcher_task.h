@@ -25,8 +25,8 @@ class ProtocolInterpreterProvider;
  *
  * ConnectionDispatcherTask is almost a pseudo-owner of the
  * ConnectionHandlerTask objects, but since we can't be both a DedicatedThreadTask/NotifiableTask and
- * DedicatedThreadOwner, we pass the original DedicatedThreadOwner (TerrierServer) value through to the
- * ConnectionHandlerTasks. TerrierServer ends up the DedicatedThreadOwner of both ConnectionDispatcherTask and
+ * DedicatedThreadOwner, we pass the original DedicatedThreadOwner (NoisepageServer) value through to the
+ * ConnectionHandlerTasks. NoisepageServer ends up the DedicatedThreadOwner of both ConnectionDispatcherTask and
  * ConnectionHandlerTasks for its instance.
  */
 class ConnectionDispatcherTask : public common::NotifiableTask {

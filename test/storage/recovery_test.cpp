@@ -26,7 +26,7 @@
 #define RECOVERY_TEST_LOG_FILE_NAME "./test_recovery_test.log"
 
 namespace noisepage::storage {
-class RecoveryTests : public TerrierTest {
+class RecoveryTests : public NoisepageTest {
  protected:
   std::default_random_engine generator_;
 

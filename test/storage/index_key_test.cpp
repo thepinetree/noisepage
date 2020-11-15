@@ -28,7 +28,7 @@
 
 namespace noisepage::storage::index {
 
-class IndexKeyTests : public TerrierTest {
+class IndexKeyTests : public NoisepageTest {
  public:
   std::default_random_engine generator_;
   std::vector<byte *> loose_pointers_;
