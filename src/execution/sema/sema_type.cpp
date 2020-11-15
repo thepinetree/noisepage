@@ -4,8 +4,9 @@
 
 #include "execution/ast/context.h"
 #include "execution/ast/type.h"
+#include "execution/sema/sema.h"
 
-namespace terrier::execution::sema {
+namespace noisepage::execution::sema {
 
 void Sema::VisitArrayTypeRepr(ast::ArrayTypeRepr *node) {
   uint64_t arr_len = 0;
@@ -104,4 +105,4 @@ void Sema::VisitLambdaTypeRepr(ast::LambdaTypeRepr *node) {
   node->SetType(ast::LambdaType::Get(fn_type));
 }
 
-}  // namespace terrier::execution::sema
+}  // namespace noisepage::execution::sema

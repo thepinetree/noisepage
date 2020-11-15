@@ -8,11 +8,11 @@
 #include "execution/sql/vector_projection_iterator.h"
 #include "storage/index/index.h"
 
-namespace terrier::storage {
+namespace noisepage::storage {
 class SqlTable;
-}  // namespace terrier::storage
+}  // namespace noisepage::storage
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 /**
  * Allows iteration for indices from TPL.
  */
@@ -94,6 +94,12 @@ class EXPORT IndexIterator {
    */
   storage::TupleSlot CurrentSlot() { return tuples_[curr_index_ - 1]; }
 
+  /**
+   * @return The size of the index.
+   * TODO(WAN): This should be a uint64_t, #1049.
+   */
+  uint32_t GetIndexSize() const { return index_->GetSize(); }
+
  private:
   exec::ExecutionContext *exec_ctx_;
   uint32_t num_attrs_;
@@ -111,4 +117,4 @@ class EXPORT IndexIterator {
   std::vector<storage::TupleSlot> tuples_{};
 };
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

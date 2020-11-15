@@ -3,11 +3,11 @@
 #include "execution/compiler/operator/operator_translator.h"
 #include "execution/compiler/pipeline_driver.h"
 
-namespace terrier::planner {
+namespace noisepage::planner {
 class ProjectionPlanNode;
-}  // namespace terrier::planner
+}  // namespace noisepage::planner
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * Translator for projections.
@@ -44,6 +44,8 @@ class ProjectionTranslator : public OperatorTranslator, public PipelineDriver {
   void LaunchWork(FunctionBuilder *function, ast::Identifier work_func_name) const override {
     UNREACHABLE("Projection is serial.");
   };
+
+  bool IsCountersPassThrough() const override { return true; }
 };
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

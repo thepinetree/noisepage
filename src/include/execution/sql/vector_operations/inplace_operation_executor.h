@@ -2,13 +2,14 @@
 
 #include <type_traits>
 
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "execution/sql/vector.h"
 #include "execution/sql/vector_operations/traits.h"
 #include "execution/sql/vector_operations/vector_operations.h"
 #include "spdlog/fmt/fmt.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 /**
  * Check:
@@ -22,12 +23,14 @@ inline void CheckInplaceOperation(const Vector *result, const Vector &input) {
   if (result->GetTypeId() != input.GetTypeId()) {
     throw EXECUTION_EXCEPTION(
         fmt::format("Left and right vector types to inplace operation must be the same, left {} right {}.",
-                    TypeIdToString(result->GetTypeId()), TypeIdToString(input.GetTypeId())));
+                    TypeIdToString(result->GetTypeId()), TypeIdToString(input.GetTypeId())),
+        common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
   if (!input.IsConstant() && result->GetCount() != input.GetCount()) {
     throw EXECUTION_EXCEPTION(
         fmt::format("Left and right input vectors to binary operation must have the same size, left {} right {}.",
-                    result->GetCount(), input.GetCount()));
+                    result->GetCount(), input.GetCount()),
+        common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
@@ -43,7 +46,7 @@ class InPlaceOperationExecutor {
    *
    * @pre Both input vectors have the same shape.
    *
-   * @note This function leverages the terrier::execution::sql::traits::ShouldPerformFullCompute trait to determine
+   * @note This function leverages the noisepage::execution::sql::traits::ShouldPerformFullCompute trait to determine
    *       whether the operation should be performed on ALL vector elements or just the active
    *       elements. Callers can control this feature by optionally specialization the trait for
    *       their operation type. If you want to use this optimization, you cannot pass in a
@@ -70,7 +73,7 @@ class InPlaceOperationExecutor {
    *
    * @pre Both input vectors have the same shape.
    *
-   * @note This function leverages the terrier::execution::sql::traits::ShouldPerformFullCompute trait to determine
+   * @note This function leverages the noisepage::execution::sql::traits::ShouldPerformFullCompute trait to determine
    *       whether the operation should be performed on ALL vector elements or just the active
    *       elements. Callers can control this feature by optionally specialization the trait for
    *       their operation type. If you want to use this optimization, you cannot pass in a
@@ -107,8 +110,8 @@ class InPlaceOperationExecutor {
         }
       }
     } else {
-      TERRIER_ASSERT(result->GetFilteredTupleIdList() == input.GetFilteredTupleIdList(),
-                     "Filter list of inputs to in-place operation do not match");
+      NOISEPAGE_ASSERT(result->GetFilteredTupleIdList() == input.GetFilteredTupleIdList(),
+                       "Filter list of inputs to in-place operation do not match");
 
       result->GetMutableNullMask()->Union(input.GetNullMask());
       if (traits::ShouldPerformFullCompute<Op>()(exec_settings, result->GetFilteredTupleIdList())) {
@@ -120,4 +123,4 @@ class InPlaceOperationExecutor {
   }
 };
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

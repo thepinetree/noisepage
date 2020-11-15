@@ -12,11 +12,12 @@
 #include "planner/plannodes/plan_visitor.h"
 #include "type/type_id.h"
 
-namespace terrier::catalog {
+namespace noisepage::catalog {
 class CatalogAccessor;
-}  // namespace terrier::catalog
+class IndexSchema;
+}  // namespace noisepage::catalog
 
-namespace terrier::execution {
+namespace noisepage::execution {
 namespace ast {
 class Context;
 class StructDecl;
@@ -25,19 +26,19 @@ namespace compiler {
 class OperatorTranslator;
 class Pipeline;
 }  // namespace compiler
-}  // namespace terrier::execution
+}  // namespace noisepage::execution
 
-namespace terrier::parser {
+namespace noisepage::parser {
 class AbstractExpression;
 }
 
-namespace terrier::planner {
+namespace noisepage::planner {
 class AbstractPlanNode;
 class AbstractJoinPlanNode;
 class AbstractScanPlanNode;
-}  // namespace terrier::planner
+}  // namespace noisepage::planner
 
-namespace terrier::brain {
+namespace noisepage::brain {
 
 /**
  * OperatingUnitRecorder extracts all relevant ExecutionOperatingUnitFeature
@@ -61,7 +62,7 @@ class OperatingUnitRecorder : planner::PlanVisitor {
   /**
    * Extracts features from OperatorTranslators
    * @param translators Vector of OperatorTranslators to extract from
-   * @returns Vector of extracted features (ExecutionOperatingUnitFeature)
+   * @return Vector of extracted features (ExecutionOperatingUnitFeature)
    */
   ExecutionOperatingUnitFeatureVector RecordTranslators(
       const std::vector<execution::compiler::OperatorTranslator *> &translators);
@@ -94,9 +95,11 @@ class OperatingUnitRecorder : planner::PlanVisitor {
   void Visit(const planner::HashJoinPlanNode *plan) override;
   void Visit(const planner::NestedLoopJoinPlanNode *plan) override;
   void Visit(const planner::LimitPlanNode *plan) override;
+  void Visit(const planner::CteScanPlanNode *plan) override;
   void Visit(const planner::OrderByPlanNode *plan) override;
   void Visit(const planner::ProjectionPlanNode *plan) override;
   void Visit(const planner::AggregatePlanNode *plan) override;
+  void Visit(const planner::CreateIndexPlanNode *plan) override;
 
   template <typename Translator>
   void RecordAggregateTranslator(common::ManagedPointer<Translator> translator, const planner::AggregatePlanNode *plan);
@@ -119,7 +122,7 @@ class OperatingUnitRecorder : planner::PlanVisitor {
    * @param total_offset Additional size by the feature (i.e HashTableEntry)
    * @param key_size Key Size
    * @param ref_offset Additional size to be added to the reference size
-   * @returns scaling factor
+   * @return scaling factor
    */
   double ComputeMemoryScaleFactor(execution::ast::StructDecl *decl, size_t total_offset, size_t key_size,
                                   size_t ref_offset);
@@ -137,7 +140,7 @@ class OperatingUnitRecorder : planner::PlanVisitor {
    * Compute key size from vector of expressions
    * @param exprs Expressions
    * @param num_key Number of keys
-   * @returns key size
+   * @return key size
    */
   size_t ComputeKeySize(const std::vector<common::ManagedPointer<parser::AbstractExpression>> &exprs, size_t *num_key);
 
@@ -145,7 +148,7 @@ class OperatingUnitRecorder : planner::PlanVisitor {
    * Compute key size from output schema
    * @param plan Plan
    * @param num_key Number of keys
-   * @returns key size
+   * @return key size
    */
   size_t ComputeKeySizeOutputSchema(const planner::AbstractPlanNode *plan, size_t *num_key);
 
@@ -153,7 +156,7 @@ class OperatingUnitRecorder : planner::PlanVisitor {
    * Compute key size from output schema
    * @param tbl_oid Table OID
    * @param num_key Number of keys
-   * @returns key size
+   * @return key size
    */
   size_t ComputeKeySize(catalog::table_oid_t tbl_oid, size_t *num_key);
 
@@ -162,16 +165,27 @@ class OperatingUnitRecorder : planner::PlanVisitor {
    * @param tbl_oid Table OID
    * @param cols vector of column oids
    * @param num_key Number of keys
-   * @returns key size
+   * @return key size
    */
   size_t ComputeKeySize(catalog::table_oid_t tbl_oid, const std::vector<catalog::col_oid_t> &cols, size_t *num_key);
+
+  /**
+   * Compute key size from an IndexSchema and optional col specifiers
+   * @param schema Index Schema
+   * @param restrict_cols whether to consider cols vector
+   * @param cols Set of column specifiers to look at
+   * @param num_key Number of keys
+   * @return key size
+   */
+  size_t ComputeKeySize(common::ManagedPointer<const catalog::IndexSchema> schema, bool restrict_cols,
+                        const std::vector<catalog::indexkeycol_oid_t> &cols, size_t *num_key);
 
   /**
    * Compute key size from vector of index oids
    * @param idx_oid Index OID
    * @param cols index column oids
    * @param num_key Number of keys
-   * @returns key size
+   * @return key size
    */
   size_t ComputeKeySize(catalog::index_oid_t idx_oid, const std::vector<catalog::indexkeycol_oid_t> &cols,
                         size_t *num_key);
@@ -226,4 +240,4 @@ class OperatingUnitRecorder : planner::PlanVisitor {
   bool tpcc_feature_fix_ = false;
 };
 
-}  // namespace terrier::brain
+}  // namespace noisepage::brain

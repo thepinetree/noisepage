@@ -2,11 +2,12 @@
 
 #include <string>
 
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "spdlog/fmt/fmt.h"
 #include "type/type_id.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 // static
 SqlTypeId GetSqlTypeFromInternalType(TypeId type) {
@@ -32,7 +33,8 @@ SqlTypeId GetSqlTypeFromInternalType(TypeId type) {
     case TypeId::Varbinary:
       return SqlTypeId::Varchar;
     default:
-      throw EXECUTION_EXCEPTION(fmt::format("Not a SQL type, {}.", TypeIdToString(type)));
+      throw EXECUTION_EXCEPTION(fmt::format("Not a SQL type, {}.", TypeIdToString(type)),
+                                common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
@@ -267,4 +269,4 @@ TypeId GetTypeId(type::TypeId frontend_type) {
   return execution_type_id;
 }
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

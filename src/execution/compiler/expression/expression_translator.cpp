@@ -3,7 +3,7 @@
 #include "execution/compiler/compilation_context.h"
 #include "parser/expression/abstract_expression.h"
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 ExpressionTranslator::ExpressionTranslator(const parser::AbstractExpression &expr,
                                            CompilationContext *compilation_context)
@@ -27,4 +27,4 @@ void ExpressionTranslator::DefineHelperStructs(util::RegionVector<ast::StructDec
   }
 }
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

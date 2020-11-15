@@ -1,11 +1,10 @@
-#include <catalog/catalog_defs.h>
-
 #include <memory>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
+#include "catalog/catalog_defs.h"
 #include "nlohmann/json.hpp"
 #include "parser/expression/column_value_expression.h"
 #include "parser/expression/comparison_expression.h"
@@ -46,7 +45,7 @@
 #include "test_util/test_harness.h"
 #include "type/type_id.h"
 
-namespace terrier::planner {
+namespace noisepage::planner {
 
 class PlanNodeJsonTest : public TerrierTest {
  public:
@@ -902,4 +901,4 @@ TEST(PlanNodeJsonTest, UpdatePlanNodeJsonTest) {
   EXPECT_EQ(plan_node->Hash(), deserialized_plan->Hash());
 }
 
-}  // namespace terrier::planner
+}  // namespace noisepage::planner

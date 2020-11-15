@@ -1,10 +1,11 @@
 #include <llvm/ADT/DenseSet.h>
+
 #include "execution/ast/context.h"
 #include "execution/ast/ast_node_factory.h"
 #include "execution/ast/type.h"
 #include "execution/sema/sema.h"
 
-namespace terrier::execution::sema {
+namespace noisepage::execution::sema {
 
 void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   if (GetCurrentScope()->LookupLocal(node->Name()) != nullptr) {
@@ -13,9 +14,9 @@ void Sema::VisitVariableDecl(ast::VariableDecl *node) {
   }
 
   // At this point, the variable either has a declared type or an initial value.
-  TERRIER_ASSERT(node->HasTypeDecl() || node->HasInitialValue(),
-                 "Variable has neither a type declaration or an initial expression. This should have "
-                 "been caught during parsing.");
+  NOISEPAGE_ASSERT(node->HasTypeDecl() || node->HasInitialValue(),
+                   "Variable has neither a type declaration or an initial expression. This should have "
+                   "been caught during parsing.");
 
   ast::Type *declared_type = nullptr, *initializer_type = nullptr;
 
@@ -132,4 +133,4 @@ void Sema::VisitStructDecl(ast::StructDecl *node) {
   GetCurrentScope()->Declare(node->Name(), struct_type);
 }
 
-}  // namespace terrier::execution::sema
+}  // namespace noisepage::execution::sema

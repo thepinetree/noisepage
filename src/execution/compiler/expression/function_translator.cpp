@@ -9,7 +9,7 @@
 #include "execution/functions/function_context.h"
 #include "parser/expression/function_expression.h"
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 FunctionTranslator::FunctionTranslator(const parser::FunctionExpression &expr, CompilationContext *compilation_context)
     : ExpressionTranslator(expr, compilation_context) {
@@ -96,4 +96,4 @@ void FunctionTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl 
   }
 }
 
-}  // namespace terrier::execution::compiler
+}  // namespace noispage::execution::compiler

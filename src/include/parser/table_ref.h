@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -11,7 +12,7 @@
 #include "parser/parser_defs.h"
 #include "parser/select_statement.h"
 
-namespace terrier {
+namespace noisepage {
 namespace binder {
 class BindNodeVisitor;
 }
@@ -129,15 +130,31 @@ class TableRef {
    * @param alias alias for table ref
    * @param table_info table information to use in creation
    */
-  TableRef(std::string alias, std::unique_ptr<TableInfo> table_info)
-      : type_(TableReferenceType::NAME), alias_(std::move(alias)), table_info_(std::move(table_info)) {}
+  TableRef(std::string alias, std::unique_ptr<TableInfo> table_info, std::vector<parser::AliasType> &&alias_col_names = {})
+      : type_(TableReferenceType::NAME), alias_(std::move(alias)), table_info_(std::move(table_info)),
+        cte_col_aliases_(std::move(alias_col_names)) {}
 
   /**
    * @param alias alias for table ref
    * @param select select statement to use in creation
    */
-  TableRef(std::string alias, std::unique_ptr<SelectStatement> select)
-      : type_(TableReferenceType::SELECT), alias_(std::move(alias)), select_(std::move(select)) {}
+  TableRef(std::string alias, std::unique_ptr<SelectStatement> select, std::vector<parser::AliasType> &&alias_col_names = {})
+      : type_(TableReferenceType::SELECT), alias_(std::move(alias)), select_(std::move(select)),
+        cte_col_aliases_(std::move(alias_col_names)) {}
+
+  /**
+   * @param alias alias for table ref
+   * @param select select statement to use in creation
+   * @param cte_col_aliases aliases for the columns
+   * @param cte_type The type of cte this table is referencing (iterative, recursive, simple)
+   */
+  TableRef(std::string alias, std::unique_ptr<SelectStatement> select, std::vector<AliasType> cte_col_aliases,
+           parser::CTEType cte_type)
+      : type_(TableReferenceType::SELECT),
+        alias_(std::move(alias)),
+        select_(std::move(select)),
+        cte_col_aliases_(std::move(cte_col_aliases)),
+        cte_type_(cte_type) {}
 
   /**
    * @param list table refs to use in creation
@@ -148,16 +165,17 @@ class TableRef {
   /**
    * @param join join definition to use in creation
    */
-  explicit TableRef(std::unique_ptr<JoinDefinition> join)
-      : type_(TableReferenceType::JOIN), alias_(""), join_(std::move(join)) {}
+  explicit TableRef(std::string alias, std::unique_ptr<JoinDefinition> join, std::vector<parser::AliasType> &&alias_col_names = {})
+      : type_(TableReferenceType::JOIN), alias_(alias), cte_col_aliases_(std::move(alias_col_names)), join_(std::move(join)) {}
 
   /**
    * @param alias alias for table ref
    * @param table_info table info to use in creation
    * @return unique pointer to the created table ref
    */
-  static std::unique_ptr<TableRef> CreateTableRefByName(std::string alias, std::unique_ptr<TableInfo> table_info) {
-    return std::make_unique<TableRef>(std::move(alias), std::move(table_info));
+  static std::unique_ptr<TableRef> CreateTableRefByName(std::string alias, std::unique_ptr<TableInfo> table_info,
+                                                        std::vector<parser::AliasType> &&alias_col_names = {}) {
+    return std::make_unique<TableRef>(std::move(alias), std::move(table_info), std::move(alias_col_names));
   }
 
   /**
@@ -165,8 +183,22 @@ class TableRef {
    * @param select select statement to use in creation
    * @return unique pointer to the created table ref
    */
-  static std::unique_ptr<TableRef> CreateTableRefBySelect(std::string alias, std::unique_ptr<SelectStatement> select) {
-    return std::make_unique<TableRef>(std::move(alias), std::move(select));
+  static std::unique_ptr<TableRef> CreateTableRefBySelect(std::string alias, std::unique_ptr<SelectStatement> select,
+                                                          std::vector<parser::AliasType> &&alias_col_names = {}) {
+    return std::make_unique<TableRef>(std::move(alias), std::move(select), std::move(alias_col_names));
+  }
+
+  /**
+   * @param alias alias for table ref
+   * @param select select statement to use in creation
+   * @param cte_col_aliases aliases for column names
+   * @param cte_type the type of cte (simple/recursive/iterative)
+   * @return unique pointer to the created (CTE) table ref
+   */
+  static std::unique_ptr<TableRef> CreateCTETableRefBySelect(std::string alias, std::unique_ptr<SelectStatement> select,
+                                                             std::vector<AliasType> cte_col_aliases,
+                                                             parser::CTEType cte_type) {
+    return std::make_unique<TableRef>(std::move(alias), std::move(select), std::move(cte_col_aliases), cte_type);
   }
 
   /**
@@ -181,14 +213,18 @@ class TableRef {
    * @param join join definition to use in creation
    * @return unique pointer to the created table ref
    */
-  static std::unique_ptr<TableRef> CreateTableRefByJoin(std::unique_ptr<JoinDefinition> join) {
-    return std::make_unique<TableRef>(std::move(join));
+  static std::unique_ptr<TableRef> CreateTableRefByJoin(std::unique_ptr<JoinDefinition> join, std::string alias = "") {
+    return std::make_unique<TableRef>(std::move(alias), std::move(join));
   }
 
   /**
    * @param v Visitor pattern for the statement
    */
   void Accept(common::ManagedPointer<binder::SqlNodeVisitor> v) { v->Visit(common::ManagedPointer(this)); }
+
+  void SetServesLateral();
+
+  bool GetServesLateral() const { return serves_lateral_; }
 
   /** @return table reference type*/
   TableReferenceType GetTableReferenceType() { return type_; }
@@ -198,6 +234,14 @@ class TableRef {
     if (alias_.empty()) alias_ = table_info_->GetTableName();
     return alias_;
   }
+
+  /** @return column alias names */
+  std::vector<AliasType> GetCteColumnAliases() { return cte_col_aliases_; }
+
+  void AddCteColumnAlias(AliasType alias) { cte_col_aliases_.push_back(alias); }
+
+  /** @return cte recursive flag */
+  parser::CTEType GetCteType() { return cte_type_; }
 
   /** @return table name */
   const std::string &GetTableName() { return table_info_->GetTableName(); }
@@ -224,6 +268,12 @@ class TableRef {
   /** @return join */
   common::ManagedPointer<JoinDefinition> GetJoin() { return common::ManagedPointer(join_); }
 
+  catalog::table_oid_t GetTableOid() const { return table_oid_; }
+
+  void SetTableOid(catalog::table_oid_t table_oid) { table_oid_ = table_oid; }
+
+  bool IsLateral() const;
+
   /**
    * @return the hashed value of this table ref object
    */
@@ -243,6 +293,13 @@ class TableRef {
    */
   bool operator!=(const TableRef &rhs) const { return !(operator==(rhs)); }
 
+  /**
+   * Inserts all the table aliases forming a table ref into the input set.
+   * (i.e., all the aliases used in the from clause, including all aliases in all JOINs)
+   * @param aliases set to insert aliases into
+   */
+  void GetConstituentTableAliases(std::vector<std::string> *aliases);
+
   /** @return TableRef serialized to json */
   nlohmann::json ToJson() const;
 
@@ -258,11 +315,18 @@ class TableRef {
   std::unique_ptr<TableInfo> table_info_;
   std::unique_ptr<SelectStatement> select_;
 
+  std::vector<AliasType> cte_col_aliases_;
+  parser::CTEType cte_type_{CTEType::INVALID};
+
   std::vector<std::unique_ptr<TableRef>> list_;
   std::unique_ptr<JoinDefinition> join_;
+
+  catalog::table_oid_t table_oid_;
+
+  bool serves_lateral_{false};
 };
 
 DEFINE_JSON_HEADER_DECLARATIONS(TableRef);
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace noisepage

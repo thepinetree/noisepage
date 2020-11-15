@@ -8,15 +8,15 @@
 #include "execution/compiler/state_descriptor.h"
 #include "storage/storage_defs.h"
 
-namespace terrier::catalog {
+namespace noisepage::catalog {
 class Schema;
-}  // namespace terrier::catalog
+}  // namespace noisepage::catalog
 
-namespace terrier::planner {
+namespace noisepage::planner {
 class InsertPlanNode;
-}  // namespace terrier::planner
+}  // namespace noisepage::planner
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * InsertTranslator
@@ -39,13 +39,11 @@ class InsertTranslator : public OperatorTranslator, public PipelineDriver {
   void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override {}
 
   /**
-   * Does nothing.
+   * Initialize the counters.
    * @param pipeline The current pipeline.
    * @param function The pipeline generating function.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {
-    DeclareInserter(function);
-  }
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
 
   /**
    * Implement insertion logic where it fills in the insert PR obtained from the StorageInterface struct
@@ -123,6 +121,9 @@ class InsertTranslator : public OperatorTranslator, public PipelineDriver {
   // Projection map of the table that we are inserting into.
   // This maps column oids to offsets in a projected row.
   storage::ProjectionMap table_pm_;
+
+  // The number of inserts that are performed.
+  StateDescriptor::Entry num_inserts_;
 };
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

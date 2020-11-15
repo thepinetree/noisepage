@@ -4,8 +4,16 @@
 #include "storage/storage_defs.h"
 #include "test_util/storage_test_util.h"
 
-namespace terrier {
+namespace noisepage {
 
+/**
+ * Currently exercises 2 key areas of VarlenEntry performance: hashing and equality comparisons. The former is mostly
+ * exercising the hash functions used for various content lengths. If hashing algorithms are changed/updated, we should
+ * run this benchmark. The other part of this benchmark evaluates comparisons of VarlenEntrys, exercising if it just
+ * looks at the length, prefix, content, or all of the above. If the logic is changed, we should rerun the benchmark.
+ *
+ * The benchmark is not currently part of CI because it proved too noisy in Jenkins runs.
+ */
 class VarlenEntryBenchmark : public benchmark::Fixture {
  public:
   void SetUp(const benchmark::State &state) final {}
@@ -157,4 +165,4 @@ BENCHMARK_REGISTER_F(VarlenEntryBenchmark, EqualityNotInlineEqualContentEqualLen
 BENCHMARK_REGISTER_F(VarlenEntryBenchmark, EqualityNotInlineDifferentContentEqualLength);
 // clang-format on
 
-}  // namespace terrier
+}  // namespace noisepage

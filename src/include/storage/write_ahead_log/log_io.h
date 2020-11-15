@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
+
 #include <cerrno>
 #include <cstring>
 #include <string>
@@ -16,7 +17,7 @@
 #include "loggers/storage_logger.h"
 #include "transaction/transaction_defs.h"
 
-namespace terrier::storage {
+namespace noisepage::storage {
 
 /**
  * Modernized wrappers around Posix I/O sys calls to hide away the ugliness and use exceptions for error reporting.
@@ -119,10 +120,17 @@ class BufferedLogWriter {
   }
 
   /**
-   * Call fsync to make sure that all writes are consistent.
+   * Call fsync to make sure that all writes are consistent. fdatasync is used as an optimization on Linux since we
+   * don't care about all of the file's metadata being persisted, just the contents.
    */
   void Persist() {
+#if __APPLE__
+    // macOS provides fcntl(out_, F_FULLFSYNC) to guarantee that on-disk buffers are flushed. AFAIK there is no portable
+    // way to do this on Linux so we'll just keep fsync for now.
     if (fsync(out_) == -1) throw std::runtime_error("fsync failed with errno " + std::to_string(errno));
+#else
+    if (fdatasync(out_) == -1) throw std::runtime_error("fdatasync failed with errno " + std::to_string(errno));
+#endif
   }
 
   /**
@@ -198,7 +206,7 @@ class BufferedLogReader {
   T ReadValue() {
     T result;
     bool ret UNUSED_ATTRIBUTE = Read(&result, sizeof(T));
-    TERRIER_ASSERT(ret, "Reading of value failed");
+    NOISEPAGE_ASSERT(ret, "Reading of value failed");
     return result;
   }
 
@@ -208,7 +216,7 @@ class BufferedLogReader {
   char buffer_[common::Constants::LOG_BUFFER_SIZE];
 
   void ReadFromBuffer(void *dest, uint32_t size) {
-    TERRIER_ASSERT(read_head_ + size <= filled_size_, "Not enough bytes in buffer for the read");
+    NOISEPAGE_ASSERT(read_head_ + size <= filled_size_, "Not enough bytes in buffer for the read");
     std::memcpy(dest, buffer_ + read_head_, size);
     read_head_ += size;
   }
@@ -227,4 +235,4 @@ using CommitCallback = std::pair<transaction::callback_fn, void *>;
  */
 using SerializedLogs = std::pair<BufferedLogWriter *, std::vector<CommitCallback>>;
 
-}  // namespace terrier::storage
+}  // namespace noisepage::storage

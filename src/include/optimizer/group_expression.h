@@ -14,7 +14,7 @@
 #include "optimizer/property_set.h"
 #include "optimizer/rule.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 /**
  * GroupExpression used to represent a particular logical or physical
@@ -91,8 +91,8 @@ class GroupExpression {
    * @returns Child's GroupID
    */
   group_id_t GetChildGroupId(int child_idx) const {
-    TERRIER_ASSERT(child_idx >= 0 && static_cast<size_t>(child_idx) < child_groups_.size(),
-                   "child_idx is out of bounds");
+    NOISEPAGE_ASSERT(child_idx >= 0 && static_cast<size_t>(child_idx) < child_groups_.size(),
+                     "child_idx is out of bounds");
     return child_groups_[child_idx];
   }
 
@@ -146,7 +146,8 @@ class GroupExpression {
    * @returns TRUE if equal to other GroupExpression
    */
   bool operator==(const GroupExpression &r) {
-    return (*contents_ == *(r.contents_)) && (child_groups_ == r.child_groups_);
+    return (*contents_ == *(r.contents_)) && (child_groups_ == r.child_groups_) &&
+           ((group_id_ == UNDEFINED_GROUP) || (r.group_id_ == UNDEFINED_GROUP) || (r.group_id_ == group_id_));
   }
 
   /**
@@ -212,7 +213,7 @@ class GroupExpression {
       lowest_cost_table_;
 };
 
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer
 
 namespace std {
 
@@ -220,11 +221,11 @@ namespace std {
  * Implementation of std::hash for GroupExpression
  */
 template <>
-struct hash<terrier::optimizer::GroupExpression> {
+struct hash<noisepage::optimizer::GroupExpression> {
   /**
    * Defines argument_type to be GroupExpression
    */
-  using argument_type = terrier::optimizer::GroupExpression;
+  using argument_type = noisepage::optimizer::GroupExpression;
 
   /**
    * Defines result_type to be size_t

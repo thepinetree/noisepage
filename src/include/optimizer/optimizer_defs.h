@@ -11,9 +11,10 @@
 #include "common/managed_pointer.h"
 #include "common/strong_typedef.h"
 #include "parser/expression/abstract_expression.h"
+#include "parser/expression/lateral_value_expression.h"
 #include "parser/expression_defs.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 /**
  * typedef for GroupID
@@ -80,6 +81,8 @@ enum class OpType {
   LOGICALDROPTRIGGER,
   LOGICALDROPVIEW,
   LOGICALANALYZE,
+  LOGICALCTESCAN,
+  LOGICALUNION,
   // Separation of logical and physical operators
   LOGICALPHYSICALDELIMITER,
 
@@ -100,6 +103,7 @@ enum class OpType {
   LEFTHASHJOIN,
   RIGHTHASHJOIN,
   OUTERHASHJOIN,
+  LEFTSEMIHASHJOIN,
   INSERT,
   INSERTSELECT,
   DELETE,
@@ -122,7 +126,9 @@ enum class OpType {
   DROPFUNCTION,
   DROPTRIGGER,
   DROPVIEW,
-  ANALYZE
+  ANALYZE,
+  CTESCAN,
+  UNION
 };
 
 /**
@@ -190,8 +196,8 @@ class AnnotatedExpression {
 };
 
 /**
- * Struct implementing equality comparisons for both terrier::parser::AbstractExpression*
- * and the const version const terrier::parser::AbstractExpression*
+ * Struct implementing equality comparisons for both noisepage::parser::AbstractExpression*
+ * and the const version const noisepage::parser::AbstractExpression*
  */
 struct ExprEqualCmp {
   /**
@@ -202,9 +208,9 @@ struct ExprEqualCmp {
    *
    * @pre lhs != nullptr && rhs != nullptr
    */
-  bool operator()(common::ManagedPointer<terrier::parser::AbstractExpression> lhs,
-                  common::ManagedPointer<terrier::parser::AbstractExpression> rhs) {
-    TERRIER_ASSERT(lhs != nullptr && rhs != nullptr, "AbstractExpressions should not be null");
+  bool operator()(common::ManagedPointer<noisepage::parser::AbstractExpression> lhs,
+                  common::ManagedPointer<noisepage::parser::AbstractExpression> rhs) {
+    NOISEPAGE_ASSERT(lhs != nullptr && rhs != nullptr, "AbstractExpressions should not be null");
     return (*lhs == *rhs);
   }
 
@@ -216,15 +222,15 @@ struct ExprEqualCmp {
    *
    * @pre lhs != nullptr && rhs != nullptr
    */
-  bool operator()(const common::ManagedPointer<terrier::parser::AbstractExpression> lhs,
-                  const common::ManagedPointer<terrier::parser::AbstractExpression> rhs) const {
-    TERRIER_ASSERT(lhs != nullptr && rhs != nullptr, "AbstractExpressions should not be null");
+  bool operator()(const common::ManagedPointer<noisepage::parser::AbstractExpression> lhs,
+                  const common::ManagedPointer<noisepage::parser::AbstractExpression> rhs) const {
+    NOISEPAGE_ASSERT(lhs != nullptr && rhs != nullptr, "AbstractExpressions should not be null");
     return (*lhs == *rhs);
   }
 };
 
 /**
- * Struct implementing Hash() for const terrier::parser::AbstractExpression*
+ * Struct implementing Hash() for const noisepage::parser::AbstractExpression*
  */
 struct ExprHasher {
   /**
@@ -234,8 +240,8 @@ struct ExprHasher {
    *
    * @pre expr != nullptr
    */
-  size_t operator()(const common::ManagedPointer<terrier::parser::AbstractExpression> expr) const {
-    TERRIER_ASSERT(expr != nullptr, "AbstractExpression should not be null");
+  size_t operator()(const common::ManagedPointer<noisepage::parser::AbstractExpression> expr) const {
+    NOISEPAGE_ASSERT(expr != nullptr, "AbstractExpression should not be null");
     return expr->Hash();
   }
 };
@@ -255,4 +261,12 @@ using ExprMap =
  */
 using ExprSet = std::unordered_set<common::ManagedPointer<parser::AbstractExpression>, ExprHasher, ExprEqualCmp>;
 
-}  // namespace terrier::optimizer
+using LateralWaitersSet = std::unordered_map<catalog::table_oid_t,
+                                             std::pair<ExprMap, std::vector<common::ManagedPointer<parser::LateralValueExpression>>>>;
+
+using UnionAliasMap = std::pair<std::unordered_map<parser::AliasType,
+                                                   common::ManagedPointer<parser::AbstractExpression>, parser::AliasType::HashKey>,
+                                std::unordered_map<parser::AliasType,
+                                                   common::ManagedPointer<parser::AbstractExpression>, parser::AliasType::HashKey>>;
+
+}  // namespace noisepage::optimizer

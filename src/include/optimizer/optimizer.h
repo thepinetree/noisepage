@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -9,10 +10,11 @@
 #include "optimizer/optimizer_context.h"
 #include "optimizer/property_set.h"
 
-namespace terrier {
+namespace noisepage {
 
 namespace planner {
 class AbstractPlanNode;
+class CteScanPlanNode;
 }  // namespace planner
 
 namespace catalog {
@@ -101,10 +103,21 @@ class Optimizer : public AbstractOptimizer {
    */
   void ExecuteTaskStack(OptimizerTaskStack *task_stack, group_id_t root_group_id, OptimizationContext *root_context);
 
+  void PopulateLateralMappings(GroupExpression *gexpr, std::vector<common::ManagedPointer<parser::AbstractExpression>>
+      &input_cols);
+
+  /**
+   * Invoke a single DFS pass through the entire plan
+   * tree to assign the CTE leader node and also provide each
+   * CTE Plan node with the cte table schema
+   */
+  void ElectCTELeader(common::ManagedPointer<planner::AbstractPlanNode> plan, catalog::table_oid_t table_oid,
+                      common::ManagedPointer<planner::CteScanPlanNode> *leader);
+
   std::unique_ptr<AbstractCostModel> cost_model_;
   std::unique_ptr<OptimizerContext> context_;
   const uint64_t task_execution_timeout_;
 };
 
 }  // namespace optimizer
-}  // namespace terrier
+}  // namespace noisepage

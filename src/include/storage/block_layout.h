@@ -6,7 +6,7 @@
 
 #include "storage/storage_defs.h"
 
-namespace terrier::storage {
+namespace noisepage::storage {
 // Used to retrieve the number of bytes an attribute actually occupies in memory. The size value stored in
 // BlockLayout also has a bit denoting whether the attribute is variable-length and thus should be treated
 // differently by the rest of the system.
@@ -41,14 +41,14 @@ class BlockLayout {
    */
   uint16_t AttrSize(col_id_t col_id) const {
     // mask off the first bit as we use that to check for varlen
-    return AttrSizeBytes(attr_sizes_.at(!col_id));
+    return AttrSizeBytes(attr_sizes_.at(col_id.UnderlyingValue()));
   }
 
   /**
    * @param col_id the column id to check for
    * @return if the given column id is varlen or not
    */
-  bool IsVarlen(col_id_t col_id) const { return static_cast<int16_t>(attr_sizes_.at(!col_id)) < 0; }
+  bool IsVarlen(col_id_t col_id) const { return static_cast<int16_t>(attr_sizes_.at(col_id.UnderlyingValue())) < 0; }
 
   /**
    * @return all the varlen columns in the layout
@@ -103,4 +103,4 @@ class BlockLayout {
   uint32_t ComputeNumSlots() const;
   uint32_t ComputeHeaderSize() const;
 };
-}  // namespace terrier::storage
+}  // namespace noisepage::storage

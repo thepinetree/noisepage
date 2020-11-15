@@ -10,12 +10,13 @@
 #include "optimizer/query_to_operator_transformer.h"
 #include "optimizer/statistics/stats_storage.h"
 #include "parser/drop_statement.h"
+#include "parser/expression/column_value_expression.h"
 #include "parser/parser_defs.h"
 #include "parser/postgresparser.h"
 #include "parser/transaction_statement.h"
 #include "planner/plannodes/abstract_plan_node.h"
 
-namespace terrier::trafficcop {
+namespace noisepage::trafficcop {
 
 std::unique_ptr<planner::AbstractPlanNode> TrafficCopUtil::Optimize(
     const common::ManagedPointer<transaction::TransactionContext> txn,
@@ -41,7 +42,7 @@ std::unique_ptr<planner::AbstractPlanNode> TrafficCopUtil::Optimize(
 
     // Output
     output = sel_stmt->GetSelectColumns();  // TODO(Matt): this is making a local copy. Revisit the life cycle and
-    // immutability of all of these Optimizer inputs to reduce copies.
+                                            // immutability of all of these Optimizer inputs to reduce copies.
 
     // PropertySort
     if (sel_stmt->GetSelectOrderBy()) {
@@ -156,4 +157,4 @@ network::QueryType TrafficCopUtil::QueryTypeForStatement(const common::ManagedPo
   }
 }
 
-}  // namespace terrier::trafficcop
+}  // namespace noisepage::trafficcop

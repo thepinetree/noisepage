@@ -1,10 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
+
 #include "parser/expression/abstract_expression.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 /**
  * StarExpression represents a star in expressions like COUNT(*).
  */
@@ -13,7 +16,21 @@ class StarExpression : public AbstractExpression {
   /**
    * Instantiates a new star expression, e.g. as in COUNT(*).
    */
-  StarExpression() : AbstractExpression(ExpressionType::STAR, type::TypeId::INTEGER, {}) {}
+  StarExpression() : AbstractExpression(ExpressionType::STAR, type::TypeId::INTEGER, {}) { table_name_ = ""; }
+
+  /**
+   * Instantiates a new star expression with a table name, e.g. as in xxx.*
+   */
+  explicit StarExpression(std::string table_name)
+      : AbstractExpression(ExpressionType::STAR, type::TypeId::INTEGER, {}) {
+    table_name_ = std::move(table_name);
+  }
+
+  /**
+   * Returns the table name associated with the star expression
+   * @return table name
+   */
+  std::string GetTableName() { return table_name_; }
 
   /**
    * Copies this StarExpression
@@ -31,13 +48,16 @@ class StarExpression : public AbstractExpression {
    */
   std::unique_ptr<AbstractExpression> CopyWithChildren(
       std::vector<std::unique_ptr<AbstractExpression>> &&children) const override {
-    TERRIER_ASSERT(children.empty(), "StarExpression should have 0 children");
+    NOISEPAGE_ASSERT(children.empty(), "StarExpression should have 0 children");
     return Copy();
   }
 
-  void Accept(common::ManagedPointer<binder::SqlNodeVisitor> v) override { v->Visit(common::ManagedPointer(this)); }
+  void Accept(common::ManagedPointer<binder::SqlNodeVisitor> v) override;
+
+ private:
+  std::string table_name_;
 };
 
 DEFINE_JSON_HEADER_DECLARATIONS(StarExpression);
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

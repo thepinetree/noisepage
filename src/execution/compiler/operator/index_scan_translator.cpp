@@ -14,7 +14,7 @@
 #include "storage/index/index.h"
 #include "storage/sql_table.h"
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 IndexScanTranslator::IndexScanTranslator(const planner::IndexScanPlanNode &plan,
                                          CompilationContext *compilation_context, Pipeline *pipeline)
@@ -47,6 +47,12 @@ IndexScanTranslator::IndexScanTranslator(const planner::IndexScanPlanNode &plan,
       compilation_context->Prepare(*key.second);
     }
   }
+
+  num_scans_index_ = CounterDeclare("num_scans_index", pipeline);
+}
+
+void IndexScanTranslator::InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {
+  CounterSet(function, num_scans_index_, 0);
 }
 
 void IndexScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
@@ -96,11 +102,21 @@ void IndexScanTranslator::PerformPipelineWork(WorkContext *context, FunctionBuil
       // PARENT_CODE
       context->Push(function);
     }
+
+    CounterAdd(function, num_scans_index_, 1);
   }
   loop.EndLoop();
 
   // @indexIteratorFree(&index_iter_)
   FreeIterator(function);
+
+  FeatureRecord(function, brain::ExecutionOperatingUnitType::IDX_SCAN,
+                brain::ExecutionOperatingUnitFeatureAttribute::NUM_ROWS, context->GetPipeline(),
+                GetCodeGen()->CallBuiltin(ast::Builtin::IndexIteratorGetSize, {GetCodeGen()->AddressOf(index_iter_)}));
+  FeatureRecord(function, brain::ExecutionOperatingUnitType::IDX_SCAN,
+                brain::ExecutionOperatingUnitFeatureAttribute::CARDINALITY, context->GetPipeline(),
+                CounterVal(num_scans_index_));
+  FeatureArithmeticRecordSet(function, context->GetPipeline(), GetTranslatorId(), CounterVal(num_scans_index_));
 }
 
 ast::Expr *IndexScanTranslator::GetTableColumn(catalog::col_oid_t col_oid) const {
@@ -119,7 +135,7 @@ void IndexScanTranslator::SetOids(FunctionBuilder *builder) const {
   for (uint16_t i = 0; i < input_oids_.size(); i++) {
     // col_oids[i] = col_oid
     ast::Expr *lhs = GetCodeGen()->ArrayAccess(col_oids_, i);
-    ast::Expr *rhs = GetCodeGen()->Const32(!input_oids_[i]);
+    ast::Expr *rhs = GetCodeGen()->Const32(input_oids_[i].UnderlyingValue());
     builder->Append(GetCodeGen()->Assign(lhs, rhs));
   }
 }
@@ -137,13 +153,13 @@ void IndexScanTranslator::DeclareIterator(FunctionBuilder *builder) const {
     num_attrs = std::max(op.GetLoIndexColumns().size(), op.GetHiIndexColumns().size());
   }
 
-  ast::Expr *init_call =
-      GetCodeGen()->IndexIteratorInit(index_iter_, GetCompilationContext()->GetExecutionContextPtrFromQueryState(),
-                                      num_attrs, !op.GetTableOid(), !op.GetIndexOid(), col_oids_);
+  ast::Expr *init_call = GetCodeGen()->IndexIteratorInit(
+      index_iter_, GetCompilationContext()->GetExecutionContextPtrFromQueryState(), num_attrs,
+      op.GetTableOid().UnderlyingValue(), op.GetIndexOid().UnderlyingValue(), col_oids_);
   builder->Append(GetCodeGen()->MakeStmt(init_call));
 }
 
-void IndexScanTranslator::DeclareIndexPR(terrier::execution::compiler::FunctionBuilder *builder) const {
+void IndexScanTranslator::DeclareIndexPR(noisepage::execution::compiler::FunctionBuilder *builder) const {
   const auto &op = GetPlanAs<planner::IndexScanPlanNode>();
   if (op.GetScanType() == planner::IndexScanType::Exact) {
     // var index_pr = @indexIteratorGetPR(&index_iter)
@@ -162,14 +178,14 @@ void IndexScanTranslator::DeclareIndexPR(terrier::execution::compiler::FunctionB
   }
 }
 
-void IndexScanTranslator::DeclareTablePR(terrier::execution::compiler::FunctionBuilder *builder) const {
+void IndexScanTranslator::DeclareTablePR(noisepage::execution::compiler::FunctionBuilder *builder) const {
   // var table_pr = @indexIteratorGetTablePR(&index_iter)
   ast::Expr *get_pr_call =
       GetCodeGen()->CallBuiltin(ast::Builtin::IndexIteratorGetTablePR, {GetCodeGen()->AddressOf(index_iter_)});
   builder->Append(GetCodeGen()->DeclareVar(table_pr_, nullptr, get_pr_call));
 }
 
-void IndexScanTranslator::DeclareSlot(terrier::execution::compiler::FunctionBuilder *builder) const {
+void IndexScanTranslator::DeclareSlot(noisepage::execution::compiler::FunctionBuilder *builder) const {
   // var slot = @indexIteratorGetSlot(&index_iter)
   ast::Expr *get_slot_call =
       GetCodeGen()->CallBuiltin(ast::Builtin::IndexIteratorGetSlot, {GetCodeGen()->AddressOf(index_iter_)});
@@ -183,8 +199,8 @@ void IndexScanTranslator::FillKey(
   for (const auto &key : index_exprs) {
     // @prSet(pr, type, nullable, attr, expr, true)
     uint16_t attr_offset = index_pm_.at(key.first);
-    type::TypeId attr_type = index_schema_.GetColumn(!key.first - 1).Type();
-    bool nullable = index_schema_.GetColumn(!key.first - 1).Nullable();
+    type::TypeId attr_type = index_schema_.GetColumn(key.first.UnderlyingValue() - 1).Type();
+    bool nullable = index_schema_.GetColumn(key.first.UnderlyingValue() - 1).Nullable();
     auto set_var = GetCodeGen()->MakeFreshIdentifier("set-val");
     builder->Append(GetCodeGen()->DeclareVar(set_var, GetCodeGen()->TplType(execution::sql::GetTypeId(
                                                                            key.second->GetReturnValueType())),
@@ -207,4 +223,4 @@ void IndexScanTranslator::FreeIterator(FunctionBuilder *builder) const {
   builder->Append(GetCodeGen()->MakeStmt(free_call));
 }
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

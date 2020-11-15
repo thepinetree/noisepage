@@ -1,6 +1,6 @@
 #pragma once
 
-namespace terrier::planner {
+namespace noisepage::planner {
 
 class AggregatePlanNode;
 class AnalyzePlanNode;
@@ -25,12 +25,14 @@ class IndexJoinPlanNode;
 class IndexScanPlanNode;
 class InsertPlanNode;
 class LimitPlanNode;
+class CteScanPlanNode;
 class NestedLoopJoinPlanNode;
 class OrderByPlanNode;
 class ProjectionPlanNode;
 class SeqScanPlanNode;
 class UpdatePlanNode;
 class SetOpPlanNode;
+class UnionPlanNode;
 class ResultPlanNode;
 
 /**
@@ -179,6 +181,12 @@ class PlanVisitor {
   virtual void Visit(UNUSED_ATTRIBUTE const LimitPlanNode *plan) {}
 
   /**
+   * Visit an CteScanPlanNode
+   * @param plan CteScanPlanNode
+   */
+  virtual void Visit(UNUSED_ATTRIBUTE const CteScanPlanNode *plan) {}
+
+  /**
    * Visit an NestedLoopJoinPlanNode
    * @param plan NestedLoopJoinPlanNode
    */
@@ -219,6 +227,12 @@ class PlanVisitor {
    * @param plan ResultPlanNode
    */
   virtual void Visit(UNUSED_ATTRIBUTE const ResultPlanNode *plan) {}
+
+  /**
+   * Visit an UnionPlanNode
+   * @param plan UnionPlanNode
+   */
+  virtual void Visit(UNUSED_ATTRIBUTE const UnionPlanNode *plan) {}
 };
 
-}  // namespace terrier::planner
+}  // namespace noisepage::planner

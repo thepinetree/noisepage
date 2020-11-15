@@ -7,13 +7,14 @@
 #include "catalog/catalog_accessor.h"
 #include "common/managed_pointer.h"
 #include "optimizer/operator_visitor.h"
+#include "physical_operators.h"
 #include "transaction/transaction_context.h"
 
 namespace planner {
 enum class AggregateStrategyType;
 }
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 class PropertySet;
 class GroupExpression;
@@ -96,6 +97,18 @@ class InputColumnDeriver : public OperatorVisitor {
   void Visit(const Limit *op) override;
 
   /**
+   * Visit function to derive input/output columns for CteScan
+   * @param op CteScan operator to visit
+   */
+  void Visit(const CteScan *op) override;
+
+  /**
+   * Visit function to derive input/output columns for Union
+   * @param op Union operator to visit
+   */
+  void Visit(const Union *op) override;
+
+  /**
    * Visit function to derive input/output columns for InnerIndexJoin
    * @param op InnerIndexJoin operator to visit
    */
@@ -148,6 +161,12 @@ class InputColumnDeriver : public OperatorVisitor {
    * @param op OuterHashJoin operator to visit
    */
   void Visit(const OuterHashJoin *op) override;
+
+  /**
+   * Visit function to derive input/output columns for LeftSemiHashJoin
+   * @param op LeftSemiHashJoin operator to visit
+   */
+  void Visit(const LeftSemiHashJoin *op) override;
 
   /**
    * Visit function to derive input/output columns for TableFreeScan
@@ -288,4 +307,4 @@ class InputColumnDeriver : public OperatorVisitor {
   transaction::TransactionContext *txn_;
 };
 
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer

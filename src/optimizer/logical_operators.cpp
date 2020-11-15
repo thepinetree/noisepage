@@ -12,7 +12,7 @@
 #include "optimizer/operator_visitor.h"
 #include "parser/expression/abstract_expression.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 BaseOperatorNodeContents *LeafOperator::Copy() const { return new LeafOperator(*this); }
 
@@ -120,8 +120,8 @@ common::hash_t LogicalExternalFileGet::Hash() const {
 BaseOperatorNodeContents *LogicalQueryDerivedGet::Copy() const { return new LogicalQueryDerivedGet(*this); }
 
 Operator LogicalQueryDerivedGet::Make(
-    std::string table_alias,
-    std::unordered_map<std::string, common::ManagedPointer<parser::AbstractExpression>> &&alias_to_expr_map) {
+    std::string table_alias, std::unordered_map<parser::AliasType, common::ManagedPointer<parser::AbstractExpression>,
+                                                parser::AliasType::HashKey> &&alias_to_expr_map) {
   auto *get = new LogicalQueryDerivedGet();
   get->table_alias_ = std::move(table_alias);
   get->alias_to_expr_map_ = std::move(alias_to_expr_map);
@@ -139,7 +139,7 @@ common::hash_t LogicalQueryDerivedGet::Hash() const {
   common::hash_t hash = BaseOperatorNodeContents::Hash();
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(table_alias_));
   for (auto &iter : alias_to_expr_map_) {
-    hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(iter.first));
+    hash = common::HashUtil::CombineHashes(hash, parser::AliasType::HashKey()(iter.first));
     hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(iter.second));
   }
   return hash;
@@ -218,7 +218,7 @@ Operator LogicalInsert::Make(
   // We need to check whether the number of values for each insert vector
   // matches the number of columns
   for (const auto &insert_vals : *values) {
-    TERRIER_ASSERT(columns.size() == insert_vals.size(), "Mismatched number of columns and values");
+    NOISEPAGE_ASSERT(columns.size() == insert_vals.size(), "Mismatched number of columns and values");
   }
 #endif
 
@@ -289,7 +289,7 @@ BaseOperatorNodeContents *LogicalLimit::Copy() const { return new LogicalLimit(*
 Operator LogicalLimit::Make(size_t offset, size_t limit,
                             std::vector<common::ManagedPointer<parser::AbstractExpression>> &&sort_exprs,
                             std::vector<optimizer::OrderByOrderingType> &&sort_directions) {
-  TERRIER_ASSERT(sort_exprs.size() == sort_directions.size(), "Mismatched ORDER BY expressions + directions");
+  NOISEPAGE_ASSERT(sort_exprs.size() == sort_directions.size(), "Mismatched ORDER BY expressions + directions");
   auto *op = new LogicalLimit();
   op->offset_ = offset;
   op->limit_ = limit;
@@ -543,6 +543,13 @@ Operator LogicalInnerJoin::Make(std::vector<AnnotatedExpression> &&join_predicat
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
+Operator LogicalInnerJoin::Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> lateral_oids) {
+  auto *join = new LogicalInnerJoin();
+  join->join_predicates_ = join_predicates;
+  join->lateral_oids_ = lateral_oids;
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
+}
+
 common::hash_t LogicalInnerJoin::Hash() const {
   common::hash_t hash = BaseOperatorNodeContents::Hash();
   for (auto &pred : join_predicates_) {
@@ -552,6 +559,10 @@ common::hash_t LogicalInnerJoin::Hash() const {
     } else {
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
     }
+  }
+
+  for(auto &oid : lateral_oids_) {
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
   }
   return hash;
 }
@@ -572,9 +583,10 @@ Operator LogicalLeftJoin::Make() {
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
-Operator LogicalLeftJoin::Make(std::vector<AnnotatedExpression> &&join_predicates) {
+Operator LogicalLeftJoin::Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> lateral_oids) {
   auto *join = new LogicalLeftJoin();
   join->join_predicates_ = join_predicates;
+  join->lateral_oids_ = lateral_oids;
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
@@ -587,6 +599,9 @@ common::hash_t LogicalLeftJoin::Hash() const {
     } else {
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
     }
+  }
+  for(auto &oid : lateral_oids_) {
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
   }
   return hash;
 }
@@ -797,8 +812,8 @@ Operator LogicalCreateFunction::Make(catalog::db_oid_t database_oid, catalog::na
                                      parser::BaseFunctionParameter::DataType return_type, size_t param_count,
                                      bool replace) {
   auto *op = new LogicalCreateFunction();
-  TERRIER_ASSERT(function_param_names.size() == param_count && function_param_types.size() == param_count,
-                 "Mismatched number of items in vector and number of function parameters");
+  NOISEPAGE_ASSERT(function_param_names.size() == param_count && function_param_types.size() == param_count,
+                   "Mismatched number of items in vector and number of function parameters");
   op->database_oid_ = database_oid;
   op->namespace_oid_ = namespace_oid;
   op->function_name_ = std::move(function_name);
@@ -1223,9 +1238,77 @@ bool LogicalAnalyze::operator==(const BaseOperatorNodeContents &r) {
 }
 
 //===--------------------------------------------------------------------===//
-template <typename T>
-void OperatorNodeContents<T>::Accept(common::ManagedPointer<OperatorVisitor> v) const {
-  v->Visit(reinterpret_cast<const T *>(this));
+// LogicalUnion
+//===--------------------------------------------------------------------===//
+BaseOperatorNodeContents *LogicalUnion::Copy() const { return new LogicalUnion(*this); }
+
+Operator LogicalUnion::Make(bool is_all, UnionAliasMap &&columns) {
+  auto *op = new LogicalUnion();
+  op->is_all_ = is_all;
+  op->columns_ = std::move(columns);
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(op));
+}
+
+bool LogicalUnion::operator==(const BaseOperatorNodeContents &r) {
+  if (r.GetOpType() != OpType::LOGICALUNION) return false;
+  const LogicalUnion &node = *dynamic_cast<const LogicalUnion *>(&r);
+//  if(node.GetColumns().size() != GetColumns().size()){
+//    return false;
+//  }
+//  for(size_t i = 0;i < GetColumns().size();i++){
+//    if(node.GetColumns()[i] != )
+//  }
+  return node.is_all_ == is_all_;
+}
+
+common::hash_t LogicalUnion::Hash() const {
+  common::hash_t hash = BaseOperatorNodeContents::Hash();
+  hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(is_all_));
+  return hash;
+}
+
+//===--------------------------------------------------------------------===//
+// LogicalCteScan
+//===--------------------------------------------------------------------===//
+BaseOperatorNodeContents *LogicalCteScan::Copy() const { return new LogicalCteScan(*this); }
+
+Operator LogicalCteScan::Make() {
+  auto *op = new LogicalCteScan();
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(op));
+}
+
+Operator LogicalCteScan::Make(
+    std::string table_alias, std::string table_name, catalog::table_oid_t table_oid, catalog::Schema table_schema,
+    std::vector<std::vector<common::ManagedPointer<parser::AbstractExpression>>> child_expressions,
+    parser::CTEType cte_type, std::vector<AnnotatedExpression> &&scan_predicate) {
+  auto *op = new LogicalCteScan();
+  op->table_schema_ = std::move(table_schema);
+  op->table_alias_ = std::move(table_alias);
+  op->table_name_ = std::move(table_name);
+  op->table_oid_ = table_oid;
+  op->child_expressions_ = std::move(child_expressions);
+  op->cte_type_ = cte_type;
+  op->scan_predicate_ = std::move(scan_predicate);
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(op));
+}
+
+bool LogicalCteScan::operator==(const BaseOperatorNodeContents &r) {
+  if (r.GetOpType() != OpType::LOGICALCTESCAN) return false;
+  const LogicalCteScan &node = *dynamic_cast<const LogicalCteScan *>(&r);
+  bool ret = (table_alias_ == node.table_alias_ && cte_type_ == node.cte_type_);
+  if (scan_predicate_.size() != node.scan_predicate_.size()) return false;
+  for (size_t i = 0; i < scan_predicate_.size(); i++) {
+    if (scan_predicate_[i].GetExpr() != node.scan_predicate_[i].GetExpr()) return false;
+  }
+  return ret;
+}
+
+common::hash_t LogicalCteScan::Hash() const {
+  common::hash_t hash = BaseOperatorNodeContents::Hash();
+  hash = common::HashUtil::CombineHashes(hash, static_cast<uint32_t>(cte_type_));
+  hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(table_alias_));
+  hash = common::HashUtil::CombineHashInRange(hash, scan_predicate_.begin(), scan_predicate_.end());
+  return hash;
 }
 
 //===--------------------------------------------------------------------===//
@@ -1299,6 +1382,10 @@ template <>
 const char *OperatorNodeContents<LogicalDropView>::name = "LogicalDropView";
 template <>
 const char *OperatorNodeContents<LogicalAnalyze>::name = "LogicalAnalyze";
+template <>
+const char *OperatorNodeContents<LogicalCteScan>::name = "LogicalCteScan";
+template <>
+const char *OperatorNodeContents<LogicalUnion>::name = "LogicalUnion";
 
 //===--------------------------------------------------------------------===//
 template <>
@@ -1371,15 +1458,9 @@ template <>
 OpType OperatorNodeContents<LogicalDropView>::type = OpType::LOGICALDROPVIEW;
 template <>
 OpType OperatorNodeContents<LogicalAnalyze>::type = OpType::LOGICALANALYZE;
+template <>
+OpType OperatorNodeContents<LogicalCteScan>::type = OpType::LOGICALCTESCAN;
+template <>
+OpType OperatorNodeContents<LogicalUnion>::type = OpType::LOGICALUNION;
 
-template <typename T>
-bool OperatorNodeContents<T>::IsLogical() const {
-  return type < OpType::LOGICALPHYSICALDELIMITER;
-}
-
-template <typename T>
-bool OperatorNodeContents<T>::IsPhysical() const {
-  return type > OpType::LOGICALPHYSICALDELIMITER;
-}
-
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer

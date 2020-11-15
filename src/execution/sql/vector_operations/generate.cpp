@@ -1,15 +1,17 @@
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "execution/sql/vector_operations/vector_operations.h"
 #include "spdlog/fmt/fmt.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 namespace {
 
 void CheckGenerateArguments(const Vector &input) {
   if (!IsTypeNumeric(input.GetTypeId())) {
     throw EXECUTION_EXCEPTION(fmt::format("Sequence generation only allowed on numeric vectors, vector of type {}.",
-                                          TypeIdToString(input.GetTypeId())));
+                                          TypeIdToString(input.GetTypeId())),
+                              common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
@@ -61,4 +63,4 @@ void VectorOps::Generate(Vector *vector, int64_t start, int64_t increment) {
   }
 }
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

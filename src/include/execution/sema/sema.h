@@ -8,7 +8,7 @@
 #include "execution/sema/error_reporter.h"
 #include "execution/sema/scope.h"
 
-namespace terrier::execution {
+namespace noisepage::execution {
 
 namespace ast {
 class Context;
@@ -91,6 +91,7 @@ class Sema : public ast::AstVisitor<Sema> {
   // Check the number of arguments to the call; true if good, false otherwise
   bool CheckArgCount(ast::CallExpr *call, uint32_t expected_arg_count);
   bool CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count);
+  bool CheckArgCountBetween(ast::CallExpr *call, uint32_t min_expected_arg_count, uint32_t max_expected_arg_count);
 
   // Check boolean logic operands: and, or
   CheckResult CheckLogicalOperands(parsing::Token::Type op, const SourcePosition &pos, ast::Expr *left,
@@ -124,16 +125,20 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinAggregatorCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinJoinHashTableInit(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableInsert(ast::CallExpr *call);
+  void CheckBuiltinJoinHashTableGetTupleCount(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableBuild(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinJoinHashTableLookup(ast::CallExpr *call);
   void CheckBuiltinJoinHashTableFree(ast::CallExpr *call);
   void CheckBuiltinHashTableEntryIterCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinJoinHashTableIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterInit(ast::CallExpr *call);
+  void CheckBuiltinSorterGetTupleCount(ast::CallExpr *call);
   void CheckBuiltinSorterInsert(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterSort(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSorterFree(ast::CallExpr *call);
   void CheckBuiltinSorterIterCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinExecutionContextCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinExecOUFeatureVectorCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinThreadStateContainerCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckMathTrigCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinSizeOfCall(ast::CallExpr *call);
@@ -150,12 +155,14 @@ class Sema : public ast::AstVisitor<Sema> {
   void CheckBuiltinPRCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinStorageInterfaceCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinIndexIteratorInit(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinIndexIteratorGetSize(ast::CallExpr *call);
   void CheckBuiltinIndexIteratorAdvance(ast::CallExpr *call);
   void CheckBuiltinIndexIteratorScan(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinIndexIteratorFree(ast::CallExpr *call);
   void CheckBuiltinIndexIteratorPRCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinAbortCall(ast::CallExpr *call);
   void CheckBuiltinParamCall(ast::CallExpr *call, ast::Builtin builtin);
+  void CheckBuiltinCteScanCall(ast::CallExpr *call, ast::Builtin builtin);
   void CheckBuiltinStringCall(ast::CallExpr *call, ast::Builtin builtin);
 
   // FOR TESTING USE ONLY
@@ -172,7 +179,7 @@ class Sema : public ast::AstVisitor<Sema> {
   void EnterScope(Scope::Kind scope_kind) {
     if (num_cached_scopes_ > 0) {
       Scope *scope = scope_cache_[--num_cached_scopes_].release();
-      TERRIER_ASSERT(scope != nullptr, "Cached scope was null");
+      NOISEPAGE_ASSERT(scope != nullptr, "Cached scope was null");
       scope->Init(GetCurrentScope(), scope_kind);
       scope_ = scope;
     } else {
@@ -182,7 +189,7 @@ class Sema : public ast::AstVisitor<Sema> {
 
   // Exit the current scope
   void ExitScope() {
-    TERRIER_ASSERT(GetCurrentScope() != nullptr, "Mismatched scope exit");
+    NOISEPAGE_ASSERT(GetCurrentScope() != nullptr, "Mismatched scope exit");
 
     Scope *scope = GetCurrentScope();
     scope_ = scope->Outer();
@@ -260,4 +267,4 @@ class Sema : public ast::AstVisitor<Sema> {
 };
 
 }  // namespace sema
-}  // namespace terrier::execution
+}  // namespace noisepage::execution

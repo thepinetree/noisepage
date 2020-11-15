@@ -3,7 +3,7 @@
 #include "execution/ast/type.h"
 #include "execution/sema/sema.h"
 
-namespace terrier::execution::sema {
+namespace noisepage::execution::sema {
 
 void Sema::ReportIncorrectCallArg(ast::CallExpr *call, uint32_t index, ast::Type *expected) {
   GetErrorReporter()->Report(call->Position(), ErrorMessages::kIncorrectCallArgType, call->GetFuncName(), expected,
@@ -33,6 +33,16 @@ bool Sema::CheckArgCountAtLeast(ast::CallExpr *call, uint32_t expected_arg_count
   if (call->NumArgs() < expected_arg_count) {
     GetErrorReporter()->Report(call->Position(), ErrorMessages::kMismatchedCallArgs, call->GetFuncName(),
                                expected_arg_count, call->NumArgs());
+    return false;
+  }
+
+  return true;
+}
+
+bool Sema::CheckArgCountBetween(ast::CallExpr *call, uint32_t min_expected_arg_count, uint32_t max_expected_arg_count) {
+  if (call->NumArgs() < min_expected_arg_count || call->NumArgs() > max_expected_arg_count) {
+    GetErrorReporter()->Report(call->Position(), ErrorMessages::kMismatchedCallArgsBetween, call->GetFuncName(),
+                               min_expected_arg_count, max_expected_arg_count, call->NumArgs());
     return false;
   }
 
@@ -138,8 +148,8 @@ Sema::CheckResult Sema::CheckArithmeticOperands(parsing::Token::Type op, const S
 
 Sema::CheckResult Sema::CheckSqlComparisonOperands(parsing::Token::Type op, const SourcePosition &pos, ast::Expr *left,
                                                    ast::Expr *right) {
-  TERRIER_ASSERT(left->GetType()->IsSqlValueType() || right->GetType()->IsSqlValueType(),
-                 "At least one input to comparison must be SQL value");
+  NOISEPAGE_ASSERT(left->GetType()->IsSqlValueType() || right->GetType()->IsSqlValueType(),
+                   "At least one input to comparison must be SQL value");
 
   // Primitive bool <cmp> SQL Boolean -> cast left.
   if (left->GetType()->IsBoolType() && right->GetType()->IsSpecificBuiltin(ast::BuiltinType::Boolean)) {
@@ -213,6 +223,13 @@ Sema::CheckResult Sema::CheckComparisonOperands(parsing::Token::Type op, const S
     ast::Type *result_type = left->GetType()->IsSqlValueType()
                                  ? ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Boolean)
                                  : ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Bool);
+    return {result_type, left, right};
+  }
+
+  // TODO(pmenon): revisit with a fix for down/up-casting integers #1174
+  // If both input types are integers, we don't need to do any work.
+  if (left->GetType()->IsIntegerType() && right->GetType()->IsIntegerType()) {
+    ast::Type *result_type = ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Bool);
     return {result_type, left, right};
   }
 
@@ -306,4 +323,4 @@ bool Sema::CheckAssignmentConstraints(ast::Type *target_type, ast::Expr **expr) 
   return false;
 }
 
-}  // namespace terrier::execution::sema
+}  // namespace noisepage::execution::sema

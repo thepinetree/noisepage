@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "brain/operating_unit.h"
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "execution/ast/ast_dump.h"
 #include "execution/ast/context.h"
@@ -16,7 +17,7 @@
 #include "loggers/execution_logger.h"
 #include "transaction/transaction_context.h"
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 //===----------------------------------------------------------------------===//
 //
@@ -40,14 +41,16 @@ void ExecutableQuery::Fragment::Run(byte query_state[], vm::ExecutionMode mode) 
   for (const auto &func_name : functions_) {
     Function func;
     if (!module_->GetFunction(func_name, mode, &func)) {
-      throw EXECUTION_EXCEPTION(fmt::format("Could not find function '{}' in query fragment.", func_name));
+      throw EXECUTION_EXCEPTION(fmt::format("Could not find function '{}' in query fragment.", func_name),
+                                common::ErrorCode::ERRCODE_INTERNAL_ERROR);
     }
     try {
       func(query_state);
     } catch (const AbortException &e) {
       for (const auto &teardown_name : teardown_fn_) {
         if (!module_->GetFunction(teardown_name, mode, &func)) {
-          throw EXECUTION_EXCEPTION(fmt::format("Could not find teardown function '{}' in query fragment.", func_name));
+          throw EXECUTION_EXCEPTION(fmt::format("Could not find teardown function '{}' in query fragment.", func_name),
+                                    common::ErrorCode::ERRCODE_INTERNAL_ERROR);
         }
         func(query_state);
       }
@@ -155,11 +158,11 @@ ExecutableQuery::~ExecutableQuery() {
 
 void ExecutableQuery::Setup(std::vector<std::unique_ptr<Fragment>> &&fragments, const std::size_t query_state_size,
                             std::unique_ptr<brain::PipelineOperatingUnits> pipeline_operating_units) {
-  TERRIER_ASSERT(
+  NOISEPAGE_ASSERT(
       std::all_of(fragments.begin(), fragments.end(), [](const auto &fragment) { return fragment->IsCompiled(); }),
       "All query fragments are not compiled!");
-  TERRIER_ASSERT(query_state_size >= sizeof(void *),
-                 "Query state must be large enough to store at least an ExecutionContext pointer.");
+  NOISEPAGE_ASSERT(query_state_size >= sizeof(void *),
+                   "Query state must be large enough to store at least an ExecutionContext pointer.");
 
   fragments_ = std::move(fragments);
   query_state_size_ = query_state_size;
@@ -173,12 +176,14 @@ void ExecutableQuery::Run(common::ManagedPointer<exec::ExecutionContext> exec_ct
   // First, allocate the query state and move the execution context into it.
   auto query_state = std::make_unique<byte[]>(query_state_size_);
   *reinterpret_cast<exec::ExecutionContext **>(query_state.get()) = exec_ctx.Get();
+  exec_ctx->SetQueryState(query_state.get());
 
   double elapsed_ms;
   {
     util::ScopedTimer timer(&elapsed_ms);
     exec_ctx->SetExecutionMode(static_cast<uint8_t>(mode));
     exec_ctx->SetPipelineOperatingUnits(GetPipelineOperatingUnits());
+    exec_ctx->SetQueryId(query_id_);
 
     // Now run through fragments.
 
@@ -200,4 +205,4 @@ std::vector<ast::Decl*> ExecutableQuery::GetDecls() const {
   return decls;
 }
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

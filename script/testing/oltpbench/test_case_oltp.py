@@ -11,7 +11,7 @@ from util.common import run_command
 from util.test_case import TestCase
 from xml.etree import ElementTree
 from oltpbench import constants
-from oltpbench.reporting.report_result import report
+from reporting.report_result import report_oltpbench_result
 
 
 class TestCaseOLTPBench(TestCase):
@@ -45,6 +45,8 @@ class TestCaseOLTPBench(TestCase):
         self.db_load = args.get("db_load",constants.OLTPBENCH_DEFAULT_DATABASE_LOAD)
         self.db_execute = args.get("db_execute",constants.OLTPBENCH_DEFAULT_DATABASE_EXECUTE)
         self.buckets = args.get("buckets",constants.OLTPBENCH_DEFAULT_BUCKETS)
+
+        self.server_data = args.get("server_data")
 
         self.publish_results = args.get("publish_results",constants.OLTPBENCH_DEFAULT_REPORT_SERVER)
         self.publish_username = args.get("publish_username")
@@ -112,17 +114,13 @@ class TestCaseOLTPBench(TestCase):
         self.create_result_dir()
 
     def run_post_test(self):
-        try:
-            # validate the OLTP result
-            self.validate_result()
+        # validate the OLTP result
+        self.validate_result()
 
-            # publish results
-            if self.publish_results:
-                report(self.publish_results, os.path.join(
-                    os.getcwd(), "oltp_result",self.filename_suffix),self.publish_username,self.publish_password,self.query_mode)
-        except:
-            traceback.print_exc(file=sys.stdout)
-            return ErrorCode.ERROR
+        # publish results
+        if self.publish_results:
+            report_oltpbench_result(self.publish_results, self.server_data, os.path.join(
+                os.getcwd(), "oltp_result",self.filename_suffix), self.publish_username, self.publish_password, self.query_mode)
 
     def create_result_dir(self):
         if not os.path.exists(self.test_result_dir):
@@ -131,7 +129,7 @@ class TestCaseOLTPBench(TestCase):
     def get_db_url(self):
         """ format the DB URL for the JDBC connection """
         # format the url base
-        db_url_base = "jdbc:postgresql://{}:{}/terrier".format(
+        db_url_base = "jdbc:postgresql://{}:{}/noisepage".format(
             self.db_host, self.db_port)
         # format the url params
         db_url_params = ""
@@ -193,7 +191,6 @@ class TestCaseOLTPBench(TestCase):
         if unexpected_result and unexpected_result.keys():
             for test in unexpected_result.keys():
                 if (unexpected_result[test] != 0):
-                    print(str(unexpected_result))
-                    sys.exit(ErrorCode.ERROR)
+                    raise RuntimeError(str(unexpected_result))
         else:
             raise RuntimeError(str(unexpected_result))

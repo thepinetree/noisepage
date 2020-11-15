@@ -10,16 +10,16 @@
 #include "planner/plannodes/plan_node_defs.h"
 #include "storage/storage_defs.h"
 
-namespace terrier::catalog {
+namespace noisepage::catalog {
 class Schema;
 class IndexSchema;
-}  // namespace terrier::catalog
+}  // namespace noisepage::catalog
 
-namespace terrier::planner {
+namespace noisepage::planner {
 class IndexJoinPlanNode;
-}  // namespace terrier::planner
+}  // namespace noisepage::planner
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * Index join translator.
@@ -35,9 +35,11 @@ class IndexJoinTranslator : public OperatorTranslator, public PipelineDriver {
 
   void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override {}
 
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+
+  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *func) const override {}
 
@@ -81,5 +83,12 @@ class IndexJoinTranslator : public OperatorTranslator, public PipelineDriver {
   ast::Identifier hi_index_pr_;
   ast::Identifier table_pr_;
   ast::Identifier slot_;
+
+  // The size of the index.
+  StateDescriptor::Entry index_size_;
+  // The number of scans on the index.
+  StateDescriptor::Entry num_scans_index_;
+  // The number of outer loop iterations.
+  StateDescriptor::Entry num_loops_;
 };
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

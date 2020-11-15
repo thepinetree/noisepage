@@ -7,7 +7,7 @@
 #include "execution/compiler/ast_fwd.h"
 #include "execution/util/region_containers.h"
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 class CodeGen;
 
@@ -105,4 +105,4 @@ class FunctionBuilder {
   } decl_;
 };
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

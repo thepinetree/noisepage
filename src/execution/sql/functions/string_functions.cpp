@@ -7,21 +7,27 @@
 #include "execution/exec/execution_context.h"
 #include "execution/sql/operators/like_operators.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
-void StringFunctions::Concat(StringVal *result, exec::ExecutionContext *ctx, const StringVal &left,
-                             const StringVal &right) {
-  if (left.is_null_ || right.is_null_) {
-    *result = StringVal::Null();
-    return;
+void StringFunctions::Concat(StringVal *result, exec::ExecutionContext *ctx, const StringVal *inputs[],
+                             uint32_t num_inputs) {
+  NOISEPAGE_ASSERT(num_inputs != 0, "Concat should have at least one argument");
+
+  std::size_t length = 0;
+  for (std::size_t i = 0; i < num_inputs; i++) {
+    if (!inputs[i]->is_null_) {
+      length += inputs[i]->GetLength();
+    }
   }
 
-  const std::size_t length = left.GetLength() + right.GetLength();
   char *const ptr = ctx->GetStringAllocator()->PreAllocate(length);
+  for (std::size_t i = 0, offset = 0; i < num_inputs; i++) {
+    if (!inputs[i]->is_null_) {
+      std::memcpy(ptr + offset, inputs[i]->GetContent(), inputs[i]->GetLength());
+      offset += inputs[i]->GetLength();
+    }
+  }
 
-  // Copy contents into result.
-  std::memcpy(ptr, left.GetContent(), left.GetLength());
-  std::memcpy(ptr + left.GetLength(), right.GetContent(), right.GetLength());
   *result = StringVal(ptr, length);
 }
 
@@ -55,8 +61,8 @@ namespace {
 
 const char *SearchSubstring(const char *haystack, const std::size_t hay_len, const char *needle,
                             const std::size_t needle_len) {
-  TERRIER_ASSERT(needle != nullptr, "No search string provided");
-  TERRIER_ASSERT(needle_len > 0, "No search string provided");
+  NOISEPAGE_ASSERT(needle != nullptr, "No search string provided");
+  NOISEPAGE_ASSERT(needle_len > 0, "No search string provided");
   for (uint32_t i = 0; i < hay_len + needle_len; i++) {
     const auto pos = haystack + i;
     if (strncmp(pos, needle, needle_len) == 0) {
@@ -95,7 +101,7 @@ void StringFunctions::SplitPart(StringVal *result, UNUSED_ATTRIBUTE exec::Execut
   for (uint32_t index = 1;; index++) {
     const auto remaining_len = end - curr;
     const auto next_delim = SearchSubstring(curr, remaining_len, delimiter, delim.GetLength());
-    if (next_delim == nullptr) {
+    if (next_delim == nullptr || next_delim == end) {
       if (index == field.val_) {
         *result = StringVal(curr, remaining_len);
       } else {
@@ -158,6 +164,12 @@ void StringFunctions::Lpad(StringVal *result, exec::ExecutionContext *ctx, const
     return;
   }
 
+  // If padding is empty string, nothing to do
+  if (pad.GetLength() == 0) {
+    *result = str;
+    return;
+  }
+
   // Allocate some memory
   char *target = ctx->GetStringAllocator()->PreAllocate(len.val_);
 
@@ -175,6 +187,10 @@ void StringFunctions::Lpad(StringVal *result, exec::ExecutionContext *ctx, const
 
   // Set result
   *result = StringVal(target, len.val_);
+}
+
+void StringFunctions::Lpad(StringVal *result, exec::ExecutionContext *ctx, const StringVal &str, const Integer &len) {
+  return Lpad(result, ctx, str, len, StringVal(" "));
 }
 
 void StringFunctions::Rpad(StringVal *result, exec::ExecutionContext *ctx, const StringVal &str, const Integer &len,
@@ -196,6 +212,12 @@ void StringFunctions::Rpad(StringVal *result, exec::ExecutionContext *ctx, const
     return;
   }
 
+  // If padding is empty string, nothing to do
+  if (pad.GetLength() == 0) {
+    *result = str;
+    return;
+  }
+
   // Allocate output
   char *target = ctx->GetStringAllocator()->PreAllocate(len.val_);
   char *ptr = target;
@@ -214,6 +236,10 @@ void StringFunctions::Rpad(StringVal *result, exec::ExecutionContext *ctx, const
 
   // Set result
   *result = StringVal(target, len.val_);
+}
+
+void StringFunctions::Rpad(StringVal *result, exec::ExecutionContext *ctx, const StringVal &str, const Integer &len) {
+  return Rpad(result, ctx, str, len, StringVal(" "));
 }
 
 void StringFunctions::Length(Integer *result, UNUSED_ATTRIBUTE exec::ExecutionContext *ctx, const StringVal &str) {
@@ -447,4 +473,31 @@ void StringFunctions::Chr(StringVal *result, exec::ExecutionContext *ctx, const 
     }
   }
 }
-}  // namespace terrier::execution::sql
+
+void StringFunctions::InitCap(StringVal *result, exec::ExecutionContext *ctx, const StringVal &str) {
+  if (str.is_null_) {
+    *result = StringVal::Null();
+    return;
+  }
+
+  if (str.GetLength() == 0) {
+    *result = str;
+    return;
+  }
+
+  char *ptr = ctx->GetStringAllocator()->PreAllocate(str.GetLength());
+  if (UNLIKELY(ptr == nullptr)) {
+    // Allocation failed
+    return;
+  }
+
+  auto *src = str.GetContent();
+  bool upper = true;
+  for (uint32_t i = 0; i < str.GetLength(); i++) {
+    ptr[i] = upper ? static_cast<char>(std::toupper(src[i])) : static_cast<char>(std::tolower(src[i]));
+    upper = !static_cast<bool>(isalnum(src[i]));
+  }
+  *result = StringVal(ptr, str.GetLength());
+}
+
+}  // namespace noisepage::execution::sql

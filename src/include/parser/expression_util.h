@@ -18,10 +18,12 @@
 #include "parser/expression/constant_value_expression.h"
 #include "parser/expression/derived_value_expression.h"
 #include "parser/expression/function_expression.h"
+#include "parser/expression/lateral_value_expression.h"
 #include "parser/expression/operator_expression.h"
 #include "parser/expression/parameter_value_expression.h"
+#include "parser/expression/type_cast_expression.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 
 /**
  * Collection of expression helpers for the optimizer and execution engine.
@@ -222,6 +224,20 @@ class ExpressionUtil {
       return nullptr;
     }
 
+//    if(expr->GetExpressionType() == ExpressionType::COLUMN_VALUE){
+//      auto cve = expr.CastManagedPointerTo<parser::ColumnValueExpression>();
+////      NOISEPAGE_ASSERT(lateral_map.find(cve->GetTableOid()) != lateral_map.end(), "Didn't find table oid in lateral map");
+//      auto iter = lateral_map.find(cve->GetTableOid());
+////      cve->SetSourcePlan(lateral_map.find(cve->GetTableOid())->second);
+//      if(iter != lateral_map.end()){
+//        auto lateral = std::make_unique<LateralValueExpression>(cve->GetTableOid(), catalog::col_oid_t(iter->second.first[expr]),
+//                                                                expr->GetReturnValueType(),
+//                                                        nullptr);
+//        iter->second.second.push_back(lateral.get());
+//        return std::move(lateral);
+//      }
+//    }
+
     std::vector<std::unique_ptr<AbstractExpression>> children;
     for (size_t i = 0; i < expr->GetChildrenSize(); i++) {
       auto child_expr = expr->GetChild(i);
@@ -232,7 +248,7 @@ class ExpressionUtil {
         if (child_expr->GetExpressionType() != ExpressionType::COLUMN_VALUE && child_expr_map.count(child_expr) != 0U) {
           auto type = child_expr->GetReturnValueType();
           auto iter = child_expr_map.find(child_expr);
-          TERRIER_ASSERT(iter != child_expr_map.end(), "Missing ColumnValueExpression...");
+          NOISEPAGE_ASSERT(iter != child_expr_map.end(), "Missing ColumnValueExpression...");
 
           // Add to children directly because DerivedValueExpression has no children
           auto value_idx = static_cast<int>(iter->second);
@@ -241,7 +257,6 @@ class ExpressionUtil {
           did_insert = true;
           break;
         }
-
         tuple_idx++;
       }
 
@@ -251,7 +266,7 @@ class ExpressionUtil {
     }
 
     // Return a copy with new children
-    TERRIER_ASSERT(children.size() == expr->GetChildrenSize(), "size not equal after walk");
+    NOISEPAGE_ASSERT(children.size() == expr->GetChildrenSize(), "size not equal after walk");
     return expr->CopyWithChildren(std::move(children));
   }
 
@@ -328,8 +343,8 @@ class ExpressionUtil {
     } else if (expr->GetExpressionType() == ExpressionType::COLUMN_VALUE) {
       tv_exprs->push_back(expr);
     } else {
-      TERRIER_ASSERT(expr->GetExpressionType() != ExpressionType::VALUE_TUPLE,
-                     "DerivedValueExpression should not exist here.");
+      NOISEPAGE_ASSERT(expr->GetExpressionType() != ExpressionType::VALUE_TUPLE,
+                       "DerivedValueExpression should not exist here.");
       for (size_t i = 0; i < children_size; i++) {
         GetTupleAndAggregateExprs(aggr_exprs, tv_exprs, expr->GetChild(i));
       }
@@ -386,23 +401,51 @@ class ExpressionUtil {
    * @returns Evaluated AbstractExpression
    */
   static std::unique_ptr<AbstractExpression> EvaluateExpression(const std::vector<optimizer::ExprMap> &expr_maps,
-                                                                common::ManagedPointer<AbstractExpression> expr) {
+                                                                common::ManagedPointer<AbstractExpression> expr,
+                                                                optimizer::LateralWaitersSet &lateral_map) {
     // To evaluate the return type, we need a bottom up approach.
     if (expr.Get() == nullptr) {
       return nullptr;
+    }
+
+    if(expr->GetExpressionType() == ExpressionType::COLUMN_VALUE){
+      auto cve = expr.CastManagedPointerTo<parser::ColumnValueExpression>();
+//      NOISEPAGE_ASSERT(lateral_map.find(cve->GetTableOid()) != lateral_map.end(), "Didn't find table oid in lateral map");
+      auto iter = lateral_map.find(cve->GetTableOid());
+//      cve->SetSourcePlan(lateral_map.find(cve->GetTableOid())->second);
+      if(iter != lateral_map.end()){
+        optimizer::ExprMap::iterator map_it = iter->second.first.begin();
+        while (map_it != iter->second.first.end()){
+          auto &cand = map_it->first;
+          if(cand->GetExpressionType() == ExpressionType::COLUMN_VALUE){
+            auto cand_cve = cand.CastManagedPointerTo<parser::ColumnValueExpression>();
+            if(cand_cve->GetTableOid() == cve->GetTableOid() && (cand_cve->GetColumnOid() == cve->GetColumnOid())){
+              break;
+            }
+          }
+          map_it++;
+        }
+        NOISEPAGE_ASSERT(map_it != iter->second.first.end(), "could not find lateral expression in expression map");
+        auto lateral = std::make_unique<LateralValueExpression>(cve->GetTableOid(), catalog::col_oid_t(map_it->second),
+                                                                expr->GetReturnValueType(),
+                                                        nullptr, iter->second.second);
+//        iter->second.second
+//        iter->second.second.push_back(lateral.get());
+        return std::move(lateral);
+      }
     }
 
     // Evaluate all children and store new children pointers
     size_t children_size = expr->GetChildrenSize();
     std::vector<std::unique_ptr<AbstractExpression>> children;
     for (size_t i = 0; i < children_size; i++) {
-      children.push_back(EvaluateExpression(expr_maps, expr->GetChild(i)));
+      children.push_back(EvaluateExpression(expr_maps, expr->GetChild(i), lateral_map));
     }
 
     if (expr->GetExpressionType() == ExpressionType::COLUMN_VALUE) {
       // Point to the correct column returned in the logical tuple underneath
       auto c_tup_expr = expr.CastManagedPointerTo<ColumnValueExpression>();
-      TERRIER_ASSERT(children_size == 0, "ColumnValueExpression should have 0 children");
+      NOISEPAGE_ASSERT(children_size == 0, "ColumnValueExpression should have 0 children");
 
       int tuple_idx = 0;
       for (auto &expr_map : expr_maps) {
@@ -428,7 +471,7 @@ class ExpressionUtil {
       Peloton never seems to read from AggregateExpression's value_idx
 
       auto c_aggr_expr = dynamic_cast<const AggregateExpression *>(expr);
-      TERRIER_ASSERT(c_aggr_expr, "expr should be AggregateExpression");
+      NOISEPAGE_ASSERT(c_aggr_expr, "expr should be AggregateExpression");
 
       auto aggr_expr = const_cast<AggregateExpression*>(c_aggr_expr);
 
@@ -465,20 +508,23 @@ class ExpressionUtil {
       */
     } else if (expr->GetExpressionType() == ExpressionType::OPERATOR_CASE_EXPR) {
       auto case_expr = expr.CastManagedPointerTo<CaseExpression>();
-      TERRIER_ASSERT(children_size == 0, "CaseExpression should have 0 children");
+      NOISEPAGE_ASSERT(children_size == 0, "CaseExpression should have 0 children");
 
       // Evaluate against WhenClause condition + result and store new
       std::vector<CaseExpression::WhenClause> clauses;
       for (size_t i = 0; i < case_expr->GetWhenClauseSize(); i++) {
-        auto cond = EvaluateExpression(expr_maps, case_expr->GetWhenClauseCondition(i));
-        auto result = EvaluateExpression(expr_maps, case_expr->GetWhenClauseResult(i));
+        auto cond = EvaluateExpression(expr_maps, case_expr->GetWhenClauseCondition(i), lateral_map);
+        auto result = EvaluateExpression(expr_maps, case_expr->GetWhenClauseResult(i), lateral_map);
         clauses.emplace_back(CaseExpression::WhenClause{std::move(cond), std::move(result)});
       }
 
       // Create and return new CaseExpression that is evaluated
-      auto def_cond = EvaluateExpression(expr_maps, case_expr->GetDefaultClause());
+      auto def_cond = EvaluateExpression(expr_maps, case_expr->GetDefaultClause(), lateral_map);
       auto type = case_expr->GetReturnValueType();
       return std::make_unique<CaseExpression>(type, std::move(clauses), std::move(def_cond));
+    } else if (expr->GetExpressionType() == ExpressionType::OPERATOR_CAST) {
+      NOISEPAGE_ASSERT(children_size == 1, "TypeCastExpression should have exactly 1 child.");
+      return expr->GetChild(0)->Copy();
     }
 
     return expr->CopyWithChildren(std::move(children));
@@ -539,7 +585,7 @@ class ExpressionUtil {
       children = std::move(new_children);
     }
 
-    TERRIER_ASSERT(children.size() == 1, "children should have exactly 1 AbstractExpression");
+    NOISEPAGE_ASSERT(children.size() == 1, "children should have exactly 1 AbstractExpression");
     return std::move(children[0]);
   }
 
@@ -580,4 +626,4 @@ class ExpressionUtil {
   }
 };
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

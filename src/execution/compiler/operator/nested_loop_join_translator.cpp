@@ -6,12 +6,12 @@
 #include "execution/compiler/work_context.h"
 #include "planner/plannodes/nested_loop_join_plan_node.h"
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoinPlanNode &plan,
                                                    CompilationContext *compilation_context, Pipeline *pipeline)
-    : OperatorTranslator(plan, compilation_context, pipeline, brain::ExecutionOperatingUnitType::NL_JOIN) {
-  TERRIER_ASSERT(plan.GetChildrenSize() == 2, "NLJ expected to have only two children.");
+    : OperatorTranslator(plan, compilation_context, pipeline, brain::ExecutionOperatingUnitType::DUMMY) {
+  NOISEPAGE_ASSERT(plan.GetChildrenSize() == 2, "NLJ expected to have only two children.");
 
   // In a nested loop, only the outer most loop determines the parallelism level.
   // So disable the parallelism check until the last child.
@@ -24,8 +24,17 @@ NestedLoopJoinTranslator::NestedLoopJoinTranslator(const planner::NestedLoopJoin
 
   // Prepare join condition.
   if (const auto join_predicate = plan.GetJoinPredicate(); join_predicate != nullptr) {
+    compilation_context->SetCurrentOp(this);
     compilation_context->Prepare(*join_predicate);
   }
+}
+
+void NestedLoopJoinTranslator::RegisterNeedValue(const OperatorTranslator *requester,
+                                                 uint32_t child_idx, uint32_t attr_idx) {
+  if(requester->GetPipeline() == GetPipeline()){
+    return;
+  }
+  UNREACHABLE("Can't do laterals over different pipelines :/");
 }
 
 void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const {
@@ -42,4 +51,4 @@ void NestedLoopJoinTranslator::PerformPipelineWork(WorkContext *context, Functio
   }
 }
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

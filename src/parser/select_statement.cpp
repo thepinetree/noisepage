@@ -6,7 +6,7 @@
 
 #include "common/json.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 
 nlohmann::json OrderByDescription::ToJson() const {
   nlohmann::json j;
@@ -178,15 +178,25 @@ std::vector<std::unique_ptr<AbstractExpression>> SelectStatement::FromJson(const
 DEFINE_JSON_BODY_DECLARATIONS(SelectStatement);
 
 std::unique_ptr<SelectStatement> SelectStatement::Copy() {
+  std::vector<std::unique_ptr<TableRef>> new_with_tables;
+  for (auto &ref : with_table_) {
+    new_with_tables.push_back(ref->Copy());
+  }
   auto select = std::make_unique<SelectStatement>(
       select_, select_distinct_, from_->Copy(), where_, group_by_ == nullptr ? nullptr : group_by_->Copy(),
-      order_by_ == nullptr ? nullptr : order_by_->Copy(), limit_ == nullptr ? nullptr : limit_->Copy());
+      order_by_ == nullptr ? nullptr : order_by_->Copy(), limit_ == nullptr ? nullptr : limit_->Copy(),
+      std::move(new_with_tables), lateral_);
   if (union_select_ != nullptr) {
+    std::vector<std::unique_ptr<TableRef>> union_new_with_tables;
+    for (auto &ref : union_select_->with_table_) {
+      union_new_with_tables.push_back(ref->Copy());
+    }
     auto union_copy = std::make_unique<SelectStatement>(
         union_select_->select_, union_select_->select_distinct_, union_select_->from_->Copy(), union_select_->where_,
         union_select_->group_by_ == nullptr ? nullptr : union_select_->group_by_->Copy(),
         union_select_->order_by_ == nullptr ? nullptr : union_select_->order_by_->Copy(),
-        union_select_->limit_ == nullptr ? nullptr : union_select_->limit_->Copy());
+        union_select_->limit_ == nullptr ? nullptr : union_select_->limit_->Copy(), std::move(union_new_with_tables),
+        union_select_->lateral_, union_select_->union_all_);
     select->SetUnionSelect(std::move(union_copy));
   }
   return select;
@@ -204,6 +214,7 @@ common::hash_t SelectStatement::Hash() const {
   for (const auto &expr : select_) {
     hash = common::HashUtil::CombineHashes(hash, expr->Hash());
   }
+  hash = common::HashUtil::CombineHashes(hash, lateral_);
   return hash;
 }
 
@@ -237,7 +248,8 @@ bool SelectStatement::operator==(const SelectStatement &rhs) const {
   if (union_select_ != nullptr && rhs.union_select_ == nullptr) return false;
   if (union_select_ == nullptr && rhs.union_select_ != nullptr) return false;
   if (union_select_ == nullptr && rhs.union_select_ == nullptr) return true;
-  return *(union_select_) == *(rhs.union_select_);
+  if (!(*(union_select_) == *(rhs.union_select_))) return false;
+  return lateral_ == rhs.lateral_;
 }
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

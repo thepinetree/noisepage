@@ -1,15 +1,17 @@
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "execution/sql/vector_operations/vector_operations.h"
 #include "spdlog/fmt/fmt.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 namespace {
 
 void CheckGatherArguments(const Vector &pointers, UNUSED_ATTRIBUTE Vector *result) {
   if (pointers.GetTypeId() != TypeId::Pointer) {
     throw EXECUTION_EXCEPTION(
-        fmt::format("Gather only works on pointer inputs, input type {}.", TypeIdToString(pointers.GetTypeId())));
+        fmt::format("Gather only works on pointer inputs, input type {}.", TypeIdToString(pointers.GetTypeId())),
+        common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
@@ -71,4 +73,4 @@ void VectorOps::Gather(const Vector &pointers, Vector *result, const std::size_t
   }
 }
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

@@ -7,11 +7,11 @@
 #include "execution/compiler/expression/column_value_provider.h"
 #include "execution/util/region_containers.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 class AbstractExpression;
-}  // namespace terrier::parser
+}  // namespace noisepage::parser
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 class CodeGen;
 class CompilationContext;
@@ -78,4 +78,4 @@ class ExpressionTranslator {
   CompilationContext *compilation_context_;
 };
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

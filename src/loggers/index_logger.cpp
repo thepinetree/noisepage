@@ -2,11 +2,8 @@
 
 #include <memory>
 
-#include "spdlog/sinks/stdout_sinks.h"
-#include "spdlog/spdlog.h"
-
-namespace terrier::storage {
-
+namespace noisepage::storage {
+#ifdef NOISEPAGE_USE_LOGGING
 std::shared_ptr<spdlog::logger> index_logger = nullptr;  // NOLINT
 
 void InitIndexLogger() {
@@ -15,4 +12,5 @@ void InitIndexLogger() {
     spdlog::register_logger(index_logger);
   }
 }
-}  // namespace terrier::storage
+#endif
+}  // namespace noisepage::storage

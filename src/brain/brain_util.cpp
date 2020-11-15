@@ -1,8 +1,7 @@
-#include <brain/brain_util.h>
+#include "brain/brain_util.h"
+#include "execution/util/execution_common.h"
 
-#include <execution/util/execution_common.h>
-
-namespace terrier::brain {
+namespace noisepage::brain {
 
 std::string BrainUtil::ExecutionOperatingUnitTypeToString(ExecutionOperatingUnitType f) {
   // NOTE: Before adding any extra case to this switch statement,
@@ -17,8 +16,6 @@ std::string BrainUtil::ExecutionOperatingUnitTypeToString(ExecutionOperatingUnit
       return "HASHJOIN_BUILD";
     case ExecutionOperatingUnitType::HASHJOIN_PROBE:
       return "HASHJOIN_PROBE";
-    case ExecutionOperatingUnitType::IDXJOIN:
-      return "IDXJOIN";
     case ExecutionOperatingUnitType::SORT_BUILD:
       return "SORT_BUILD";
     case ExecutionOperatingUnitType::SORT_ITERATE:
@@ -55,10 +52,24 @@ std::string BrainUtil::ExecutionOperatingUnitTypeToString(ExecutionOperatingUnit
       return "OUTPUT";
     case ExecutionOperatingUnitType::LIMIT:
       return "LIMIT";
+    case ExecutionOperatingUnitType::PARALLEL_MERGE_HASHJOIN:
+      return "PARALLEL_MERGE_HASHJOIN";
+    case ExecutionOperatingUnitType::PARALLEL_MERGE_AGGBUILD:
+      return "PARALLEL_MERGE_AGGBUILD";
+    case ExecutionOperatingUnitType::PARALLEL_SORT_STEP:
+      return "PARALLEL_SORT_STEP";
+    case ExecutionOperatingUnitType::PARALLEL_SORT_MERGE_STEP:
+      return "PARALLEL_SORT_MERGE_STEP";
+    case ExecutionOperatingUnitType::CREATE_INDEX:
+      return "CREATE_INDEX";
+    case ExecutionOperatingUnitType::CREATE_INDEX_MAIN:
+      return "CREATE_INDEX_MAIN";
+    case ExecutionOperatingUnitType::UNION:
+      return "UNION";
     default:
       UNREACHABLE("Undefined ExecutionOperatingUnitType encountered");
       break;
   }
 }
 
-}  // namespace terrier::brain
+}  // namespace noisepage::brain

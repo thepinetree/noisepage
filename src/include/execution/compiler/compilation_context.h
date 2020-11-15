@@ -9,15 +9,15 @@
 #include "execution/compiler/executable_query.h"
 #include "execution/compiler/pipeline.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 class AbstractExpression;
-}  // namespace terrier::parser
+}  // namespace noisepage::parser
 
-namespace terrier::planner {
+namespace noisepage::planner {
 class AbstractPlanNode;
-}  // namespace terrier::planner
+}  // namespace noisepage::planner
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * An enumeration capturing the mode of code generation when compiling SQL queries to TPL.
@@ -121,9 +121,23 @@ class CompilationContext {
 
   ast::Expr *GetOutputCallback() const { return output_callback_; }
 
+  /** @return True if we should collect counters in TPL, used for Lin's models. */
+  bool IsCountersEnabled() const { return counters_enabled_; }
+
+  /** @return True if we should record pipeline metrics */
+  bool IsPipelineMetricsEnabled() const { return pipeline_metrics_enabled_; }
+
+  /** @return Query Id associated with the query */
+  query_id_t GetQueryId() const { return query_id_t{unique_id_}; }
+
+  void SetCurrentOp(OperatorTranslator *current_op) { current_op_ = current_op; }
+
+  OperatorTranslator *GetCurrentOp() { return current_op_; }
+
  private:
   // Private to force use of static Compile() function.
   explicit CompilationContext(ExecutableQuery *query, catalog::CatalogAccessor *accessor, CompilationMode mode,
+                              const exec::ExecutionSettings &exec_settings,
                               ast::LambdaExpr *output_callback = nullptr);
 
   // Given a plan node, compile it into a compiled query object.
@@ -167,6 +181,14 @@ class CompilationContext {
 
   // The pipelines in this context in no specific order.
   std::vector<Pipeline *> pipelines_;
+
+  // Whether counters are enabled.
+  bool counters_enabled_;
+
+  // Whether pipeline metrics are enabled.
+  bool pipeline_metrics_enabled_;
+
+  OperatorTranslator *current_op_;
 };
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

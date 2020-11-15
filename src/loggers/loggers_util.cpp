@@ -8,6 +8,7 @@
 #include "loggers/common_logger.h"
 #include "loggers/execution_logger.h"
 #include "loggers/index_logger.h"
+#include "loggers/messenger_logger.h"
 #include "loggers/metrics_logger.h"
 #include "loggers/network_logger.h"
 #include "loggers/optimizer_logger.h"
@@ -15,13 +16,14 @@
 #include "loggers/settings_logger.h"
 #include "loggers/storage_logger.h"
 #include "loggers/transaction_logger.h"
-#include "spdlog/sinks/stdout_sinks.h"
-#include "spdlog/spdlog.h"
 
+#ifdef NOISEPAGE_USE_LOGGING
 std::shared_ptr<spdlog::sinks::stdout_sink_mt> default_sink = nullptr;  // NOLINT
+#endif
 
-namespace terrier {
+namespace noisepage {
 void LoggersUtil::Initialize() {
+#ifdef NOISEPAGE_USE_LOGGING
   try {
     // create the default, shared sink
     if (default_sink == nullptr) {
@@ -32,6 +34,7 @@ void LoggersUtil::Initialize() {
     catalog::InitCatalogLogger();
     common::InitCommonLogger();
     execution::InitExecutionLogger();
+    messenger::InitMessengerLogger();
     metrics::InitMetricsLogger();
     network::InitNetworkLogger();
     optimizer::InitOptimizerLogger();
@@ -48,30 +51,15 @@ void LoggersUtil::Initialize() {
     std::cerr << "Debug logging initialization failed for " << ex.what() << std::endl;  // NOLINT
     throw ex;
   }
+#endif
 }
 
 void LoggersUtil::ShutDown() {
+#ifdef NOISEPAGE_USE_LOGGING
   if (default_sink != nullptr) {
     spdlog::shutdown();
     default_sink = nullptr;
   }
+#endif
 }
-}  // namespace terrier
-
-template void spdlog::logger::trace<std::string>(const std::string &);
-template void spdlog::logger::debug<std::string>(const std::string &);
-template void spdlog::logger::info<std::string>(const std::string &);
-template void spdlog::logger::warn<std::string>(const std::string &);
-template void spdlog::logger::error<std::string>(const std::string &);
-
-template void spdlog::logger::trace<>(const char *fmt);
-template void spdlog::logger::debug<>(const char *fmt);
-template void spdlog::logger::info<>(const char *fmt);
-template void spdlog::logger::warn<>(const char *fmt);
-template void spdlog::logger::error<>(const char *fmt);
-
-template void spdlog::logger::trace<std::string_view>(const std::string_view &);
-template void spdlog::logger::debug<std::string_view>(const std::string_view &);
-template void spdlog::logger::info<std::string_view>(const std::string_view &);
-template void spdlog::logger::warn<std::string_view>(const std::string_view &);
-template void spdlog::logger::error<std::string_view>(const std::string_view &);
+}  // namespace noisepage

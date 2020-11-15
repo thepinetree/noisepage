@@ -4,7 +4,7 @@
 
 #include "common/macros.h"
 
-namespace terrier::execution::ast {
+namespace noisepage::execution::ast {
 
 // The list of all builtin functions
 // Args: internal name, function name
@@ -39,17 +39,46 @@ namespace terrier::execution::ast {
   F(ExecutionContextAddRowsAffected, execCtxAddRowsAffected)            \
   F(ExecutionContextGetMemoryPool, execCtxGetMem)                       \
   F(ExecutionContextGetTLS, execCtxGetTLS)                              \
+  F(ExecutionContextRegisterHook, execCtxRegisterHook)                  \
+  F(ExecutionContextClearHooks, execCtxClearHooks)                      \
+  F(ExecutionContextInitHooks, execCtxInitHooks)                        \
   F(ThreadStateContainerReset, tlsReset)                                \
   F(ThreadStateContainerGetState, tlsGetCurrentThreadState)             \
   F(ThreadStateContainerIterate, tlsIterate)                            \
   F(ThreadStateContainerClear, tlsClear)                                \
+  F(ExecOUFeatureVectorRecordFeature, execOUFeatureVectorRecordFeature) \
+  F(ExecOUFeatureVectorInitialize, execOUFeatureVectorInit)             \
+  F(ExecOUFeatureVectorFilter, execOUFeatureVectorFilter)               \
+  F(ExecOUFeatureVectorReset, execOUFeatureVectorReset)                 \
                                                                         \
   /* Table scans */                                                     \
   F(TableIterInit, tableIterInit)                                       \
+  F(TempTableIterInitBind, tempTableIterInitBind)                       \
   F(TableIterAdvance, tableIterAdvance)                                 \
+  F(TableIterGetVPINumTuples, tableIterGetVPINumTuples)                 \
   F(TableIterGetVPI, tableIterGetVPI)                                   \
   F(TableIterClose, tableIterClose)                                     \
   F(TableIterParallel, iterateTableParallel)                            \
+  F(TableIterCreateIndexParallel, iterateTableCreateIndexParallel)      \
+                                                                        \
+  /*Cte Scans*/                                                         \
+  F(CteScanInit, cteScanInit)                                           \
+  F(CteScanGetTable, cteScanGetTable)                                   \
+  F(CteScanGetTableOid, cteScanGetTableOid)                             \
+  F(CteScanGetInsertTempTablePR, cteScanGetInsertTempTablePR)           \
+  F(CteScanTableInsert, cteScanTableInsert)                             \
+  F(CteScanFree, cteScanFree)                                           \
+                                                                        \
+  /*Iterative Cte Scans*/                                               \
+  F(IndCteScanInit, indCteScanInit)                                     \
+  F(IndCteScanGetResult, indCteScanGetResult)                           \
+  F(IndCteScanGetReadCte, indCteScanGetReadCte)                         \
+  F(IndCteScanGetWriteCte, indCteScanGetWriteCte)                       \
+  F(IndCteScanGetReadTableOid, indCteScanGetReadTableOid)               \
+  F(IndCteScanAccumulate, indCteScanAccumulate)                         \
+  F(IndCteScanGetInsertTempTablePR, indCteScanGetInsertTempTablePR)     \
+  F(IndCteScanTableInsert, indCteScanTableInsert)                       \
+  F(IndCteScanFree, indCteScanFree)                                     \
                                                                         \
   /* VPI */                                                             \
   F(VPIInit, vpiInit)                                                   \
@@ -129,6 +158,8 @@ namespace terrier::execution::ast {
                                                                         \
   /* Aggregations */                                                    \
   F(AggHashTableInit, aggHTInit)                                        \
+  F(AggHashTableGetTupleCount, aggHTGetTupleCount)                      \
+  F(AggHashTableGetInsertCount, aggHTGetInsertCount)                    \
   F(AggHashTableInsert, aggHTInsert)                                    \
   F(AggHashTableLinkEntry, aggHTLink)                                   \
   F(AggHashTableLookup, aggHTLookup)                                    \
@@ -157,6 +188,7 @@ namespace terrier::execution::ast {
   F(JoinHashTableInsert, joinHTInsert)                                  \
   F(JoinHashTableBuild, joinHTBuild)                                    \
   F(JoinHashTableBuildParallel, joinHTBuildParallel)                    \
+  F(JoinHashTableGetTupleCount, joinHTGetTupleCount)                    \
   F(JoinHashTableLookup, joinHTLookup)                                  \
   F(JoinHashTableFree, joinHTFree)                                      \
                                                                         \
@@ -164,8 +196,15 @@ namespace terrier::execution::ast {
   F(HashTableEntryIterHasNext, htEntryIterHasNext)                      \
   F(HashTableEntryIterGetRow, htEntryIterGetRow)                        \
                                                                         \
+  F(JoinHashTableIterInit, joinHTIterInit)                              \
+  F(JoinHashTableIterHasNext, joinHTIterHasNext)                        \
+  F(JoinHashTableIterNext, joinHTIterNext)                              \
+  F(JoinHashTableIterGetRow, joinHTIterGetRow)                          \
+  F(JoinHashTableIterFree, joinHTIterFree)                              \
+                                                                        \
   /* Sorting */                                                         \
   F(SorterInit, sorterInit)                                             \
+  F(SorterGetTupleCount, sorterGetTupleCount)                           \
   F(SorterInsert, sorterInsert)                                         \
   F(SorterInsertTopK, sorterInsertTopK)                                 \
   F(SorterInsertTopKFinish, sorterInsertTopKFinish)                     \
@@ -181,11 +220,14 @@ namespace terrier::execution::ast {
   F(SorterIterClose, sorterIterClose)                                   \
                                                                         \
   /* Output */                                                          \
+  F(ResultBufferNew, resultBufferNew)                                   \
   F(ResultBufferAllocOutRow, resultBufferAllocRow)                      \
   F(ResultBufferFinalize, resultBufferFinalize)                         \
+  F(ResultBufferFree, resultBufferFree)                                 \
                                                                         \
   /* Index */                                                           \
   F(IndexIteratorInit, indexIteratorInit)                               \
+  F(IndexIteratorGetSize, indexIteratorGetSize)                         \
   F(IndexIteratorScanKey, indexIteratorScanKey)                         \
   F(IndexIteratorScanAscending, indexIteratorScanAscending)             \
   F(IndexIteratorScanDescending, indexIteratorScanDescending)           \
@@ -248,13 +290,16 @@ namespace terrier::execution::ast {
                                                                         \
   /* SQL Table Calls */                                                 \
   F(StorageInterfaceInit, storageInterfaceInit)                         \
+  F(StorageInterfaceGetIndexHeapSize, storageInterfaceGetIndexHeapSize) \
   F(GetTablePR, getTablePR)                                             \
   F(TableInsert, tableInsert)                                           \
   F(TableDelete, tableDelete)                                           \
   F(TableUpdate, tableUpdate)                                           \
   F(GetIndexPR, getIndexPR)                                             \
+  F(IndexGetSize, indexGetSize)                                         \
   F(IndexInsert, indexInsert)                                           \
   F(IndexInsertUnique, indexInsertUnique)                               \
+  F(IndexInsertWithSlot, indexInsertWithSlot)                           \
   F(IndexDelete, indexDelete)                                           \
   F(StorageInterfaceFree, storageInterfaceFree)                         \
   /* Trig */                                                            \
@@ -274,6 +319,10 @@ namespace terrier::execution::ast {
   F(Truncate, truncate)                                                 \
   F(Log10, log10)                                                       \
   F(Log2, log2)                                                         \
+  F(Sqrt, sqrt)                                                         \
+  F(Cbrt, cbrt)                                                         \
+  F(Round, round)                                                       \
+  F(Round2, round2)                                                     \
                                                                         \
   /* EXP */                                                             \
   F(Exp, exp)                                                           \
@@ -321,12 +370,22 @@ namespace terrier::execution::ast {
   F(Trim2, trim2)                                                       \
   F(Position, position)                                                 \
   F(ASCII, ascii)                                                       \
+  F(Length, length)                                                     \
+  F(InitCap, initCap)                                                   \
+  F(SplitPart, splitPart)                                               \
+  F(Lpad, lpad)                                                         \
+  F(Ltrim, ltrim)                                                       \
+  F(Rpad, rpad)                                                         \
+  F(Rtrim, rtrim)                                                       \
+  F(Concat, concat)                                                     \
                                                                         \
   /* Char function */                                                   \
   F(Chr, chr)                                                           \
   F(CharLength, charLength)                                             \
                                                                         \
   /* Arithmetic functions */                                            \
+  F(Mod, mod)                                                           \
+  F(Pow, pow)                                                           \
   F(Abs, abs)                                                           \
                                                                         \
   /* Mini runners functions */                                          \
@@ -336,8 +395,14 @@ namespace terrier::execution::ast {
   F(NpRunnersDummyReal, NpRunnersDummyReal)                             \
                                                                         \
   F(ExecutionContextStartResourceTracker, execCtxStartResourceTracker)  \
+  F(ExecutionContextSetMemoryUseOverride, execCtxSetMemoryUseOverride)  \
   F(ExecutionContextEndResourceTracker, execCtxEndResourceTracker)      \
+  F(ExecutionContextStartPipelineTracker, execCtxStartPipelineTracker)  \
   F(ExecutionContextEndPipelineTracker, execCtxEndPipelineTracker)      \
+                                                                        \
+  F(RegisterThreadWithMetricsManager, registerThreadWithMetricsManager) \
+  F(CheckTrackersStopped, checkTrackersStopped)                         \
+  F(AggregateMetricsThread, aggregateMetricsThread)                     \
                                                                         \
   F(AbortTxn, abortTxn)                                                 \
                                                                         \
@@ -387,4 +452,4 @@ class Builtins {
   static const char *builtin_function_names[];
 };
 
-}  // namespace terrier::execution::ast
+}  // namespace noisepage::execution::ast

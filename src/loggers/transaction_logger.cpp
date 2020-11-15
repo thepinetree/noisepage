@@ -2,11 +2,8 @@
 
 #include <memory>
 
-#include "spdlog/sinks/stdout_sinks.h"
-#include "spdlog/spdlog.h"
-
-namespace terrier::transaction {
-
+namespace noisepage::transaction {
+#ifdef NOISEPAGE_USE_LOGGING
 std::shared_ptr<spdlog::logger> transaction_logger = nullptr;  // NOLINT
 
 void InitTransactionLogger() {
@@ -15,5 +12,5 @@ void InitTransactionLogger() {
     spdlog::register_logger(transaction_logger);
   }
 }
-
-}  // namespace terrier::transaction
+#endif
+}  // namespace noisepage::transaction

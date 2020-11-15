@@ -7,15 +7,15 @@
 #include "execution/compiler/pipeline_driver.h"
 #include "storage/storage_defs.h"
 
-namespace terrier::catalog {
+namespace noisepage::catalog {
 class Schema;
-}  // namespace terrier::catalog
+}  // namespace noisepage::catalog
 
-namespace terrier::planner {
+namespace noisepage::planner {
 class UpdatePlanNode;
-}  // namespace terrier::planner
+}  // namespace noisepage::planner
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * Update Translator
@@ -38,11 +38,11 @@ class UpdateTranslator : public OperatorTranslator, public PipelineDriver {
   void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override {}
 
   /**
-   * Does nothing.
+   * Initialize the counters.
    * @param pipeline The current pipeline.
    * @param function The pipeline generating function.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Implement update logic where it fills in the update PR obtained from the StorageInterface struct
@@ -52,6 +52,9 @@ class UpdateTranslator : public OperatorTranslator, public PipelineDriver {
    * @param function The pipeline generating function.
    */
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
+
+  /** Record the counters for Lin's models. */
+  void FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * @return The value (vector) of the attribute at the given index (@em attr_idx) produced by the
@@ -127,6 +130,9 @@ class UpdateTranslator : public OperatorTranslator, public PipelineDriver {
   // Projection map of the table that we are updating.
   // This maps column oids to offsets in a projected row.
   storage::ProjectionMap table_pm_;
+
+  // The number of updates that are performed.
+  StateDescriptor::Entry num_updates_;
 };
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

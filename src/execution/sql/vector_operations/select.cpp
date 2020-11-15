@@ -1,3 +1,4 @@
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "execution/exec/execution_settings.h"
 #include "execution/sql/operators/comparison_operators.h"
@@ -7,7 +8,7 @@
 #include "execution/sql/vector_operations/vector_operations.h"
 #include "spdlog/fmt/fmt.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 namespace {
 
@@ -46,23 +47,27 @@ struct IsSafeForFullCompute<T, std::enable_if_t<std::is_fundamental_v<T> || std:
 void CheckSelection(const Vector &left, const Vector &right, TupleIdList *result) {
   if (left.GetTypeId() != right.GetTypeId()) {
     throw EXECUTION_EXCEPTION(fmt::format("Input vector types must match for selections, left {} right {}.",
-                                          TypeIdToString(left.GetTypeId()), TypeIdToString(right.GetTypeId())));
+                                          TypeIdToString(left.GetTypeId()), TypeIdToString(right.GetTypeId())),
+                              common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
   if (!left.IsConstant() && !right.IsConstant()) {
     if (left.GetSize() != right.GetSize()) {
       throw EXECUTION_EXCEPTION(
           fmt::format("Left and right vectors to comparison have different sizes, left {} right {}.", left.GetSize(),
-                      right.GetSize()));
+                      right.GetSize()),
+          common::ErrorCode::ERRCODE_INTERNAL_ERROR);
     }
     if (left.GetCount() != right.GetCount()) {
       throw EXECUTION_EXCEPTION(
           fmt::format("Left and right vectors to comparison have different counts, left {} right {}.", left.GetCount(),
-                      right.GetCount()));
+                      right.GetCount()),
+          common::ErrorCode::ERRCODE_INTERNAL_ERROR);
     }
     if (result->GetCapacity() != left.GetSize()) {
       throw EXECUTION_EXCEPTION(
           fmt::format("Result list not large enough to store all TIDs in input vector, result {} input {}.",
-                      result->GetCapacity(), left.GetSize()));
+                      result->GetCapacity(), left.GetSize()),
+          common::ErrorCode::ERRCODE_INTERNAL_ERROR);
     }
   }
 }
@@ -191,32 +196,32 @@ void SelectOperation(const exec::ExecutionSettings &exec_settings, const Vector 
 
 void VectorOps::SelectEqual(const exec::ExecutionSettings &exec_settings, const Vector &left, const Vector &right,
                             TupleIdList *tid_list) {
-  SelectOperation<terrier::execution::sql::Equal>(exec_settings, left, right, tid_list);
+  SelectOperation<noisepage::execution::sql::Equal>(exec_settings, left, right, tid_list);
 }
 
 void VectorOps::SelectGreaterThan(const exec::ExecutionSettings &exec_settings, const Vector &left, const Vector &right,
                                   TupleIdList *tid_list) {
-  SelectOperation<terrier::execution::sql::GreaterThan>(exec_settings, left, right, tid_list);
+  SelectOperation<noisepage::execution::sql::GreaterThan>(exec_settings, left, right, tid_list);
 }
 
 void VectorOps::SelectGreaterThanEqual(const exec::ExecutionSettings &exec_settings, const Vector &left,
                                        const Vector &right, TupleIdList *tid_list) {
-  SelectOperation<terrier::execution::sql::GreaterThanEqual>(exec_settings, left, right, tid_list);
+  SelectOperation<noisepage::execution::sql::GreaterThanEqual>(exec_settings, left, right, tid_list);
 }
 
 void VectorOps::SelectLessThan(const exec::ExecutionSettings &exec_settings, const Vector &left, const Vector &right,
                                TupleIdList *tid_list) {
-  SelectOperation<terrier::execution::sql::LessThan>(exec_settings, left, right, tid_list);
+  SelectOperation<noisepage::execution::sql::LessThan>(exec_settings, left, right, tid_list);
 }
 
 void VectorOps::SelectLessThanEqual(const exec::ExecutionSettings &exec_settings, const Vector &left,
                                     const Vector &right, TupleIdList *tid_list) {
-  SelectOperation<terrier::execution::sql::LessThanEqual>(exec_settings, left, right, tid_list);
+  SelectOperation<noisepage::execution::sql::LessThanEqual>(exec_settings, left, right, tid_list);
 }
 
 void VectorOps::SelectNotEqual(const exec::ExecutionSettings &exec_settings, const Vector &left, const Vector &right,
                                TupleIdList *tid_list) {
-  SelectOperation<terrier::execution::sql::NotEqual>(exec_settings, left, right, tid_list);
+  SelectOperation<noisepage::execution::sql::NotEqual>(exec_settings, left, right, tid_list);
 }
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

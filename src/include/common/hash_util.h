@@ -7,22 +7,21 @@
 #include <string>
 #include <type_traits>
 
+#include "common/hash_defs.h"
 #include "common/macros.h"
 #include "common/strong_typedef.h"
 #include "execution/util/execution_common.h"
 #include "xxHash/xxh3.h"
 
-namespace terrier::common {
-
-/**
- * This is our typedef that we use throughout the entire code to represent a hash value.
- */
-using hash_t = uint64_t;
+namespace noisepage::common {
 
 /**
  * Generic hashing utility class. The main entry point are the HashUtil::Hash() functions. There are
  * overloaded specialized versions for arithmetic values (integers and floats), and generic versions
  * for longer buffers (strings, c-strings, and opaque buffers).
+ *
+ * @warning If you change any of this functionality, compare stable performance numbers of varlen_entry_benchmark before
+ * and after. It is not currently part of CI because it can be noisy.
  */
 class EXPORT HashUtil {
  public:
@@ -224,13 +223,13 @@ class EXPORT HashUtil {
     switch (len) {
       case 3:
         hash ^= (static_cast<uint64_t>(buf[2])) << 16u;
-        TERRIER_FALLTHROUGH;
+        NOISEPAGE_FALLTHROUGH;
       case 2:
         hash ^= (static_cast<uint64_t>(buf[1])) << 8u;
-        TERRIER_FALLTHROUGH;
+        NOISEPAGE_FALLTHROUGH;
       case 1:
         hash ^= buf[0];
-        TERRIER_FALLTHROUGH;
+        NOISEPAGE_FALLTHROUGH;
       default:
         break;
     }
@@ -293,4 +292,4 @@ class EXPORT HashUtil {
   }
 };
 
-}  // namespace terrier::common
+}  // namespace noisepage::common

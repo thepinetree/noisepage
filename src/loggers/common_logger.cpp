@@ -2,11 +2,8 @@
 
 #include <memory>
 
-#include "spdlog/sinks/stdout_sinks.h"
-#include "spdlog/spdlog.h"
-
-namespace terrier::common {
-
+namespace noisepage::common {
+#ifdef NOISEPAGE_USE_LOGGING
 std::shared_ptr<spdlog::logger> common_logger = nullptr;  // NOLINT
 
 void InitCommonLogger() {
@@ -15,5 +12,5 @@ void InitCommonLogger() {
     spdlog::register_logger(common_logger);
   }
 }
-
-}  // namespace terrier::common
+#endif
+}  // namespace noisepage::common

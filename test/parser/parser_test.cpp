@@ -17,10 +17,9 @@
 #include "parser/pg_trigger.h"
 #include "parser/postgresparser.h"
 #include "parser/statements.h"
-#include "spdlog/spdlog.h"
 #include "test_util/test_harness.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 
 class ParserTestBase : public TerrierTest {
  protected:
@@ -28,8 +27,10 @@ class ParserTestBase : public TerrierTest {
    * Initialization
    */
   void SetUp() override {
+#if NOISEPAGE_USE_LOGGER
     parser_logger->set_level(spdlog::level::debug);
     spdlog::flush_every(std::chrono::seconds(1));
+#endif
   }
 
   void CheckTable(const std::unique_ptr<TableInfo> &table_info, const std::string &table_name) {
@@ -398,7 +399,7 @@ TEST_F(ParserTestBase, SelectTest) {
   auto select_stmt = result->GetStatement(0).CastManagedPointerTo<SelectStatement>();
   EXPECT_EQ(select_stmt->GetSelectTable()->GetTableName(), "foo");
   // CheckTable(select_stmt->from_->table_info_, std::string("foo"));
-  EXPECT_EQ(select_stmt->GetSelectColumns()[0]->GetExpressionType(), ExpressionType::STAR);
+  EXPECT_EQ(select_stmt->GetSelectColumns()[0]->GetExpressionType(), ExpressionType::TABLE_STAR);
 
   auto result2 = parser::PostgresParser::BuildParseTree("SELECT id FROM foo LIMIT 1 OFFSET 1;");
   EXPECT_EQ(result2->GetStatement(0)->GetType(), StatementType::SELECT);
@@ -408,6 +409,25 @@ TEST_F(ParserTestBase, SelectTest) {
 
   EXPECT_NE(*select_stmt, *select_stmt_2);
   EXPECT_NE(select_stmt->Hash(), select_stmt_2->Hash());
+}
+
+// NOLINTNEXTLINE
+TEST_F(ParserTestBase, SelectWithTest) {
+  auto result =
+      parser::PostgresParser::BuildParseTree("WITH EMPLOYEE AS (SELECT * FROM COMPANY) SELECT * FROM EMPLOYEE;");
+
+  EXPECT_EQ(result->GetStatements().size(), 1);
+  EXPECT_EQ(result->GetStatement(0)->GetType(), StatementType::SELECT);
+
+  auto select_stmt = result->GetStatement(0).CastManagedPointerTo<SelectStatement>();
+  EXPECT_EQ(select_stmt->GetSelectTable()->GetTableName(), "employee");
+  // CheckTable(select_stmt->from_->table_info_, std::string("foo"));
+  EXPECT_EQ(select_stmt->GetSelectColumns()[0]->GetExpressionType(), ExpressionType::TABLE_STAR);
+
+  auto with_select_stmt = select_stmt->GetSelectWith()[0]->GetSelect();
+  EXPECT_EQ(with_select_stmt->GetSelectTable()->GetTableName(), "company");
+  EXPECT_EQ(select_stmt->GetSelectWith()[0]->GetAlias(), "employee");
+  EXPECT_EQ(with_select_stmt->GetSelectColumns()[0]->GetExpressionType(), ExpressionType::TABLE_STAR);
 }
 
 // NOLINTNEXTLINE
@@ -658,7 +678,7 @@ TEST_F(ParserTestBase, OldBasicTest) {
   // cast result to derived class pointers
   auto statement = result->GetStatement(0).CastManagedPointerTo<SelectStatement>();
   EXPECT_EQ("foo", statement->GetSelectTable()->GetTableName());
-  EXPECT_EQ(ExpressionType::STAR, statement->GetSelectColumns()[0]->GetExpressionType());
+  EXPECT_EQ(ExpressionType::TABLE_STAR, statement->GetSelectColumns()[0]->GetExpressionType());
 }
 
 // NOLINTNEXTLINE
@@ -966,7 +986,7 @@ TEST_F(ParserTestBase, OldNestedQueryTest) {
   EXPECT_EQ("t", statement->GetSelectTable()->GetAlias());
   auto nested_statement = statement->GetSelectTable()->GetSelect();
   EXPECT_EQ("foo", nested_statement->GetSelectTable()->GetTableName());
-  EXPECT_EQ(ExpressionType::STAR, nested_statement->GetSelectColumns()[0]->GetExpressionType());
+  EXPECT_EQ(ExpressionType::TABLE_STAR, nested_statement->GetSelectColumns()[0]->GetExpressionType());
 }
 
 // NOLINTNEXTLINE
@@ -980,7 +1000,7 @@ TEST_F(ParserTestBase, OldMultiTableTest) {
   auto select_expression = statement->GetSelectColumns()[0].CastManagedPointerTo<ColumnValueExpression>();
   EXPECT_EQ("foo", select_expression->GetTableName());
   EXPECT_EQ("name", select_expression->GetColumnName());
-  EXPECT_EQ("name_new", select_expression->GetAlias());
+  EXPECT_EQ(parser::AliasType("name_new"), select_expression->GetAlias());
 
   auto from = statement->GetSelectTable();
   EXPECT_EQ(TableReferenceType::CROSS_PRODUCT, from->GetTableReferenceType());
@@ -1577,7 +1597,7 @@ TEST_F(ParserTestBase, OldCreateTriggerTest) {
 
 // NOLINTNEXTLINE
 TEST_F(ParserTestBase, OldDropTriggerTest) {
-  std::string query = "DROP TRIGGER if_dist_exists ON terrier.films;";
+  std::string query = "DROP TRIGGER if_dist_exists ON noisepage.films;";
   auto result = parser::PostgresParser::BuildParseTree(query);
   EXPECT_EQ(result->GetStatement(0)->GetType(), StatementType::DROP);
   auto drop_trigger_stmt = result->GetStatement(0).CastManagedPointerTo<DropStatement>();
@@ -1755,4 +1775,4 @@ TEST_F(ParserTestBase, OldTypeCastInExpressionTest) {
   }
 }
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

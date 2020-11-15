@@ -8,7 +8,7 @@
 #include "optimizer/optimization_context.h"
 #include "optimizer/pattern.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 /**
  * Enum defining the types of rules
@@ -35,11 +35,16 @@ enum class RuleType : uint32_t {
   AGGREGATE_TO_PLAIN_AGGREGATE,
   INNER_JOIN_TO_INDEX_JOIN,
   INNER_JOIN_TO_NL_JOIN,
+  SEMI_JOIN_TO_HASH_JOIN,
   INNER_JOIN_TO_HASH_JOIN,
+  LEFT_JOIN_TO_HASH_JOIN,
   IMPLEMENT_DISTINCT,
   IMPLEMENT_LIMIT,
   EXPORT_EXTERNAL_FILE_TO_PHYSICAL,
   ANALYZE_TO_PHYSICAL,
+  CTESCAN_TO_PHYSICAL,
+  CTESCAN_TO_PHYSICAL_EMPTY,
+  UNION_TO_PHYSICAL,
 
   // Create/Drop
   CREATE_DATABASE_TO_PHYSICAL,
@@ -64,11 +69,16 @@ enum class RuleType : uint32_t {
   PUSH_FILTER_THROUGH_AGGREGATION,
   COMBINE_CONSECUTIVE_FILTER,
   EMBED_FILTER_INTO_GET,
+  EMBED_FILTER_INTO_CTE_SCAN,
   MARK_JOIN_GET_TO_INNER_JOIN,
+  SINGLE_JOIN_GET_TO_INNER_JOIN,
+  DEPENDENT_JOIN_GET_TO_INNER_JOIN,
   MARK_JOIN_INNER_JOIN_TO_INNER_JOIN,
   MARK_JOIN_FILTER_TO_INNER_JOIN,
   PULL_FILTER_THROUGH_MARK_JOIN,
   PULL_FILTER_THROUGH_AGGREGATION,
+  UNION_WITH_RECURSIVE_CTE,
+  QUERY_DERIVED_GET_ON_TABLE_FREE_SCAN,
 
   // Place holder to generate number of rules compile time
   NUM_RULES
@@ -301,4 +311,4 @@ class RuleSet {
   std::unordered_map<uint32_t, std::vector<Rule *>> rules_map_;
 };
 
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer

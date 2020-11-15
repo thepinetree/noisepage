@@ -2,7 +2,7 @@
 
 #include "execution/util/execution_common.h"
 
-namespace terrier::planner {
+namespace noisepage::planner {
 
 std::string PlanNodeTypeToString(PlanNodeType type) {
   switch (type) {
@@ -72,6 +72,12 @@ std::string PlanNodeTypeToString(PlanNodeType type) {
       return "ExportExternalFile";
     case PlanNodeType::RESULT:
       return "Result";
+    case PlanNodeType::CTESCAN:
+      return "CteScan";
+    case PlanNodeType::CTESCANLEADER:
+      return "CteScanLeader";
+    case PlanNodeType::UNION:
+      return "Union";
     case PlanNodeType::MOCK:
       return "Mock";
   }
@@ -104,4 +110,4 @@ std::string JoinTypeToString(LogicalJoinType type) {
   UNREACHABLE("Impossible to reach. All join types handled.");
 }
 
-}  // namespace terrier::planner
+}  // namespace noisepage::planner

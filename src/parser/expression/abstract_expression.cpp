@@ -19,9 +19,10 @@
 #include "parser/expression/parameter_value_expression.h"
 #include "parser/expression/star_expression.h"
 #include "parser/expression/subquery_expression.h"
+#include "parser/expression/table_star_expression.h"
 #include "parser/expression/type_cast_expression.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 
 void AbstractExpression::SetMutableStateForCopy(const AbstractExpression &copy_expr) {
   SetExpressionName(copy_expr.GetExpressionName());
@@ -38,7 +39,7 @@ common::hash_t AbstractExpression::Hash() const {
   }
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(return_value_type_));
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(expression_name_));
-  hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(alias_));
+  hash = common::HashUtil::CombineHashes(hash, parser::AliasType::HashKey()(alias_));
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(depth_));
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(static_cast<char>(has_subquery_)));
 
@@ -47,7 +48,7 @@ common::hash_t AbstractExpression::Hash() const {
 
 bool AbstractExpression::operator==(const AbstractExpression &rhs) const {
   if (expression_type_ != rhs.expression_type_) return false;
-  if (alias_ != rhs.alias_) return false;
+  if (!(alias_ == rhs.alias_)) return false;
   if (expression_name_ != rhs.expression_name_) return false;
   if (depth_ != rhs.depth_) return false;
   if (has_subquery_ != rhs.has_subquery_) return false;
@@ -78,7 +79,7 @@ nlohmann::json AbstractExpression::ToJson() const {
   nlohmann::json j;
   j["expression_type"] = expression_type_;
   j["expression_name"] = expression_name_;
-  j["alias"] = alias_;
+  j["alias"] = alias_.GetName();
   j["depth"] = depth_;
   j["has_subquery"] = has_subquery_;
   j["return_value_type"] = return_value_type_;
@@ -96,7 +97,7 @@ std::vector<std::unique_ptr<AbstractExpression>> AbstractExpression::FromJson(co
 
   expression_type_ = j.at("expression_type").get<ExpressionType>();
   expression_name_ = j.at("expression_name").get<std::string>();
-  alias_ = j.at("alias").get<std::string>();
+  alias_ = parser::AliasType(j.at("alias").get<std::string>());
   return_value_type_ = j.at("return_value_type").get<type::TypeId>();
   depth_ = j.at("depth").get<int>();
   has_subquery_ = j.at("has_subquery").get<bool>();
@@ -195,6 +196,11 @@ JSONDeserializeExprIntermediate DeserializeExpression(const nlohmann::json &j) {
       break;
     }
 
+    case ExpressionType::TABLE_STAR: {
+      expr = std::make_unique<TableStarExpression>();
+      break;
+    }
+
     case ExpressionType::ROW_SUBQUERY: {
       expr = std::make_unique<SubqueryExpression>();
       break;
@@ -248,8 +254,8 @@ int AbstractExpression::DeriveDepth() {
 
 void AbstractExpression::DeriveExpressionName() {
   // If alias exists, it will be used in TrafficCop
-  if (!alias_.empty()) {
-    expression_name_ = alias_;
+  if (!alias_.Empty()) {
+    expression_name_ = alias_.GetName();
     return;
   }
   // TODO(WAN): I don't understand why we need to derive an expression name at all. And aliases are known early.
@@ -257,4 +263,4 @@ void AbstractExpression::DeriveExpressionName() {
 
 DEFINE_JSON_BODY_DECLARATIONS(AbstractExpression);
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

@@ -8,7 +8,7 @@
 #include "parser/sql_statement.h"
 #include "parser/table_ref.h"
 
-namespace terrier {
+namespace noisepage {
 
 namespace binder {
 class BindNodeVisitor;
@@ -17,7 +17,7 @@ class BindNodeVisitor;
 namespace parser {
 
 enum OrderType { kOrderAsc, kOrderDesc };
-using terrier::parser::OrderType;
+using noisepage::parser::OrderType;
 
 /**
  * Describes OrderBy clause in a select statement.
@@ -328,11 +328,13 @@ class SelectStatement : public SQLStatement {
    * @param group_by group by condition
    * @param order_by order by condition
    * @param limit limit condition
+   * @param with accompanying cte query
    */
   SelectStatement(std::vector<common::ManagedPointer<AbstractExpression>> select, bool select_distinct,
                   std::unique_ptr<TableRef> from, common::ManagedPointer<AbstractExpression> where,
                   std::unique_ptr<GroupByDescription> group_by, std::unique_ptr<OrderByDescription> order_by,
-                  std::unique_ptr<LimitDescription> limit)
+                  std::unique_ptr<LimitDescription> limit, std::vector<std::unique_ptr<TableRef>> &&with,
+                  bool lateral,  bool union_all = true)
       : SQLStatement(StatementType::SELECT),
         select_(std::move(select)),
         select_distinct_(select_distinct),
@@ -341,7 +343,10 @@ class SelectStatement : public SQLStatement {
         group_by_(std::move(group_by)),
         order_by_(std::move(order_by)),
         limit_(std::move(limit)),
-        union_select_(nullptr) {}
+        union_select_(nullptr),
+        with_table_(std::move(with)),
+        lateral_(lateral),
+        union_all_(union_all) {}
 
   /** Default constructor for deserialization. */
   SelectStatement() = default;
@@ -351,8 +356,30 @@ class SelectStatement : public SQLStatement {
   /** @return a copy of the select statement */
   std::unique_ptr<SelectStatement> Copy();
 
+  const std::vector<common::ManagedPointer<AbstractExpression>> &GetRawSelectColumns() {
+    return select_;
+  }
+
   /** @return select columns */
-  const std::vector<common::ManagedPointer<AbstractExpression>> &GetSelectColumns() { return select_; }
+  const std::vector<common::ManagedPointer<AbstractExpression>> &GetSelectColumns() {
+     if(union_select_ == nullptr || exposed_select_.empty()) {
+       return select_;
+     }else{
+       return exposed_select_;
+     }
+  }
+
+//  std::vector<common::ManagedPointer<AbstractExpression>> GetAllSelectColumns() {
+//    std::vector<common::ManagedPointer<AbstractExpression>> columns;
+//    columns.insert(columns.end(), GetSelectColumns().begin(), GetSelectColumns().end());
+//    if(union_ == nullptr){
+//      return columns;
+//    }
+//
+//    auto right = union_select_->GetAllSelectColumns();
+//    columns.insert(columns.end(), right.begin(), right.end());
+//    return right;
+//  }
 
   /** @return true if "SELECT DISTINCT", false otherwise */
   bool IsSelectDistinct() { return select_distinct_; }
@@ -372,6 +399,15 @@ class SelectStatement : public SQLStatement {
   /** @return select limit */
   common::ManagedPointer<LimitDescription> GetSelectLimit() { return common::ManagedPointer(limit_); }
 
+  /** @return select with */
+  std::vector<common::ManagedPointer<TableRef>> GetSelectWith() {
+    std::vector<common::ManagedPointer<TableRef>> ret;
+    for (auto &ref : with_table_) {
+      ret.emplace_back(common::ManagedPointer<TableRef>(ref));
+    }
+    return ret;
+  }
+
   /** @return depth of the select statement */
   int GetDepth() { return depth_; }
 
@@ -380,6 +416,26 @@ class SelectStatement : public SQLStatement {
    * @param select_stmt select statement to union with
    */
   void SetUnionSelect(std::unique_ptr<SelectStatement> select_stmt) { union_select_ = std::move(select_stmt); }
+
+  /**
+   * Gets the select statement this statement is unioned with if at all
+   * @return The select statement this is unioned with if that exists else nullptr
+   */
+  common::ManagedPointer<SelectStatement> GetUnionSelect() {
+    return common::ManagedPointer<SelectStatement>(union_select_);
+  }
+
+  bool IsLateral() {
+    return lateral_;
+  }
+
+  void SetServesLateral() {
+    serves_lateral_ = true;
+  }
+
+  bool IsUnionAll() {
+    return union_all_;
+  }
 
   /**
    * @return the hashed value of this select statement
@@ -409,6 +465,7 @@ class SelectStatement : public SQLStatement {
  private:
   friend class binder::BindNodeVisitor;
   std::vector<common::ManagedPointer<AbstractExpression>> select_;
+  std::vector<common::ManagedPointer<AbstractExpression>> exposed_select_;
   bool select_distinct_;
   std::unique_ptr<TableRef> from_;
   common::ManagedPointer<AbstractExpression> where_;
@@ -417,6 +474,10 @@ class SelectStatement : public SQLStatement {
   std::unique_ptr<LimitDescription> limit_;
   std::unique_ptr<SelectStatement> union_select_;
   int depth_ = -1;
+  std::vector<std::unique_ptr<TableRef>> with_table_;
+  bool serves_lateral_{false};
+  bool lateral_;
+  bool union_all_;
 
   /** @param select List of select columns */
   void SetSelectColumns(std::vector<common::ManagedPointer<AbstractExpression>> select) { select_ = std::move(select); }
@@ -428,4 +489,4 @@ class SelectStatement : public SQLStatement {
 DEFINE_JSON_HEADER_DECLARATIONS(SelectStatement);
 
 }  // namespace parser
-}  // namespace terrier
+}  // namespace noisepage

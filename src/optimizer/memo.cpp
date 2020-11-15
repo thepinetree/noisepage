@@ -1,19 +1,20 @@
+#include "optimizer/memo.h"
+
 #include <string>
 #include <unordered_set>
 #include <utility>
 
 #include "optimizer/group_expression.h"
 #include "optimizer/logical_operators.h"
-#include "optimizer/memo.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 GroupExpression *Memo::InsertExpression(GroupExpression *gexpr, group_id_t target_group, bool enforced) {
   // If leaf, then just return
   if (gexpr->Contents()->GetOpType() == OpType::LEAF) {
     const auto leaf = gexpr->Contents()->GetContentsAs<LeafOperator>();
-    TERRIER_ASSERT(target_group == UNDEFINED_GROUP || target_group == leaf->GetOriginGroup(),
-                   "target_group does not match the LeafOperator's group");
+    NOISEPAGE_ASSERT(target_group == UNDEFINED_GROUP || target_group == leaf->GetOriginGroup(),
+                     "target_group does not match the LeafOperator's group");
     gexpr->SetGroupID(leaf->GetOriginGroup());
 
     // Let the caller delete!
@@ -21,10 +22,11 @@ GroupExpression *Memo::InsertExpression(GroupExpression *gexpr, group_id_t targe
     return nullptr;
   }
 
+  gexpr->SetGroupID(target_group);
   // Lookup in hash table
   auto it = group_expressions_.find(gexpr);
   if (it != group_expressions_.end()) {
-    TERRIER_ASSERT(*gexpr == *(*it), "GroupExpression should be equal");
+    NOISEPAGE_ASSERT(*gexpr == *(*it), "GroupExpression should be equal");
     delete gexpr;
     return *it;
   }
@@ -58,6 +60,10 @@ group_id_t Memo::AddNewGroup(GroupExpression *gexpr) {
   } else if (op_type == OpType::LOGICALQUERYDERIVEDGET) {
     const auto query_get = gexpr->Contents()->GetContentsAs<LogicalQueryDerivedGet>();
     table_aliases.insert(query_get->GetTableAlias());
+  } else if (op_type == OpType::LOGICALCTESCAN) {
+    // For CTE group, the table alias can get directly from logical CTE Scan
+    const auto logical_cte_scan = gexpr->Contents()->GetContentsAs<LogicalCteScan>();
+    table_aliases.insert(logical_cte_scan->GetTableAlias());
   } else {
     // For other groups, need to aggregate the table alias from children
     for (auto child_group_id : gexpr->GetChildGroupIDs()) {
@@ -72,4 +78,4 @@ group_id_t Memo::AddNewGroup(GroupExpression *gexpr) {
   return new_group_id;
 }
 
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer

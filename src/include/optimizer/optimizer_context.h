@@ -1,8 +1,11 @@
 #pragma once
 
+#include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "catalog/schema.h"
 #include "common/settings.h"
 #include "optimizer/cost_model/abstract_cost_model.h"
 #include "optimizer/group_expression.h"
@@ -10,7 +13,7 @@
 #include "optimizer/rule.h"
 #include "optimizer/statistics/stats_storage.h"
 
-namespace terrier {
+namespace noisepage {
 
 namespace transaction {
 class TransactionContext;
@@ -18,6 +21,10 @@ class TransactionContext;
 
 namespace catalog {
 class CatalogAccessor;
+}
+
+namespace planner {
+class OutputSchema;
 }
 
 namespace optimizer {
@@ -70,6 +77,24 @@ class OptimizerContext {
   catalog::CatalogAccessor *GetCatalogAccessor() { return accessor_; }
 
   /**
+   * Gets the CTE Schema
+   * @returns CTE Schema
+   */
+  catalog::Schema &GetCTESchema(const catalog::table_oid_t &cte_oid) { return cte_schemas_.find(cte_oid)->second; }
+
+  /**
+   * Gets a vector of all temp oids of cte tables in the current query context
+   * @return a vector of temporary table oids
+   */
+  std::vector<catalog::table_oid_t> GetCTETables() {
+    std::vector<catalog::table_oid_t> keys;
+    for (auto &it : cte_schemas_) {
+      keys.push_back(it.first);
+    }
+    return keys;
+  }
+
+  /**
    * Gets the StatsStorage
    * @returns StatsStorage
    */
@@ -110,6 +135,15 @@ class OptimizerContext {
    * @param accessor CatalogAccessor
    */
   void SetCatalogAccessor(catalog::CatalogAccessor *accessor) { accessor_ = accessor; }
+
+  /**
+   * Sets the CTE Schema
+   * @param table_id the temp table oid of the cte table we are setting a schema for
+   * @param schema OutputSchema
+   */
+  void SetCTESchema(catalog::table_oid_t table_id, catalog::Schema schema) {
+    cte_schemas_[table_id] = std::move(schema);
+  }
 
   /**
    * Sets the StatsStorage
@@ -169,7 +203,7 @@ class OptimizerContext {
                                     group_id_t target_group) {
     auto new_gexpr = MakeGroupExpression(node);
     auto ptr = memo_.InsertExpression(new_gexpr, target_group, false);
-    TERRIER_ASSERT(ptr, "Root of expr should not fail insertion");
+    NOISEPAGE_ASSERT(ptr, "Root of expr should not fail insertion");
 
     (*gexpr) = ptr;
     return (ptr == new_gexpr);
@@ -186,7 +220,34 @@ class OptimizerContext {
   void ReplaceRewriteExpression(common::ManagedPointer<AbstractOptimizerNode> node, group_id_t target_group) {
     memo_.EraseExpression(target_group);
     UNUSED_ATTRIBUTE auto ret = memo_.InsertExpression(MakeGroupExpression(node), target_group, false);
-    TERRIER_ASSERT(ret, "Root expr should always be inserted");
+    NOISEPAGE_ASSERT(ret, "Root expr should always be inserted");
+  }
+
+  void AddLateralEntries(const std::vector<catalog::table_oid_t> &table_ids, ExprMap &&expr_map) {
+    for(auto id : table_ids){
+      lateral_waiters_[id] = std::make_pair<ExprMap, std::vector<common::ManagedPointer<parser::LateralValueExpression>>>
+          (std::move(expr_map), {});
+    }
+  }
+
+  void AddLateralWaiter(catalog::table_oid_t table, common::ManagedPointer<parser::LateralValueExpression> expr) {
+    auto iter = lateral_waiters_.find(table);
+    NOISEPAGE_ASSERT(iter != lateral_waiters_.end(), "Asked for lateral table_oid that isn't available");
+    iter->second.second.push_back(expr);
+  }
+
+  const std::vector<common::ManagedPointer<parser::LateralValueExpression>> &GetLateralWaiters(catalog::table_oid_t oid) const {
+    return lateral_waiters_.find(oid)->second.second;
+  }
+
+  LateralWaitersSet &GetLateralWaitersSet() {
+    return lateral_waiters_;
+  }
+
+  void ClearLateralWaiters(const std::vector<catalog::table_oid_t> &table_ids) {
+    for(auto id : table_ids){
+      lateral_waiters_.erase(id);
+    }
   }
 
  private:
@@ -198,7 +259,9 @@ class OptimizerContext {
   StatsStorage *stats_storage_{};
   transaction::TransactionContext *txn_{};
   std::vector<OptimizationContext *> track_list_;
+  std::unordered_map<catalog::table_oid_t, catalog::Schema> cte_schemas_;
+  LateralWaitersSet lateral_waiters_;
 };
 
 }  // namespace optimizer
-}  // namespace terrier
+}  // namespace noisepage

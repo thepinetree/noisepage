@@ -4,7 +4,7 @@
 
 #include "execution/ast/identifier.h"
 
-namespace terrier::execution {
+namespace noisepage::execution {
 
 namespace ast {
 class Type;
@@ -31,6 +31,8 @@ namespace sema {
   F(NonFunction, "cannot call non-function '%0'", ())                                                                 \
   F(MismatchedCallArgs, "wrong number of arguments in call to '%0': expected %1, received %2.",                       \
     (ast::Identifier, uint32_t, uint32_t))                                                                            \
+  F(MismatchedCallArgsBetween, "wrong number of arguments in call to '%0': expected between %1 and %2, received %3.", \
+    (ast::Identifier, uint32_t, uint32_t, uint32_t))                                                                  \
   F(IncorrectCallArgType, "function '%0' expects argument of type '%1' in position '%2', received type '%3'",         \
     (ast::Identifier, ast::Type *, uint32_t, ast::Type *))                                                            \
   F(IncorrectCallArgType2, "function '%0' expects '%1' argument in position '%2', received type '%3'",                \
@@ -73,6 +75,10 @@ namespace sema {
   F(NotASQLAggregate, "'%0' is not a SQL aggregator type", (ast::Type *))                                             \
   F(BadParallelScanFunction,                                                                                          \
     "parallel scan function must have type (*ExecutionContext, *TableVectorIterator)->nil, "                          \
+    "received '%0'",                                                                                                  \
+    (ast::Type *))                                                                                                    \
+  F(BadHookFunction,                                                                                                  \
+    "hook function must have type (*QueryState, *TLS, *)->nil, "                                                      \
     "received '%0'",                                                                                                  \
     (ast::Type *))                                                                                                    \
   F(BadKeyEqualityCheckFunctionForJoinTableLookup,                                                                    \
@@ -130,4 +136,4 @@ class ErrorMessages {
 };
 
 }  // namespace sema
-}  // namespace terrier::execution
+}  // namespace noisepage::execution

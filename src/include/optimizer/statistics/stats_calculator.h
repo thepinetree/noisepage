@@ -12,7 +12,7 @@
 #include "parser/expression/column_value_expression.h"
 #include "transaction/transaction_context.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 /**
  * Derive stats for the root group using a group expression's children's stats
@@ -40,6 +40,12 @@ class StatsCalculator : public OperatorVisitor {
   void Visit(const LogicalQueryDerivedGet *op) override;
 
   /**
+   * Visit a LogicalCteScan
+   * @param op Operator being visited
+   */
+  void Visit(const LogicalCteScan *op) override;
+
+  /**
    * Visit a LogicalInnerJoin
    * @param op Operator being visited
    */
@@ -56,6 +62,12 @@ class StatsCalculator : public OperatorVisitor {
    * @param op Operator being visited
    */
   void Visit(const LogicalLimit *op) override;
+
+  /**
+   * Visit a LogicalUnion
+   * @param op Operator being visited
+   */
+  void Visit(const LogicalUnion *op) override;
 
  private:
   /**
@@ -115,4 +127,4 @@ class StatsCalculator : public OperatorVisitor {
   OptimizerContext *context_;
 };
 
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer

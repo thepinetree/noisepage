@@ -7,15 +7,15 @@
 #include "execution/sql/vector_projection_iterator.h"
 #include "storage/sql_table.h"
 
-namespace terrier::execution::exec {
+namespace noisepage::execution::exec {
 class ExecutionContext;
 }
 
-namespace terrier::storage {
+namespace noisepage::storage {
 class SqlTable;
 }
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 class ThreadStateContainer;
 
@@ -24,6 +24,13 @@ class ThreadStateContainer;
  */
 class EXPORT TableVectorIterator {
  public:
+  /** Used to denote the offsets into ExecutionContext::hooks_ of particular functions */
+  enum class HookOffsets : uint32_t {
+    EndHook = 0,
+
+    NUM_HOOKS
+  };
+
   /**
    * Minimum block range
    */
@@ -56,6 +63,13 @@ class EXPORT TableVectorIterator {
   bool Init();
 
   /**
+   * Initialize the temp table, returning true if the initialization succeeded
+   * @param cte_table the CTE table to initialize
+   * @return True if the initialization succeeded; false otherwise
+   */
+  bool InitTempTable(common::ManagedPointer<storage::SqlTable> cte_table);
+
+  /**
    * Initialize the iterator over a chunk of blocks [start, end), returning true if the iteration succeeded.
    *
    * If block_start == 0 and block_end == storage::DataTable::GetMaxBlocks(),
@@ -77,6 +91,9 @@ class EXPORT TableVectorIterator {
    * @return True if the iterator has been initialized; false otherwise.
    */
   bool IsInitialized() const { return initialized_; }
+
+  /** @return The total number of tuples in the vector projection iterator. */
+  uint64_t GetVectorProjectionIteratorNumTuples() const { return vector_projection_iterator_.GetTotalTupleCount(); }
 
   /**
    * @return The iterator over the current active vector projection.
@@ -130,6 +147,7 @@ class EXPORT TableVectorIterator {
 
   // True if the iterator has been initialized.
   bool initialized_{false};
+  bool Init(common::ManagedPointer<storage::SqlTable> table, uint32_t block_start, uint32_t block_end);
 };
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

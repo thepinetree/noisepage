@@ -7,99 +7,18 @@
 
 #include "libpg_query/pg_query.h"
 #include "parser/create_statement.h"
+#include "parser/parse_result.h"
 #include "parser/parsenodes.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 struct FuncParameter;
 struct ReturnType;
 class SQLStatement;
 class UpdateClause;
 class UpdateStatement;
-}  // namespace terrier::parser
+}  // namespace noisepage::parser
 
-namespace terrier::parser {
-
-/**
- * ParseResult is the parser's output to the binder. It allows you to obtain non-owning managed pointers to the
- * statements and expressions that were generated during the parse. If you need to take ownership, you can do that
- * too, but then the parse result's copy is invalidated.
- */
-class ParseResult {
- public:
-  /**
-   * @return true if no statements exist
-   */
-  bool Empty() const { return statements_.empty(); }
-
-  /**
-   * Adds a statement to this parse result.
-   */
-  void AddStatement(std::unique_ptr<SQLStatement> statement) { statements_.emplace_back(std::move(statement)); }
-
-  /**
-   * Adds an expression to this parse result.
-   */
-  void AddExpression(std::unique_ptr<AbstractExpression> expression) {
-    expressions_.emplace_back(std::move(expression));
-  }
-
-  /**
-   * @return non-owning list of all the statements contained in this parse result
-   */
-  std::vector<common::ManagedPointer<SQLStatement>> GetStatements() {
-    std::vector<common::ManagedPointer<SQLStatement>> statements;
-    statements.reserve(statements_.size());
-    for (const auto &statement : statements_) {
-      statements.emplace_back(common::ManagedPointer(statement));
-    }
-    return statements;
-  }
-
-  /**
-   * @return size of internal statements_ vector
-   */
-  uint32_t NumStatements() const { return statements_.size(); }
-
-  /**
-   * @return the statement at a particular index
-   */
-  common::ManagedPointer<SQLStatement> GetStatement(size_t idx) { return common::ManagedPointer(statements_[idx]); }
-
-  /**
-   * @return non-owning list of all the expressions contained in this parse result
-   */
-  std::vector<common::ManagedPointer<AbstractExpression>> GetExpressions() {
-    std::vector<common::ManagedPointer<AbstractExpression>> expressions;
-    expressions.reserve(expressions_.size());
-    for (const auto &statement : expressions_) {
-      expressions.emplace_back(common::ManagedPointer(statement));
-    }
-    return expressions;
-  }
-
-  /**
-   * @return the expression at a particular index
-   */
-  common::ManagedPointer<AbstractExpression> GetExpression(size_t idx) {
-    return common::ManagedPointer(expressions_[idx]);
-  }
-
-  /**
-   * Returns ownership of the statements in this parse result.
-   * @return moved statements
-   */
-  std::vector<std::unique_ptr<SQLStatement>> &&TakeStatementsOwnership() { return std::move(statements_); }
-
-  /**
-   * Returns ownership of the expressions in this parse result.
-   * @return moved expressions
-   */
-  std::vector<std::unique_ptr<AbstractExpression>> &&TakeExpressionsOwnership() { return std::move(expressions_); }
-
- private:
-  std::vector<std::unique_ptr<SQLStatement>> statements_;
-  std::vector<std::unique_ptr<AbstractExpression>> expressions_;
-};
+namespace noisepage::parser {
 
 /**
  * PostgresParser obtains and transforms the Postgres parse tree into our Terrier parse tree.
@@ -170,7 +89,7 @@ class PostgresParser {
   static void ListTransform(ParseResult *parse_result, List *root, const std::string &query_string);
 
   /**
-   * Transforms a single node in the parse list into a terrier SQLStatement object.
+   * Transforms a single node in the parse list into a noisepage SQLStatement object.
    * @param[in,out] parse_result the current parse result, which will be updated
    * @param node parsed node
    * @return SQLStatement corresponding to the parsed node
@@ -193,7 +112,8 @@ class PostgresParser {
   static std::unique_ptr<AbstractExpression> ValueTransform(ParseResult *parse_result, value val);
 
   // SELECT statements
-  static std::unique_ptr<SelectStatement> SelectTransform(ParseResult *parse_result, SelectStmt *root);
+  static std::unique_ptr<SelectStatement> SelectTransform(ParseResult *parse_result, SelectStmt *root,
+                                                          bool lateral = false);
   // SELECT helpers
   static std::vector<common::ManagedPointer<AbstractExpression>> TargetTransform(ParseResult *parse_result, List *root);
   static std::unique_ptr<TableRef> FromTransform(ParseResult *parse_result, SelectStmt *select_root);
@@ -201,10 +121,12 @@ class PostgresParser {
                                                               Node *having_node);
   static std::unique_ptr<OrderByDescription> OrderByTransform(ParseResult *parse_result, List *order);
   static common::ManagedPointer<AbstractExpression> WhereTransform(ParseResult *parse_result, Node *root);
+  static std::vector<std::unique_ptr<TableRef>> WithTransform(ParseResult *parse_result, WithClause *root);
 
   // FromTransform helpers
   static std::unique_ptr<JoinDefinition> JoinTransform(ParseResult *parse_result, JoinExpr *root);
   static std::string AliasTransform(Alias *root);
+  static std::vector<AliasType> ColumnAliasListTransform(Alias *root);
   static std::unique_ptr<TableRef> RangeVarTransform(ParseResult *parse_result, RangeVar *root);
   static std::unique_ptr<TableRef> RangeSubselectTransform(ParseResult *parse_result, RangeSubselect *root);
 
@@ -307,4 +229,4 @@ class PostgresParser {
   static std::unique_ptr<UpdateStatement> UpdateTransform(ParseResult *parse_result, UpdateStmt *update_stmt);
 };
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

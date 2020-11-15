@@ -2,11 +2,8 @@
 
 #include <memory>
 
-#include "spdlog/sinks/stdout_sinks.h"
-#include "spdlog/spdlog.h"
-
-namespace terrier::optimizer {
-
+namespace noisepage::optimizer {
+#ifdef NOISEPAGE_USE_LOGGING
 std::shared_ptr<spdlog::logger> optimizer_logger = nullptr;  // NOLINT
 
 void InitOptimizerLogger() {
@@ -15,5 +12,5 @@ void InitOptimizerLogger() {
     spdlog::register_logger(optimizer_logger);
   }
 }
-
-}  // namespace terrier::optimizer
+#endif
+}  // namespace noisepage::optimizer

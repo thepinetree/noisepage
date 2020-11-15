@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 #include "main/db_main.h"
 #include "network/connection_handle_factory.h"
-#include "network/terrier_server.h"
+#include "network/noisepage_server.h"
 #include "storage/garbage_collector.h"
 #include "test_util/manual_packet_util.h"
 #include "test_util/test_harness.h"
@@ -19,15 +19,15 @@
 #include "transaction/deferred_action_manager.h"
 #include "transaction/transaction_manager.h"
 
-namespace terrier::trafficcop {
+namespace noisepage::trafficcop {
 
 class TrafficCopTests : public TerrierTest {
  protected:
   void SetUp() override {
     std::unordered_map<settings::Param, settings::ParamInfo> param_map;
-    terrier::settings::SettingsManager::ConstructParamMap(param_map);
+    noisepage::settings::SettingsManager::ConstructParamMap(param_map);
 
-    db_main_ = terrier::DBMain::Builder()
+    db_main_ = noisepage::DBMain::Builder()
                    .SetSettingsParameterMap(std::move(param_map))
                    .SetUseSettingsManager(true)
                    .SetUseGC(true)
@@ -167,10 +167,26 @@ TEST_F(TrafficCopTests, TemporaryNamespaceTest) {
       new_namespace_oid = db_accessor->CreateNamespace(std::string(trafficcop::TEMP_NAMESPACE_PREFIX));
       txn_manager_->Abort(txn);
     } while (new_namespace_oid == catalog::INVALID_NAMESPACE_OID);
-    EXPECT_GT(static_cast<uint32_t>(new_namespace_oid), catalog::START_OID);
+    EXPECT_GT(new_namespace_oid.UnderlyingValue(), catalog::START_OID);
     txn1.commit();
   } catch (const std::exception &e) {
     EXPECT_TRUE(false);
   }
 }
-}  // namespace terrier::trafficcop
+
+// NOLINTNEXTLINE
+TEST_F(TrafficCopTests, ArithmeticErrorTest) {
+  pqxx::connection connection(fmt::format("host=127.0.0.1 port={0} user={1} sslmode=disable application_name=psql",
+                                          port_, catalog::DEFAULT_DATABASE));
+
+  pqxx::work txn1(connection);
+  try {
+    pqxx::result r = txn1.exec("SELECT ASIN(10.0);");
+  } catch (const std::exception &e) {
+    std::string error(e.what());
+    std::string expect("ERROR:  ASin is undefined outside [-1,1]\n");
+    EXPECT_EQ(error, expect);
+  }
+}
+
+}  // namespace noisepage::trafficcop

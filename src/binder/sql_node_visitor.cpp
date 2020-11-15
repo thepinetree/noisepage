@@ -9,13 +9,15 @@
 #include "parser/expression/default_value_expression.h"
 #include "parser/expression/derived_value_expression.h"
 #include "parser/expression/function_expression.h"
+#include "parser/expression/lateral_value_expression.h"
 #include "parser/expression/operator_expression.h"
 #include "parser/expression/parameter_value_expression.h"
 #include "parser/expression/star_expression.h"
 #include "parser/expression/subquery_expression.h"
+#include "parser/expression/table_star_expression.h"
 #include "parser/expression/type_cast_expression.h"
 
-namespace terrier {
+namespace noisepage {
 void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::AggregateExpression> expr) {
   expr->AcceptChildren(common::ManagedPointer(this));
 }
@@ -43,6 +45,9 @@ void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::DerivedValueEx
 void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::FunctionExpression> expr) {
   expr->AcceptChildren(common::ManagedPointer(this));
 }
+void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::LateralValueExpression> expr) {
+  expr->AcceptChildren(common::ManagedPointer(this));
+}
 void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::OperatorExpression> expr) {
   expr->AcceptChildren(common::ManagedPointer(this));
 }
@@ -52,6 +57,9 @@ void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::ParameterValue
 void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::StarExpression> expr) {
   expr->AcceptChildren(common::ManagedPointer(this));
 }
+void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::TableStarExpression> expr) {
+  expr->AcceptChildren(common::ManagedPointer(this));
+}
 void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::SubqueryExpression> expr) {
   expr->AcceptChildren(common::ManagedPointer(this));
 }
@@ -59,4 +67,4 @@ void binder::SqlNodeVisitor::Visit(common::ManagedPointer<parser::TypeCastExpres
   expr->AcceptChildren(common::ManagedPointer(this));
 }
 
-}  // namespace terrier
+}  // namespace noisepage

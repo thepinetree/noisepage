@@ -8,11 +8,11 @@
 #include "execution/compiler/expression/expression_translator.h"
 #include "execution/functions/function_context.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 class FunctionExpression;
-}  // namespace terrier::parser
+}  // namespace noisepage::parser
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * A translator for function expressions.
@@ -43,4 +43,4 @@ class FunctionTranslator : public ExpressionTranslator {
   ast::Identifier main_fn_;
 //  common::ManagedPointer<functions::FunctionContext> udf_context_;
 };
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

@@ -1,9 +1,10 @@
 #pragma once
 
 #include <string>
+
 #include "common/macros.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 
 /**
  * All possible expression types.
@@ -41,6 +42,7 @@ enum class ExpressionType : uint8_t {
   CONJUNCTION_OR,
 
   COLUMN_VALUE,
+  LATERAL_VALUE,
 
   VALUE_CONSTANT,
   VALUE_PARAMETER,
@@ -68,6 +70,7 @@ enum class ExpressionType : uint8_t {
   ROW_SUBQUERY,
 
   STAR,
+  TABLE_STAR,
   PLACEHOLDER,
   COLUMN_REF,
   FUNCTION_REF,
@@ -83,4 +86,4 @@ enum class ExpressionType : uint8_t {
  */
 std::string ExpressionTypeToString(ExpressionType type, bool short_str);
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

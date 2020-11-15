@@ -5,26 +5,128 @@
 #include <utility>
 #include <vector>
 
-#include "binder/sql_node_visitor.h"
-#include "common/hash_util.h"
+#include "common/hash_defs.h"
 #include "common/json_header.h"
 #include "common/managed_pointer.h"
 #include "parser/expression_defs.h"
 #include "type/type_id.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 class OptimizerUtil;
 class QueryToOperatorTransformer;
 class ExpressionNodeContents;
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer
 
-namespace terrier::binder {
+namespace noisepage::binder {
 class BindNodeVisitor;
 class BinderUtil;
-}  // namespace terrier::binder
+class SqlNodeVisitor;
+}  // namespace noisepage::binder
 
-namespace terrier::parser {
+namespace noisepage::parser {
 class ParseResult;
+
+/**
+ * Type to represent aliases. This was added to account for the fact that you can have duplicate aliases
+ * in queries that stil need have distinguishable identifiers. For example in SELECT * FROM (SELECT 1 as x, 2 as x) p;
+ * We achieve this by having an additional serial number field. This field allows for two aliases with the same
+ * name string but different valid serial numbers to be distinguishable. However, we maintain that an alias with name
+ * "xxx" but with an invalid serial number matches with all aliases with name "xxx" regardless of their serial number
+ */
+class AliasType {
+ public:
+  /**
+   * Default constructor
+   */
+  AliasType() : serial_no_{0}, serial_valid_{false} {}
+
+  /**
+   * Constructs an alias with a name and valid serial number
+   * @param name Alias name
+   * @param serial_no Serial number
+   */
+  explicit AliasType(std::string name, size_t serial_no)
+      : name_{std::move(name)}, serial_no_{serial_no}, serial_valid_{true} {}
+
+  /**
+   * Constructs an alias with a name and invalid serial number
+   * @param name Alias name
+   */
+  explicit AliasType(std::string &&name) : name_{name}, serial_no_{0}, serial_valid_{false} {}
+
+  /**
+   * Constructs an alias with a name and invalid serial number
+   * @param name Alias name
+   */
+  explicit AliasType(const std::string &name) : name_{std::string(name)}, serial_no_{0}, serial_valid_{false} {}
+
+  /**
+   * Gets the name of this alias
+   * @return Name of this alias
+   */
+  const std::string &GetName() const { return name_; }
+
+  /**
+   * @return Whether or not the serial number of this alias is valid
+   */
+  bool IsSerialNoValid() const { return serial_valid_; }
+
+  /**
+   * @return The serial number of this alias
+   */
+  size_t GetSerialNo() const { return serial_no_; }
+
+  /**
+   * Equality function
+   * @param other The alias we are comparing against
+   * @return Whether or not these two aliases are considered equal as documented above
+   */
+  bool operator==(const AliasType &other) const {
+    bool names_equal = (name_ == other.name_);
+    if (!serial_valid_ || !other.serial_valid_) {
+      return names_equal;
+    }
+    return names_equal && (serial_no_ == other.serial_no_);
+  }
+
+  /**
+   * @return Whether this alias's name is empty
+   */
+  bool Empty() const { return name_.empty(); }
+
+  /**
+   * Hash structure for AliasType. This does not include the serial number as
+   * we wish for parser::AliasType("xxx",1) and parser::AliasType("xxx") to be
+   * considered equal. In other words, if the serial number is invalid, it should
+   * match with all alias types with a matching string regardless of serial number
+   */
+  struct HashKey {
+    /**
+     * @param p Alias we are hashing
+     * @return Hash value of alias, effectively the hash of the name
+     */
+    size_t operator()(const AliasType &p) const { return std::hash<std::string>{}(p.name_); }
+  };
+
+  /**
+   * Compare function struct for comparing aliases purely based on their serial number in ascending order
+   * SHOUlD NOT BE USED ON ALIASES WHOSE SERIAL NUMBERS ARE INVALID
+   */
+  struct CompareSerialNo {
+    /**
+     * Comparison function based on serial number
+     * @param p first alias we are comparing
+     * @param q second alias we are comparing against p
+     * @return false if p is strictly considered "less" than q
+     */
+    bool operator()(const AliasType &p, const AliasType &q) const { return p.GetSerialNo() < q.GetSerialNo(); }
+  };
+
+ private:
+  std::string name_;
+  size_t serial_no_;
+  bool serial_valid_;
+};
 
 /**
  * AbstractExpression is the base class of any expression which is output from the parser.
@@ -54,7 +156,7 @@ class AbstractExpression {
    * @param alias alias of the column (used in column value expression)
    * @param children the list of children for this node
    */
-  AbstractExpression(const ExpressionType expression_type, const type::TypeId return_value_type, std::string alias,
+  AbstractExpression(const ExpressionType expression_type, const type::TypeId return_value_type, AliasType alias,
                      std::vector<std::unique_ptr<AbstractExpression>> &&children)
       : expression_type_(expression_type),
         alias_(std::move(alias)),
@@ -82,11 +184,6 @@ class AbstractExpression {
    * @param expression_name Set the expression name of the current expression
    */
   void SetExpressionName(std::string expression_name) { expression_name_ = std::move(expression_name); }
-
-  /**
-   * @param expression_type Set the expression type of the current expression
-   */
-  void SetExpressionType(ExpressionType expression_type) { expression_type_ = expression_type; }
 
   /**
    * @param return_value_type Set the return value type of the current expression
@@ -172,7 +269,7 @@ class AbstractExpression {
    * @return child of abstract expression at that index
    */
   common::ManagedPointer<AbstractExpression> GetChild(uint64_t index) const {
-    TERRIER_ASSERT(index < children_.size(), "Index must be in bounds.");
+    NOISEPAGE_ASSERT(index < children_.size(), "Index must be in bounds.");
     return common::ManagedPointer(children_[index]);
   }
 
@@ -184,11 +281,16 @@ class AbstractExpression {
    */
   virtual void DeriveExpressionName();
 
-  /** @return alias of this abstract expression */
-  const std::string &GetAlias() const { return alias_; }
+  /** @return alias name of this abstract expression */
+  const std::string &GetAliasName() const { return alias_.GetName(); }
+
+  /**
+   * @return The full alias type of this abstract expression
+   */
+  const AliasType &GetAlias() const { return alias_; }
 
   /** set alias of this abstract expression */
-  void SetAlias(std::string alias) { alias_ = std::move(alias); }
+  void SetAlias(AliasType alias) { alias_ = std::move(alias); }
 
   /**
    * Derive the expression type of the current expression.
@@ -240,6 +342,11 @@ class AbstractExpression {
    */
   virtual std::vector<std::unique_ptr<AbstractExpression>> FromJson(const nlohmann::json &j);
 
+  /**
+   * @param expression_type Set the expression type of the current expression
+   */
+  void SetExpressionType(ExpressionType expression_type) { expression_type_ = expression_type; }
+
  protected:
   // We make abstract expression friend with both binder and query to operator transformer
   // as they each traverse the ast independently and add in necessary information to the ast
@@ -261,7 +368,7 @@ class AbstractExpression {
   /** MUTABLE Name of the current expression */
   std::string expression_name_;
   /** Alias of the current expression */
-  std::string alias_;
+  AliasType alias_;
   /** Type of the return value */
   type::TypeId return_value_type_;
 
@@ -312,19 +419,19 @@ struct JSONDeserializeExprIntermediate {
  */
 JSONDeserializeExprIntermediate DeserializeExpression(const nlohmann::json &j);
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser
 
 namespace std {
 /**
  * Implements std::hash for abstract expressions
  */
 template <>
-struct hash<terrier::parser::AbstractExpression> {
+struct hash<noisepage::parser::AbstractExpression> {
   /**
    * Hashes the given expression
    * @param expr the expression to hash
    * @return hash code of the given expression
    */
-  size_t operator()(const terrier::parser::AbstractExpression &expr) const { return expr.Hash(); }
+  size_t operator()(const noisepage::parser::AbstractExpression &expr) const { return expr.Hash(); }
 };
 }  // namespace std

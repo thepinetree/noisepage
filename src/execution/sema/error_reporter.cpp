@@ -5,10 +5,9 @@
 
 #include "execution/ast/type.h"
 #include "execution/ast/type_visitor.h"
-
 #include "loggers/execution_logger.h"
 
-namespace terrier::execution::sema {
+namespace noisepage::execution::sema {
 
 namespace {
 #define F(id, str, arg_types) str,
@@ -93,4 +92,4 @@ std::string ErrorReporter::SerializeErrors() {
   return error_str;
 }
 
-}  // namespace terrier::execution::sema
+}  // namespace noisepage::execution::sema

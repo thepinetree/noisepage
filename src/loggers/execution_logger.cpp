@@ -2,11 +2,8 @@
 
 #include <memory>
 
-#include "spdlog/sinks/stdout_sinks.h"
-#include "spdlog/spdlog.h"
-
-namespace terrier::execution {
-
+namespace noisepage::execution {
+#ifdef NOISEPAGE_USE_LOGGING
 std::shared_ptr<spdlog::logger> execution_logger = nullptr;  // NOLINT
 
 void InitExecutionLogger() {
@@ -15,5 +12,5 @@ void InitExecutionLogger() {
     spdlog::register_logger(execution_logger);
   }
 }
-
-}  // namespace terrier::execution
+#endif
+}  // namespace noisepage::execution

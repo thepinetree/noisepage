@@ -14,7 +14,7 @@
 #include "optimizer/operator_visitor.h"
 #include "parser/expression/abstract_expression.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 //===--------------------------------------------------------------------===//
 // TableFreeScan
@@ -190,8 +190,8 @@ common::hash_t ExternalFileScan::Hash() const {
 BaseOperatorNodeContents *QueryDerivedScan::Copy() const { return new QueryDerivedScan(*this); }
 
 Operator QueryDerivedScan::Make(
-    std::string table_alias,
-    std::unordered_map<std::string, common::ManagedPointer<parser::AbstractExpression>> &&alias_to_expr_map) {
+    std::string table_alias, std::unordered_map<parser::AliasType, common::ManagedPointer<parser::AbstractExpression>,
+                                                parser::AliasType::HashKey> &&alias_to_expr_map) {
   auto *get = new QueryDerivedScan();
   get->table_alias_ = std::move(table_alias);
   get->alias_to_expr_map_ = alias_to_expr_map;
@@ -209,7 +209,7 @@ common::hash_t QueryDerivedScan::Hash() const {
   common::hash_t hash = BaseOperatorNodeContents::Hash();
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(table_alias_));
   for (auto &iter : alias_to_expr_map_) {
-    hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(iter.first));
+    hash = common::HashUtil::CombineHashes(hash, parser::AliasType::HashKey()(iter.first));
     hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(iter.second));
   }
   return hash;
@@ -235,6 +235,31 @@ common::hash_t OrderBy::Hash() const {
   // I guess every OrderBy object hashes to the same thing?
   return hash;
 }
+
+//===--------------------------------------------------------------------===//
+// Union
+//===--------------------------------------------------------------------===//
+BaseOperatorNodeContents *Union::Copy() const { return new Union(*this); }
+
+Operator Union::Make(UnionAliasMap &&columns) {
+  auto *union_op = new Union();
+  union_op->columns_ = std::move(columns);
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(union_op));
+}
+
+bool Union::operator==(const BaseOperatorNodeContents &r) {
+  if (r.GetOpType() != OpType::UNION){
+    return false;
+  }
+  return r.GetContentsAs<Union>()->GetColumns() == GetColumns();
+}
+
+common::hash_t Union::Hash() const {
+  common::hash_t hash = BaseOperatorNodeContents::Hash();
+  // I guess every Union object hashes to the same thing?
+  return hash;
+}
+
 
 //===--------------------------------------------------------------------===//
 // PhysicalLimit
@@ -353,9 +378,10 @@ bool InnerIndexJoin::operator==(const BaseOperatorNodeContents &r) {
 //===--------------------------------------------------------------------===//
 BaseOperatorNodeContents *InnerNLJoin::Copy() const { return new InnerNLJoin(*this); }
 
-Operator InnerNLJoin::Make(std::vector<AnnotatedExpression> &&join_predicates) {
+Operator InnerNLJoin::Make(std::vector<AnnotatedExpression> &&join_predicates, std::vector<catalog::table_oid_t> &&lateral_oids) {
   auto *join = new InnerNLJoin();
   join->join_predicates_ = std::move(join_predicates);
+  join->lateral_oids_ = std::move(lateral_oids);
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
@@ -368,6 +394,10 @@ common::hash_t InnerNLJoin::Hash() const {
     else
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
   }
+
+  for(auto oid : lateral_oids_){
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
+  }
   return hash;
 }
 
@@ -376,6 +406,9 @@ bool InnerNLJoin::operator==(const BaseOperatorNodeContents &r) {
   const InnerNLJoin &node = *dynamic_cast<const InnerNLJoin *>(&r);
   if (join_predicates_.size() != node.join_predicates_.size()) return false;
   if (join_predicates_ != node.join_predicates_) return false;
+  for (size_t i = 0; i < lateral_oids_.size(); i++) {
+    if (lateral_oids_[i] != node.lateral_oids_[i]) return false;
+  }
   return true;
 }
 
@@ -454,11 +487,13 @@ BaseOperatorNodeContents *InnerHashJoin::Copy() const { return new InnerHashJoin
 
 Operator InnerHashJoin::Make(std::vector<AnnotatedExpression> &&join_predicates,
                              std::vector<common::ManagedPointer<parser::AbstractExpression>> &&left_keys,
-                             std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys) {
+                             std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys,
+                             std::vector<catalog::table_oid_t> &&lateral_oids) {
   auto *join = new InnerHashJoin();
   join->join_predicates_ = std::move(join_predicates);
   join->left_keys_ = std::move(left_keys);
   join->right_keys_ = std::move(right_keys);
+  join->lateral_oids_ = std::move(lateral_oids);
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
@@ -473,12 +508,64 @@ common::hash_t InnerHashJoin::Hash() const {
     else
       hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
   }
+  for(auto oid : lateral_oids_){
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
+  }
   return hash;
 }
 
 bool InnerHashJoin::operator==(const BaseOperatorNodeContents &r) {
   if (r.GetOpType() != OpType::INNERHASHJOIN) return false;
   const InnerHashJoin &node = *dynamic_cast<const InnerHashJoin *>(&r);
+  if (left_keys_.size() != node.left_keys_.size() || right_keys_.size() != node.right_keys_.size() ||
+      join_predicates_.size() != node.join_predicates_.size())
+    return false;
+  if (join_predicates_ != node.join_predicates_) return false;
+  for (size_t i = 0; i < left_keys_.size(); i++) {
+    if (*(left_keys_[i]) != *(node.left_keys_[i])) return false;
+  }
+  for (size_t i = 0; i < right_keys_.size(); i++) {
+    if (*(right_keys_[i]) != *(node.right_keys_[i])) return false;
+  }
+
+  for (size_t i = 0; i < lateral_oids_.size(); i++) {
+    if (lateral_oids_[i] != node.lateral_oids_[i]) return false;
+  }
+  return true;
+}
+
+//===--------------------------------------------------------------------===//
+// LeftSemiHashJoin
+//===--------------------------------------------------------------------===//
+BaseOperatorNodeContents *LeftSemiHashJoin::Copy() const { return new LeftSemiHashJoin(*this); }
+
+Operator LeftSemiHashJoin::Make(std::vector<AnnotatedExpression> &&join_predicates,
+                                std::vector<common::ManagedPointer<parser::AbstractExpression>> &&left_keys,
+                                std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys) {
+  auto *join = new LeftSemiHashJoin();
+  join->join_predicates_ = std::move(join_predicates);
+  join->left_keys_ = std::move(left_keys);
+  join->right_keys_ = std::move(right_keys);
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
+}
+
+common::hash_t LeftSemiHashJoin::Hash() const {
+  common::hash_t hash = BaseOperatorNodeContents::Hash();
+  for (auto &expr : left_keys_) hash = common::HashUtil::CombineHashes(hash, expr->Hash());
+  for (auto &expr : right_keys_) hash = common::HashUtil::CombineHashes(hash, expr->Hash());
+  for (auto &pred : join_predicates_) {
+    auto expr = pred.GetExpr();
+    if (expr)
+      hash = common::HashUtil::SumHashes(hash, expr->Hash());
+    else
+      hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
+  }
+  return hash;
+}
+
+bool LeftSemiHashJoin::operator==(const BaseOperatorNodeContents &r) {
+  if (r.GetOpType() != OpType::LEFTSEMIHASHJOIN) return false;
+  const LeftSemiHashJoin &node = *dynamic_cast<const LeftSemiHashJoin *>(&r);
   if (left_keys_.size() != node.left_keys_.size() || right_keys_.size() != node.right_keys_.size() ||
       join_predicates_.size() != node.join_predicates_.size())
     return false;
@@ -497,22 +584,49 @@ bool InnerHashJoin::operator==(const BaseOperatorNodeContents &r) {
 //===--------------------------------------------------------------------===//
 BaseOperatorNodeContents *LeftHashJoin::Copy() const { return new LeftHashJoin(*this); }
 
-Operator LeftHashJoin::Make(common::ManagedPointer<parser::AbstractExpression> join_predicate) {
+Operator LeftHashJoin::Make(std::vector<AnnotatedExpression> &&join_predicates,
+                            std::vector<common::ManagedPointer<parser::AbstractExpression>> &&left_keys,
+                            std::vector<common::ManagedPointer<parser::AbstractExpression>> &&right_keys,
+                            std::vector<catalog::table_oid_t> &&lateral_oids) {
   auto *join = new LeftHashJoin();
-  join->join_predicate_ = join_predicate;
+  join->join_predicates_ = std::move(join_predicates);
+  join->left_keys_ = std::move(left_keys);
+  join->right_keys_ = std::move(right_keys);
+  join->lateral_oids_ = std::move(lateral_oids);
   return Operator(common::ManagedPointer<BaseOperatorNodeContents>(join));
 }
 
 common::hash_t LeftHashJoin::Hash() const {
   common::hash_t hash = BaseOperatorNodeContents::Hash();
-  hash = common::HashUtil::CombineHashes(hash, join_predicate_->Hash());
+  for (auto &expr : left_keys_) hash = common::HashUtil::CombineHashes(hash, expr->Hash());
+  for (auto &expr : right_keys_) hash = common::HashUtil::CombineHashes(hash, expr->Hash());
+  for (auto &pred : join_predicates_) {
+    auto expr = pred.GetExpr();
+    if (expr)
+      hash = common::HashUtil::SumHashes(hash, expr->Hash());
+    else
+      hash = common::HashUtil::SumHashes(hash, BaseOperatorNodeContents::Hash());
+  }
+  for (auto oid : lateral_oids_){
+    hash = common::HashUtil::SumHashes(hash, oid.UnderlyingValue());
+  }
   return hash;
 }
 
 bool LeftHashJoin::operator==(const BaseOperatorNodeContents &r) {
   if (r.GetOpType() != OpType::LEFTHASHJOIN) return false;
-  const LeftHashJoin &node = *static_cast<const LeftHashJoin *>(&r);
-  return (*join_predicate_ == *(node.join_predicate_));
+  const LeftHashJoin &node = *dynamic_cast<const LeftHashJoin *>(&r);
+  if (left_keys_.size() != node.left_keys_.size() || right_keys_.size() != node.right_keys_.size() ||
+      join_predicates_.size() != node.join_predicates_.size())
+    return false;
+  if (join_predicates_ != node.join_predicates_) return false;
+  for (size_t i = 0; i < left_keys_.size(); i++) {
+    if (*(left_keys_[i]) != *(node.left_keys_[i])) return false;
+  }
+  for (size_t i = 0; i < right_keys_.size(); i++) {
+    if (*(right_keys_[i]) != *(node.right_keys_[i])) return false;
+  }
+  return true;
 }
 
 //===--------------------------------------------------------------------===//
@@ -574,7 +688,7 @@ Operator Insert::Make(catalog::db_oid_t database_oid, catalog::table_oid_t table
   // We need to check whether the number of values for each insert vector
   // matches the number of columns
   for (const auto &insert_vals : values) {
-    TERRIER_ASSERT(columns.size() == insert_vals.size(), "Mismatched number of columns and values");
+    NOISEPAGE_ASSERT(columns.size() == insert_vals.size(), "Mismatched number of columns and values");
   }
 #endif
 
@@ -1066,8 +1180,8 @@ Operator CreateFunction::Make(catalog::db_oid_t database_oid, catalog::namespace
                               std::vector<std::string> &&function_body, std::vector<std::string> &&function_param_names,
                               std::vector<parser::BaseFunctionParameter::DataType> &&function_param_types,
                               parser::BaseFunctionParameter::DataType return_type, size_t param_count, bool replace) {
-  TERRIER_ASSERT(function_param_names.size() == param_count && function_param_types.size() == param_count,
-                 "Mismatched number of items in vector and number of function parameters");
+  NOISEPAGE_ASSERT(function_param_names.size() == param_count && function_param_types.size() == param_count,
+                   "Mismatched number of items in vector and number of function parameters");
   auto *op = new CreateFunction();
   op->database_oid_ = database_oid;
   op->namespace_oid_ = namespace_oid;
@@ -1295,9 +1409,35 @@ bool Analyze::operator==(const BaseOperatorNodeContents &r) {
 }
 
 //===--------------------------------------------------------------------===//
-template <typename T>
-void OperatorNodeContents<T>::Accept(common::ManagedPointer<OperatorVisitor> v) const {
-  v->Visit(reinterpret_cast<const T *>(this));
+// PhysicalCteScan
+//===--------------------------------------------------------------------===//
+BaseOperatorNodeContents *CteScan::Copy() const { return new CteScan(*this); }
+
+Operator CteScan::Make(std::vector<std::vector<common::ManagedPointer<parser::AbstractExpression>>> child_expressions,
+                       std::string table_name, catalog::table_oid_t table_oid, parser::CTEType cte_type,
+                       std::vector<AnnotatedExpression> &&scan_predicate, catalog::Schema &&table_schema) {
+  auto *cte_scan_op = new CteScan();
+  cte_scan_op->child_expressions_ = std::move(child_expressions);
+  cte_scan_op->table_name_ = std::move(table_name);
+  cte_scan_op->table_oid_ = table_oid;
+  cte_scan_op->cte_type_ = cte_type;
+  cte_scan_op->scan_predicate_ = std::move(scan_predicate);
+  cte_scan_op->table_schema_ = std::move(table_schema);
+  return Operator(common::ManagedPointer<BaseOperatorNodeContents>(cte_scan_op));
+}
+
+bool CteScan::operator==(const BaseOperatorNodeContents &r) {
+  if (r.GetOpType() != OpType::CTESCAN) return false;
+  const CteScan &node = *dynamic_cast<const CteScan *>(&r);
+  return table_name_ == node.GetTableName();
+}
+
+common::hash_t CteScan::Hash() const {
+  common::hash_t hash = BaseOperatorNodeContents::Hash();
+  hash = common::HashUtil::CombineHashes(hash, static_cast<uint32_t>(cte_type_));
+  hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(table_name_));
+  hash = common::HashUtil::CombineHashInRange(hash, scan_predicate_.begin(), scan_predicate_.end());
+  return hash;
 }
 
 //===--------------------------------------------------------------------===//
@@ -1327,6 +1467,8 @@ template <>
 const char *OperatorNodeContents<OuterNLJoin>::name = "OuterNLJoin";
 template <>
 const char *OperatorNodeContents<InnerHashJoin>::name = "InnerHashJoin";
+template <>
+const char *OperatorNodeContents<LeftSemiHashJoin>::name = "LeftSemiHashJoin";
 template <>
 const char *OperatorNodeContents<LeftHashJoin>::name = "LeftHashJoin";
 template <>
@@ -1377,6 +1519,10 @@ template <>
 const char *OperatorNodeContents<DropView>::name = "DropView";
 template <>
 const char *OperatorNodeContents<Analyze>::name = "Analyze";
+template <>
+const char *OperatorNodeContents<CteScan>::name = "CteScan";
+template <>
+const char *OperatorNodeContents<Union>::name = "Union";
 
 //===--------------------------------------------------------------------===//
 template <>
@@ -1405,6 +1551,8 @@ template <>
 OpType OperatorNodeContents<OuterNLJoin>::type = OpType::OUTERNLJOIN;
 template <>
 OpType OperatorNodeContents<InnerHashJoin>::type = OpType::INNERHASHJOIN;
+template <>
+OpType OperatorNodeContents<LeftSemiHashJoin>::type = OpType::LEFTSEMIHASHJOIN;
 template <>
 OpType OperatorNodeContents<LeftHashJoin>::type = OpType::LEFTHASHJOIN;
 template <>
@@ -1455,15 +1603,9 @@ template <>
 OpType OperatorNodeContents<DropView>::type = OpType::DROPVIEW;
 template <>
 OpType OperatorNodeContents<Analyze>::type = OpType::ANALYZE;
+template <>
+OpType OperatorNodeContents<CteScan>::type = OpType::CTESCAN;
+template <>
+OpType OperatorNodeContents<Union>::type = OpType::UNION;
 
-template <typename T>
-bool OperatorNodeContents<T>::IsLogical() const {
-  return type < OpType::LOGICALPHYSICALDELIMITER;
-}
-
-template <typename T>
-bool OperatorNodeContents<T>::IsPhysical() const {
-  return type > OpType::LOGICALPHYSICALDELIMITER;
-}
-
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer

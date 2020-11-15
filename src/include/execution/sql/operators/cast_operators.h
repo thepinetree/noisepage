@@ -5,13 +5,14 @@
 #include <limits>
 #include <string>
 
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "execution/sql/runtime_types.h"
 #include "execution/sql/sql.h"
 #include "spdlog/fmt/fmt.h"
 #include "storage/storage_defs.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 //===----------------------------------------------------------------------===//
 //
@@ -46,7 +47,8 @@ struct EXPORT Cast {
     if (!TryCast<InType, OutType>{}(input, &result)) {
       throw EXECUTION_EXCEPTION(
           fmt::format("Type {} cannot be cast because the value is out of range for the target type {}.",
-                      TypeIdToString(GetTypeId<InType>()), TypeIdToString(GetTypeId<OutType>())));
+                      TypeIdToString(GetTypeId<InType>()), TypeIdToString(GetTypeId<OutType>())),
+          common::ErrorCode::ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE);
     }
     return result;  // NOLINT
   }
@@ -242,7 +244,13 @@ struct EXPORT TryCast<
     constexpr OutType k_max = std::numeric_limits<OutType>::max();
 
     *output = static_cast<OutType>(input);
-    return input >= k_min && input <= k_max;
+
+    // Fixes this hideously obscure bug: https://godbolt.org/z/M14jdb
+    if constexpr (std::numeric_limits<OutType>::is_integer && !std::numeric_limits<InType>::is_integer) {  // NOLINT
+      return k_min <= input && static_cast<OutType>(input) < k_max;
+    } else {  // NOLINT
+      return k_min <= input && input <= k_max;
+    }
   }
 };
 
@@ -428,4 +436,4 @@ struct EXPORT TryCast<storage::VarlenEntry, Timestamp> {
   }
 };
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

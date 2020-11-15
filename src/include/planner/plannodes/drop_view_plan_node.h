@@ -4,12 +4,13 @@
 #include <string>
 #include <utility>
 #include <vector>
+
 #include "catalog/catalog_defs.h"
 #include "parser/drop_statement.h"
 #include "planner/plannodes/abstract_plan_node.h"
 #include "planner/plannodes/plan_visitor.h"
 
-namespace terrier::planner {
+namespace noisepage::planner {
 /**
  *  The plan node for dropping views
  */
@@ -58,10 +59,7 @@ class DropViewPlanNode : public AbstractPlanNode {
      * Build the drop view plan node
      * @return plan node
      */
-    std::unique_ptr<DropViewPlanNode> Build() {
-      return std::unique_ptr<DropViewPlanNode>(
-          new DropViewPlanNode(std::move(children_), std::move(output_schema_), database_oid_, view_oid_, if_exists_));
-    }
+    std::unique_ptr<DropViewPlanNode> Build();
 
    protected:
     /**
@@ -90,11 +88,7 @@ class DropViewPlanNode : public AbstractPlanNode {
    */
   DropViewPlanNode(std::vector<std::unique_ptr<AbstractPlanNode>> &&children,
                    std::unique_ptr<OutputSchema> output_schema, catalog::db_oid_t database_oid,
-                   catalog::view_oid_t view_oid, bool if_exists)
-      : AbstractPlanNode(std::move(children), std::move(output_schema)),
-        database_oid_(database_oid),
-        view_oid_(view_oid),
-        if_exists_(if_exists) {}
+                   catalog::view_oid_t view_oid, bool if_exists);
 
  public:
   /**
@@ -155,4 +149,4 @@ class DropViewPlanNode : public AbstractPlanNode {
 
 DEFINE_JSON_HEADER_DECLARATIONS(DropViewPlanNode);
 
-}  // namespace terrier::planner
+}  // namespace noisepage::planner

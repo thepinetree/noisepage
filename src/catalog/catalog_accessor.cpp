@@ -9,7 +9,7 @@
 #include "catalog/database_catalog.h"
 #include "catalog/postgres/pg_proc.h"
 
-namespace terrier::catalog {
+namespace noisepage::catalog {
 db_oid_t CatalogAccessor::GetDatabaseOid(std::string name) const {
   NormalizeObjectName(&name);
   return catalog_->GetDatabaseOid(txn_, name);
@@ -23,7 +23,7 @@ db_oid_t CatalogAccessor::CreateDatabase(std::string name) const {
 bool CatalogAccessor::DropDatabase(db_oid_t db) const { return catalog_->DeleteDatabase(txn_, db); }
 
 void CatalogAccessor::SetSearchPath(std::vector<namespace_oid_t> namespaces) {
-  TERRIER_ASSERT(!namespaces.empty(), "search path cannot be empty");
+  NOISEPAGE_ASSERT(!namespaces.empty(), "search path cannot be empty");
 
   default_namespace_ = namespaces[0];
   search_path_ = std::move(namespaces);
@@ -79,6 +79,9 @@ bool CatalogAccessor::SetTablePointer(table_oid_t table, storage::SqlTable *tabl
 }
 
 common::ManagedPointer<storage::SqlTable> CatalogAccessor::GetTable(table_oid_t table) const {
+  if (UNLIKELY(catalog::IsTempOid(table))) {
+    return temp_tables_.find(table)->second;
+  }
   if (cache_ != DISABLED) {
     auto table_ptr = cache_->GetTable(table);
     if (table_ptr == nullptr) {
@@ -196,8 +199,8 @@ proc_oid_t CatalogAccessor::GetProcOid(const std::string &procname, const std::v
   return catalog::INVALID_PROC_OID;
 }
 
-bool CatalogAccessor::SetProcCtxPtr(proc_oid_t proc_oid, const execution::functions::FunctionContext *udf_context) {
-  return dbc_->SetProcCtxPtr(txn_, proc_oid, udf_context);
+bool CatalogAccessor::SetProcCtxPtr(proc_oid_t proc_oid, const execution::functions::FunctionContext *func_context) {
+  return dbc_->SetProcCtxPtr(txn_, proc_oid, func_context);
 }
 
 common::ManagedPointer<execution::functions::FunctionContext> CatalogAccessor::GetProcCtxPtr(proc_oid_t proc_oid) {
@@ -217,4 +220,8 @@ common::ManagedPointer<storage::BlockStore> CatalogAccessor::GetBlockStore() con
   return catalog_->GetBlockStore();
 }
 
-}  // namespace terrier::catalog
+void CatalogAccessor::RegisterTempTable(table_oid_t table_oid, const common::ManagedPointer<storage::SqlTable> table) {
+  temp_tables_[table_oid] = table;
+}
+
+}  // namespace noisepage::catalog

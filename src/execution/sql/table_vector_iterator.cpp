@@ -1,6 +1,7 @@
 #include "execution/sql/table_vector_iterator.h"
 
 #include <tbb/parallel_for.h>
+#include <tbb/task_arena.h>
 #include <tbb/task_scheduler_init.h>
 
 #include <limits>
@@ -10,11 +11,13 @@
 
 #include "catalog/catalog_accessor.h"
 #include "execution/exec/execution_context.h"
+#include "execution/exec/execution_settings.h"
 #include "execution/sql/thread_state_container.h"
 #include "execution/util/timer.h"
 #include "loggers/execution_logger.h"
+#include "storage/index/index.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 TableVectorIterator::TableVectorIterator(exec::ExecutionContext *exec_ctx, uint32_t table_oid, uint32_t *col_oids,
                                          uint32_t num_oids)
@@ -25,14 +28,20 @@ TableVectorIterator::~TableVectorIterator() = default;
 bool TableVectorIterator::Init() { return Init(0, storage::DataTable::GetMaxBlocks()); }
 
 bool TableVectorIterator::Init(uint32_t block_start, uint32_t block_end) {
+  auto table = exec_ctx_->GetAccessor()->GetTable(table_oid_);
+  return Init(table, block_start, block_end);
+}
+
+bool TableVectorIterator::Init(common::ManagedPointer<storage::SqlTable> table, uint32_t block_start,
+                               uint32_t block_end) {
   // No-op if already initialized
   if (IsInitialized()) {
     return true;
   }
 
   // Set up the table and the iterator.
-  table_ = exec_ctx_->GetAccessor()->GetTable(table_oid_);
-  TERRIER_ASSERT(table_ != nullptr, "Table must exist!!");
+  table_ = table;
+  NOISEPAGE_ASSERT(table_ != nullptr, "Table must exist!!");
   if (block_start == 0 && block_end == storage::DataTable::GetMaxBlocks()) {
     iter_ = std::make_unique<storage::DataTable::SlotIterator>(table_->begin());
   } else {
@@ -60,6 +69,10 @@ bool TableVectorIterator::Init(uint32_t block_start, uint32_t block_end) {
   // All good.
   initialized_ = true;
   return true;
+}
+
+bool TableVectorIterator::InitTempTable(common::ManagedPointer<storage::SqlTable> cte_table) {
+  return Init(cte_table, 0, storage::DataTable::GetMaxBlocks());
 }
 
 bool TableVectorIterator::Advance() {
@@ -105,7 +118,6 @@ class ScanTask {
 
     // Pull out the thread-local state
     byte *const thread_state = thread_state_container_->AccessCurrentThreadState();
-
     // Call scanning function
     scanner_(query_state_, thread_state, &iter);
   }
@@ -117,7 +129,7 @@ class ScanTask {
   uint32_t num_oids_;
   void *const query_state_;
   ThreadStateContainer *const thread_state_container_;
-  TableVectorIterator::ScanFn scanner_;
+  TableVectorIterator::ScanFn scanner_ = nullptr;
 };
 
 }  // namespace
@@ -136,16 +148,34 @@ bool TableVectorIterator::ParallelScan(uint32_t table_oid, uint32_t *col_oids, u
   timer.Start();
 
   // Execute parallel scan
-  tbb::task_scheduler_init scan_scheduler;
-  tbb::blocked_range<uint32_t> block_range(0, table->table_.data_table_->GetNumBlocks(), min_grain_size);
-  tbb::parallel_for(block_range, ScanTask(table_oid, col_oids, num_oids, query_state, exec_ctx, scan_fn));
+  size_t num_threads = std::max(exec_ctx->GetExecutionSettings().GetNumberOfParallelExecutionThreads(), 0);
+  size_t num_tasks = std::ceil(table->table_.data_table_->GetNumBlocks() * 1.0 / min_grain_size);
+  size_t concurrent = std::min(num_threads, num_tasks);
+  exec_ctx->SetNumConcurrentEstimate(concurrent);
 
+  tbb::task_arena limited_arena(num_threads);
+  tbb::blocked_range<uint32_t> block_range(0, table->table_.data_table_->GetNumBlocks(), min_grain_size);
+  const bool is_static_partitioned = exec_ctx->GetExecutionSettings().GetIsStaticPartitionerEnabled();
+  limited_arena.execute(
+      [&block_range, &table_oid, &col_oids, &num_oids, &query_state, &exec_ctx, &scan_fn, is_static_partitioned] {
+        is_static_partitioned
+            ? tbb::parallel_for(block_range, ScanTask(table_oid, col_oids, num_oids, query_state, exec_ctx, scan_fn),
+                                tbb::static_partitioner())
+            : tbb::parallel_for(block_range, ScanTask(table_oid, col_oids, num_oids, query_state, exec_ctx, scan_fn));
+      });
+
+  exec_ctx->SetNumConcurrentEstimate(0);
   timer.Stop();
 
-  double tps = table->GetNumTuple() / timer.GetElapsed() / 1000.0;
+  auto *tsc = exec_ctx->GetThreadStateContainer();
+  auto *tls = tsc->AccessCurrentThreadState();
+  exec_ctx->InvokeHook(static_cast<uint32_t>(HookOffsets::EndHook), tls, nullptr);
+
+  UNUSED_ATTRIBUTE double tps = table->GetNumTuple() / timer.GetElapsed() / 1000.0;
   EXECUTION_LOG_TRACE("Scanned {} blocks ({} tuples) in {} ms ({:.3f} mtps)", table->table_.data_table_->GetNumBlocks(),
                       table->GetNumTuple(), timer.GetElapsed(), tps);
 
   return true;
 }
-}  // namespace terrier::execution::sql
+
+}  // namespace noisepage::execution::sql

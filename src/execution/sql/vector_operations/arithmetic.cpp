@@ -1,3 +1,4 @@
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "execution/exec/execution_settings.h"
 #include "execution/sql/operators/numeric_binary_operators.h"
@@ -5,15 +6,16 @@
 #include "execution/sql/vector_operations/vector_operations.h"
 #include "spdlog/fmt/fmt.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 namespace traits {
 
 // Specialized struct to enable full-computation.
 template <template <typename> typename Op, typename T>
-struct ShouldPerformFullCompute<Op<T>, std::enable_if_t<std::is_same_v<Op<T>, terrier::execution::sql::Add<T>> ||
-                                                        std::is_same_v<Op<T>, terrier::execution::sql::Subtract<T>> ||
-                                                        std::is_same_v<Op<T>, terrier::execution::sql::Multiply<T>>>> {
+struct ShouldPerformFullCompute<Op<T>,
+                                std::enable_if_t<std::is_same_v<Op<T>, noisepage::execution::sql::Add<T>> ||
+                                                 std::is_same_v<Op<T>, noisepage::execution::sql::Subtract<T>> ||
+                                                 std::is_same_v<Op<T>, noisepage::execution::sql::Multiply<T>>>> {
   bool operator()(const exec::ExecutionSettings &exec_settings, const TupleIdList *tid_list) const {
     auto full_compute_threshold = exec_settings.GetArithmeticFullComputeOptThreshold();
     return tid_list == nullptr || full_compute_threshold <= tid_list->ComputeSelectivity();
@@ -32,17 +34,20 @@ void CheckBinaryOperation(const Vector &left, const Vector &right, Vector *resul
   if (left.GetTypeId() != right.GetTypeId()) {
     throw EXECUTION_EXCEPTION(
         fmt::format("Left and right vector types to binary operation must be the same, left {} right {}",
-                    TypeIdToString(left.GetTypeId()), TypeIdToString(right.GetTypeId())));
+                    TypeIdToString(left.GetTypeId()), TypeIdToString(right.GetTypeId())),
+        common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
   if (left.GetTypeId() != result->GetTypeId()) {
     throw EXECUTION_EXCEPTION(
         fmt::format("Result type of binary operation must be the same as input type, input {} result {}.",
-                    TypeIdToString(left.GetTypeId()), TypeIdToString(result->GetTypeId())));
+                    TypeIdToString(left.GetTypeId()), TypeIdToString(result->GetTypeId())),
+        common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
   if (!left.IsConstant() && !right.IsConstant() && left.GetCount() != right.GetCount()) {
     throw EXECUTION_EXCEPTION(
         fmt::format("Left and right input vectors to binary operation must have the same size, left {} right {}.",
-                    left.GetCount(), right.GetCount()));
+                    left.GetCount(), right.GetCount()),
+        common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
@@ -153,7 +158,8 @@ void DivModOperation(const Vector &left, const Vector &right, Vector *result) {
       break;
     default:
       throw EXECUTION_EXCEPTION(
-          fmt::format("Invalid type for arithmetic operation, {}.", TypeIdToString(left.GetTypeId())));
+          fmt::format("Invalid type for arithmetic operation, {}.", TypeIdToString(left.GetTypeId())),
+          common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
@@ -195,7 +201,8 @@ void BinaryArithmeticOperation(const exec::ExecutionSettings &exec_settings, con
       break;
     default:
       throw EXECUTION_EXCEPTION(
-          fmt::format("Invalid type for arithmetic operation, {}.", TypeIdToString(left.GetTypeId())));
+          fmt::format("Invalid type for arithmetic operation, {}.", TypeIdToString(left.GetTypeId())),
+          common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
@@ -203,26 +210,26 @@ void BinaryArithmeticOperation(const exec::ExecutionSettings &exec_settings, con
 
 void VectorOps::Add(const exec::ExecutionSettings &exec_settings, const Vector &left, const Vector &right,
                     Vector *result) {
-  BinaryArithmeticOperation<terrier::execution::sql::Add>(exec_settings, left, right, result);
+  BinaryArithmeticOperation<noisepage::execution::sql::Add>(exec_settings, left, right, result);
 }
 
 void VectorOps::Subtract(const exec::ExecutionSettings &exec_settings, const Vector &right, Vector *result,
                          const Vector &left) {
-  BinaryArithmeticOperation<terrier::execution::sql::Subtract>(exec_settings, left, right, result);
+  BinaryArithmeticOperation<noisepage::execution::sql::Subtract>(exec_settings, left, right, result);
 }
 
 void VectorOps::Multiply(const exec::ExecutionSettings &exec_settings, const Vector &left, const Vector &right,
                          Vector *result) {
-  BinaryArithmeticOperation<terrier::execution::sql::Multiply>(exec_settings, left, right, result);
+  BinaryArithmeticOperation<noisepage::execution::sql::Multiply>(exec_settings, left, right, result);
 }
 
 void VectorOps::Divide(const exec::ExecutionSettings &exec_settings, const Vector &left, const Vector &right,
                        Vector *result) {
-  DivModOperation<terrier::execution::sql::Divide>(left, right, result);
+  DivModOperation<noisepage::execution::sql::Divide>(left, right, result);
 }
 
 void VectorOps::Modulo(const Vector &left, const Vector &right, Vector *result) {
-  DivModOperation<terrier::execution::sql::Modulo>(left, right, result);
+  DivModOperation<noisepage::execution::sql::Modulo>(left, right, result);
 }
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

@@ -9,7 +9,7 @@
 #include "optimizer/operator_visitor.h"
 #include "transaction/transaction_context.h"
 
-namespace terrier {
+namespace noisepage {
 
 namespace planner {
 class AbstractPlanNode;
@@ -51,7 +51,7 @@ class PlanGenerator : public OperatorVisitor {
   /**
    * Constructor
    */
-  PlanGenerator();
+  PlanGenerator(LateralWaitersSet &laterals);
 
   /**
    * Converts an operator node into a plan node.
@@ -116,6 +116,12 @@ class PlanGenerator : public OperatorVisitor {
   void Visit(const Limit *op) override;
 
   /**
+   * Visitor function for a Union operator
+   * @param op Union operator being visited
+   */
+  void Visit(const Union *op) override;
+
+  /**
    * Visitor function for a InnerIndexJoin operator
    * @param op InnerIndexJoin operator being visited
    */
@@ -168,6 +174,12 @@ class PlanGenerator : public OperatorVisitor {
    * @param op OuterHashJoin operator being visited
    */
   void Visit(const OuterHashJoin *op) override;
+
+  /**
+   * Visitor function for a LeftSemiHashJoin operator
+   * @param op LeftSemiHashJoin operator being visited
+   */
+  void Visit(const LeftSemiHashJoin *op) override;
 
   /**
    * Visitor function for a Insert operator
@@ -300,6 +312,12 @@ class PlanGenerator : public OperatorVisitor {
    */
   void Visit(const Analyze *analyze) override;
 
+  /**
+   * Visit a CteScan operator
+   * @param cte_scan operator
+   */
+  void Visit(const CteScan *cte_scan) override;
+
  private:
   /**
    * Register a pointer to be deleted on transaction commit/abort
@@ -407,7 +425,10 @@ class PlanGenerator : public OperatorVisitor {
    * Transaction Context executing under
    */
   transaction::TransactionContext *txn_;
+
+  // for laterals, maps from temp_oid to plan node
+  LateralWaitersSet &laterals_;
 };
 
 }  // namespace optimizer
-}  // namespace terrier
+}  // namespace noisepage

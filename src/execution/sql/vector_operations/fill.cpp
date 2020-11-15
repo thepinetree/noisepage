@@ -1,17 +1,19 @@
+#include "common/error/error_code.h"
 #include "common/error/exception.h"
 #include "execution/sql/generic_value.h"
 #include "execution/sql/vector_operations/vector_operations.h"
 #include "execution/util/bit_vector.h"
 #include "spdlog/fmt/fmt.h"
 
-namespace terrier::execution::sql {
+namespace noisepage::execution::sql {
 
 namespace {
 
 void CheckFillArguments(const Vector &input, const GenericValue &value) {
   if (input.GetTypeId() != value.GetTypeId()) {
     throw EXECUTION_EXCEPTION(fmt::format("Invalid types for fill, input {} value {}.",
-                                          TypeIdToString(input.GetTypeId()), TypeIdToString(value.GetTypeId())));
+                                          TypeIdToString(input.GetTypeId()), TypeIdToString(value.GetTypeId())),
+                              common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
@@ -70,11 +72,11 @@ void VectorOps::Fill(Vector *vector, const GenericValue &value) {
       TemplatedFillOperation(vector, vector->varlen_heap_.AddVarlen(value.str_value_));
       break;
     default:
-      throw EXECUTION_EXCEPTION(
-          fmt::format("Vector of type {} cannot be filled.", TypeIdToString(vector->GetTypeId())));
+      throw EXECUTION_EXCEPTION(fmt::format("Vector of type {} cannot be filled.", TypeIdToString(vector->GetTypeId())),
+                                common::ErrorCode::ERRCODE_INTERNAL_ERROR);
   }
 }
 
 void VectorOps::FillNull(Vector *vector) { vector->null_mask_.SetAll(); }
 
-}  // namespace terrier::execution::sql
+}  // namespace noisepage::execution::sql

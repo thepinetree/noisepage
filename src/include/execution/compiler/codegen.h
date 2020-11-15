@@ -20,11 +20,11 @@
 #include "parser/expression_defs.h"
 #include "planner/plannodes/plan_node_defs.h"
 
-namespace terrier::catalog {
+namespace noisepage::catalog {
 class CatalogAccessor;
-}  // namespace terrier::catalog
+}  // namespace noisepage::catalog
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * Bundles convenience methods needed by other classes during code generation.
@@ -137,6 +137,11 @@ class CodeGen {
    * @return A literal whose value is identical to the provided string.
    */
   [[nodiscard]] ast::Expr *ConstString(std::string_view str) const;
+
+  /**
+   * @return A literal null whose type matches the provided type
+   */
+  [[nodiscard]] ast::Expr *ConstNull(type::TypeId type) const;
 
   // ---------------------------------------------------------------------------
   //
@@ -588,6 +593,17 @@ class CodeGen {
                                                 ast::Identifier worker_name);
 
   /**
+   * Call tempTableIterInitBind(&tvi, execCtx, oids, &cte_scan_iterator)
+   * @param tvi The identifier of table vector iterator
+   * @param cte_scan_iterator_ptr The identifier of cte scan iterator
+   * @param col_oids The identifier of the array of column oids to read.
+   * @param exec_ctx_expr The pointer to the execution context variable
+   * @return The expression corresponding to the builtin call.
+   */
+  ast::Expr *TempTableIterInit(ast::Identifier tvi, ast::Expr *cte_scan_iterator_ptr, ast::Identifier col_oids,
+                               ast::Expr *exec_ctx_expr);
+
+  /**
    * Call \@abortTxn(exec_ctx).
    * @param exec_ctx The execution context that we are running in.
    * @return The call.
@@ -696,7 +712,7 @@ class CodeGen {
    * @param attr_idx Index of the column being accessed.
    * @return The expression corresponding to the builtin call.
    */
-  [[nodiscard]] ast::Expr *PRGet(ast::Expr *pr, terrier::type::TypeId type, bool nullable, uint32_t attr_idx);
+  [[nodiscard]] ast::Expr *PRGet(ast::Expr *pr, noisepage::type::TypeId type, bool nullable, uint32_t attr_idx);
 
   /**
    * Call \@prSet(pr, attr_idx, val, [own]).
@@ -747,12 +763,51 @@ class CodeGen {
   [[nodiscard]] ast::Expr *FilterManagerRunFilters(ast::Expr *filter_manager, ast::Expr *vpi, ast::Expr *exec_ctx);
 
   /**
+   * Call \@execCtxRegisterHook(exec_ctx, hook_idx, hook).
+   * @param exec_ctx The execution context to modify.
+   * @param hook_idx Index to install hook at
+   * @param hook Hook function to register
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *ExecCtxRegisterHook(ast::Expr *exec_ctx, uint32_t hook_idx, ast::Identifier hook);
+
+  /**
+   * Call \@execCtxClearHooks(exec_ctx).
+   * @param exec_ctx The execution context to modify.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *ExecCtxClearHooks(ast::Expr *exec_ctx);
+
+  /**
+   * Call \@execCtxInitHooks(exec_ctx, num_hooks).
+   * @param exec_ctx The execution context to modify.
+   * @param num_hooks Number of hooks
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *ExecCtxInitHooks(ast::Expr *exec_ctx, uint32_t num_hooks);
+
+  /**
    * Call \@execCtxAddRowsAffected(exec_ctx, num_rows_affected).
    * @param exec_ctx The execution context to modify.
    * @param num_rows_affected The amount to increment or decrement the number of rows affected.
    * @return The call.
    */
   [[nodiscard]] ast::Expr *ExecCtxAddRowsAffected(ast::Expr *exec_ctx, int64_t num_rows_affected);
+
+  /**
+   * Call \@execCtxRecordFeature(exec_ctx, pipeline_id, feature_id, feature_attribute, value).
+   * @param ouvec OU feature vector to update
+   * @param pipeline_id The ID of the pipeline whose feature is to be recorded.
+   * @param feature_id The ID of the feature to be recorded.
+   * @param feature_attribute The attribute of the feature to record.
+   * @param mode Update mode
+   * @param value The value to be recorded.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *ExecOUFeatureVectorRecordFeature(
+      ast::Expr *ouvec, pipeline_id_t pipeline_id, feature_id_t feature_id,
+      brain::ExecutionOperatingUnitFeatureAttribute feature_attribute,
+      brain::ExecutionOperatingUnitFeatureUpdateMode mode, ast::Expr *value);
 
   /**
    * Call \@execCtxGetMemPool(). Return the memory pool within an execution context.
@@ -831,11 +886,10 @@ class CodeGen {
    * the build-row structures with the provided name.
    * @param join_hash_table The join hash table.
    * @param exec_ctx The execution context.
-   * @param mem_pool The memory pool.
    * @param build_row_type_name The name of the materialized build-side row in the hash table.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *JoinHashTableInit(ast::Expr *join_hash_table, ast::Expr *exec_ctx, ast::Expr *mem_pool,
+  [[nodiscard]] ast::Expr *JoinHashTableInit(ast::Expr *join_hash_table, ast::Expr *exec_ctx,
                                              ast::Identifier build_row_type_name);
 
   /**
@@ -904,6 +958,44 @@ class CodeGen {
    */
   [[nodiscard]] ast::Expr *HTEntryIterGetRow(ast::Expr *iter, ast::Identifier row_type);
 
+  /**
+   * Call \@joinHTIterInit(). Initializes a join hash table iterator which iterates over every element
+   * of the hash table.
+   * @param iter A pointer to the iterator.
+   * @param ht A pointer to the hash table to iterate over.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHTIteratorInit(ast::Expr *iter, ast::Expr *ht);
+
+  /**
+   * Call \@joinHTIterHasNext(). Determines if the given iterator has more data.
+   * @param iter A pointer to the iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHTIteratorHasNext(ast::Expr *iter);
+
+  /**
+   * Call \@joinHTIterNext(). Advances the iterator by one element.
+   * @param iter A pointer to the iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHTIteratorNext(ast::Expr *iter);
+
+  /**
+   * Call \@joinHTIterGetRow(). Returns a pointer to the payload the iterator is currently positioned at.
+   * @param iter A pointer to the iterator.
+   * @param payload_type The type of the payload
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHTIteratorGetRow(ast::Expr *iter, ast::Identifier payload_type);
+
+  /**
+   * Call \@joinHTIterFree(). Cleans up and destroys the given iterator.
+   * @param iter A pointer to the iterator.
+   * @return The call.
+   */
+  [[nodiscard]] ast::Expr *JoinHTIteratorFree(ast::Expr *iter);
+
   // -------------------------------------------------------
   //
   // Hash aggregation
@@ -914,12 +1006,10 @@ class CodeGen {
    * Call \@aggHTInit(). Initializes an aggregation hash table.
    * @param agg_ht A pointer to the aggregation hash table.
    * @param exec_ctx The execution context.
-   * @param mem_pool A pointer to the memory pool.
    * @param agg_payload_type The name of the struct representing the aggregation payload.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *AggHashTableInit(ast::Expr *agg_ht, ast::Expr *exec_ctx, ast::Expr *mem_pool,
-                                            ast::Identifier agg_payload_type);
+  [[nodiscard]] ast::Expr *AggHashTableInit(ast::Expr *agg_ht, ast::Expr *exec_ctx, ast::Identifier agg_payload_type);
 
   /**
    * Call \@aggHTLookup(). Performs a single key lookup in an aggregation hash table. The hash value
@@ -1105,12 +1195,12 @@ class CodeGen {
    * Call \@sorterInit(). Initialize the provided sorter instance using a memory pool, comparison
    * function and the struct that will be materialized into the sorter instance.
    * @param sorter The sorter instance.
-   * @param mem_pool The memory pool instance.
+   * @param exec_ctx The execution context that we are running in.
    * @param cmp_func_name The name of the comparison function to use.
    * @param sort_row_type_name The name of the materialized sort-row type.
    * @return The call.
    */
-  [[nodiscard]] ast::Expr *SorterInit(ast::Expr *sorter, ast::Expr *mem_pool, ast::Identifier cmp_func_name,
+  [[nodiscard]] ast::Expr *SorterInit(ast::Expr *sorter, ast::Expr *exec_ctx, ast::Identifier cmp_func_name,
                                       ast::Identifier sort_row_type_name);
 
   /**
@@ -1287,6 +1377,31 @@ class CodeGen {
   ast::Expr *StorageInterfaceInit(ast::Expr *si, ast::Expr *exec_ctx, uint32_t table_oid, ast::Identifier col_oids,
                                   bool need_indexes);
 
+  /**
+   *
+   * @param csi The cte scan iterator to initialize
+   * @param table_oid temp oid of the cte table
+   * @param col_ids temp column oids of all columns in this cte table
+   * @param col_types The identifier of the array of column types to access.
+   * @param exec_ctx_var the execution context variable pointer
+   * @return The expression corresponding to the builtin call.
+   */
+  ast::Expr *CteScanIteratorInit(ast::Expr *csi, catalog::table_oid_t table_oid, ast::Identifier col_ids,
+                                 ast::Identifier col_types, ast::Expr *exec_ctx_var);
+
+  /**
+   *
+   * @param csi The inductive cte scan iterator to initialize
+   * @param table_oid temp oid of the cte table
+   * @param col_ids temp column oids of all columns in this cte table
+   * @param col_types The identifier of the array of column types to access.
+   * @param is_recursive whether or not this represents a recursive cte scan
+   * @param exec_ctx_var the execution context variable pointer
+   * @return The expression corresponding to the builtin call.
+   */
+  ast::Expr *IndCteScanIteratorInit(ast::Expr *csi, catalog::table_oid_t table_oid, ast::Identifier col_ids,
+                                    ast::Identifier col_types, bool is_recursive, ast::Expr *exec_ctx_var);
+
   // ---------------------------------------------------------------------------
   //
   // Identifiers
@@ -1401,4 +1516,4 @@ class CodeGen {
   std::unique_ptr<brain::PipelineOperatingUnits> pipeline_operating_units_;
 };
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

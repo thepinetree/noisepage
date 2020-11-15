@@ -6,8 +6,9 @@
 #include "execution/compiler/if.h"
 #include "execution/compiler/loop.h"
 #include "planner/plannodes/aggregate_plan_node.h"
+#include "planner/plannodes/output_schema.h"
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 namespace {
 constexpr char OUTPUT_COL_PREFIX[] = "out";
@@ -19,14 +20,39 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan, Compil
       output_var_(GetCodeGen()->MakeFreshIdentifier("outRow")),
       output_struct_(GetCodeGen()->MakeFreshIdentifier("OutputStruct")) {
   // Prepare the child.
-  pipeline->UpdateParallelism(Pipeline::Parallelism::Serial);
+  //pipeline->UpdateParallelism(Pipeline::Parallelism::Serial);
   compilation_context->Prepare(plan, pipeline);
+
+  output_buffer_ = pipeline->DeclarePipelineStateEntry(
+      "output_buffer", GetCodeGen()->PointerType(GetCodeGen()->BuiltinType(ast::BuiltinType::OutputBuffer)));
+  num_output_ = CounterDeclare("num_output", pipeline);
 }
 
-void OutputTranslator::PerformPipelineWork(terrier::execution::compiler::WorkContext *context,
-                                           terrier::execution::compiler::FunctionBuilder *function) const {
-  // First generate the call @resultBufferAllocRow(execCtx)
+void OutputTranslator::InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {
+  if(GetCompilationContext()->GetOutputCallback()){
+    return;
+  }
   auto exec_ctx = GetExecutionContext();
+  auto *new_call = GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferNew, {exec_ctx});
+  function->Append(GetCodeGen()->Assign(output_buffer_.Get(GetCodeGen()), new_call));
+
+  InitializeCounters(pipeline, function);
+}
+
+void OutputTranslator::TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const {
+  if(GetCompilationContext()->GetOutputCallback()){
+    return;
+  }
+  auto out_buffer = output_buffer_.Get(GetCodeGen());
+  ast::Expr *alloc_call = GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFree, {out_buffer});
+  function->Append(GetCodeGen()->MakeStmt(alloc_call));
+}
+
+void OutputTranslator::PerformPipelineWork(noisepage::execution::compiler::WorkContext *context,
+                                           noisepage::execution::compiler::FunctionBuilder *function) const {
+  // First generate the call @resultBufferAllocRow(execCtx)
+  auto out_buffer = output_buffer_.Get(GetCodeGen());
+  ast::Expr *alloc_call = GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {out_buffer});
   ast::Expr *cast_call;
   auto callback = GetCompilationContext()->GetOutputCallback();
   if(callback){
@@ -52,14 +78,36 @@ void OutputTranslator::PerformPipelineWork(terrier::execution::compiler::WorkCon
       function->Append(GetCodeGen()->Call(callback->As<ast::LambdaExpr>()->GetName(), {lhs}));
     }
   }
+
+  CounterAdd(function, num_output_, 1);
+}
+
+void OutputTranslator::InitializeCounters(const Pipeline &pipeline, FunctionBuilder *function) const {
+  CounterSet(function, num_output_, 0);
+}
+
+void OutputTranslator::RecordCounters(const Pipeline &pipeline, FunctionBuilder *function) const {
+  FeatureRecord(function, brain::ExecutionOperatingUnitType::OUTPUT,
+                brain::ExecutionOperatingUnitFeatureAttribute::NUM_ROWS, pipeline, CounterVal(num_output_));
+  FeatureArithmeticRecordMul(function, pipeline, GetTranslatorId(), CounterVal(num_output_));
+}
+
+void OutputTranslator::EndParallelPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {
+  auto out_buffer = output_buffer_.Get(GetCodeGen());
+  function->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {out_buffer}));
+  RecordCounters(pipeline, function);
 }
 
 void OutputTranslator::FinishPipelineWork(const Pipeline &pipeline, FunctionBuilder *function) const {
   if(GetCompilationContext()->GetOutputCallback()){
     return;
   }
-  auto exec_ctx = GetExecutionContext();
-  function->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {exec_ctx}));
+  auto out_buffer = output_buffer_.Get(GetCodeGen());
+  function->Append(GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferFinalize, {out_buffer}));
+
+  if (!pipeline.IsParallel()) {
+    RecordCounters(pipeline, function);
+  }
 }
 
 void OutputTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *> *decls) {
@@ -80,4 +128,4 @@ void OutputTranslator::DefineHelperStructs(util::RegionVector<ast::StructDecl *>
   decls->push_back(codegen->DeclareStruct(output_struct_, std::move(fields)));
 }
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

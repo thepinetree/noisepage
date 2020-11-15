@@ -10,16 +10,16 @@
 #include "planner/plannodes/plan_node_defs.h"
 #include "storage/storage_defs.h"
 
-namespace terrier::catalog {
+namespace noisepage::catalog {
 class IndexSchema;
 class Schema;
-}  // namespace terrier::catalog
+}  // namespace noisepage::catalog
 
-namespace terrier::planner {
+namespace noisepage::planner {
 class IndexScanPlanNode;
-}  // namespace terrier::planner
+}  // namespace noisepage::planner
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * Index scan translator.
@@ -35,7 +35,10 @@ class IndexScanTranslator : public OperatorTranslator, public PipelineDriver {
 
   void DefineHelperFunctions(util::RegionVector<ast::FunctionDecl *> *decls) override {}
 
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
+  /**
+   * Initialize the counters.
+   */
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
 
@@ -82,5 +85,9 @@ class IndexScanTranslator : public OperatorTranslator, public PipelineDriver {
   ast::Identifier hi_index_pr_;
   ast::Identifier table_pr_;
   ast::Identifier slot_;
+
+  // The number of scans on the index that are performed.
+  // TODO(WAN): check if range scans are supported, or if it is only point queries right now.
+  StateDescriptor::Entry num_scans_index_;
 };
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler

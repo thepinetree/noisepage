@@ -10,10 +10,14 @@
 #include "optimizer/statistics/count_min_sketch.h"
 #include "test_util/test_harness.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 class TopKElementsTests : public TerrierTest {
-  void SetUp() override { optimizer::optimizer_logger->set_level(spdlog::level::info); }
+  void SetUp() override {
+#if NOISEPAGE_USE_LOGGER
+    optimizer::optimizer_logger->set_level(spdlog::level::info);
+#endif
+  }
 };
 
 // Check that we can do simple increments to the top-k trackre
@@ -45,10 +49,7 @@ TEST_F(TopKElementsTests, SimpleIncrementTest) {
   top_k.Increment(5, 15);
   EXPECT_EQ(top_k.GetSize(), 5);
 
-  std::ostringstream stream;
-  stream << top_k;
-
-  OPTIMIZER_LOG_TRACE(stream.str());
+  OPTIMIZER_LOG_TRACE(top_k);
 }
 
 // Check that if incrementally increase the count of a key that
@@ -128,7 +129,7 @@ TEST_F(TopKElementsTests, SortedKeyTest) {
   auto sorted_keys = top_k.GetSortedTopKeys();
   EXPECT_EQ(sorted_keys.size(), k);
   int i = 0;
-  for (const auto &key : sorted_keys) {
+  for (UNUSED_ATTRIBUTE const auto &key : sorted_keys) {
     // Pop off the keys from our expected stack each time.
     // It should match the current key in our sorted key list
     auto expected_key = expected_keys.top();
@@ -137,8 +138,7 @@ TEST_F(TopKElementsTests, SortedKeyTest) {
     // TODO(pavlo): This text case is in correct because we can't
     // guarantee that the keys we shove in will have the exact amount
     // that we originally set them to.
-
-    OPTIMIZER_LOG_TRACE("Top-" + std::to_string(i) += ": " + key + " <-> " += expected_key);
+    OPTIMIZER_LOG_TRACE("Top-{0}: {1} <-> {2}", i, key, expected_key);
     // EXPECT_EQ(key, expected_key) << "Iteration #" << i;
     i++;
   }
@@ -369,4 +369,4 @@ TEST_F(TopKElementsTests, OutputTest) {
   }
 }
 
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer

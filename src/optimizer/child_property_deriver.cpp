@@ -14,7 +14,7 @@
 #include "optimizer/property_set.h"
 #include "parser/expression_util.h"
 
-namespace terrier::optimizer {
+namespace noisepage::optimizer {
 
 std::vector<std::pair<PropertySet *, std::vector<PropertySet *>>> ChildPropertyDeriver::GetProperties(
     catalog::CatalogAccessor *accessor, Memo *memo, PropertySet *requirements, GroupExpression *gexpr) {
@@ -102,6 +102,28 @@ void ChildPropertyDeriver::Visit(const Limit *op) {
   output_.emplace_back(provided_prop, std::move(child_input_properties));
 }
 
+void ChildPropertyDeriver::Visit(const Union *op) {
+  // No properties for operator
+  std::vector<PropertySet *> child_input_properties{};
+  auto provided_prop = requirements_->Copy();
+  for (size_t i = 0; i < gexpr_->GetChildrenGroupsSize(); i++) {
+    child_input_properties.push_back(requirements_->Copy());
+  }
+
+  output_.emplace_back(provided_prop, std::move(child_input_properties));
+}
+
+void ChildPropertyDeriver::Visit(const CteScan *op) {
+  // No properties for operator
+  std::vector<PropertySet *> child_input_properties{};
+  auto provided_prop = requirements_->Copy();
+  for (size_t i = 0; i < gexpr_->GetChildrenGroupsSize(); i++) {
+    child_input_properties.push_back(requirements_->Copy());
+  }
+
+  output_.emplace_back(provided_prop, std::move(child_input_properties));
+}
+
 void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const OrderBy *op) {}
 
 void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const InnerIndexJoin *op) {
@@ -114,9 +136,10 @@ void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const RightNLJoin *op) {}
 void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const OuterNLJoin *op) {}
 void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const InnerHashJoin *op) { DeriveForJoin(); }
 
-void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const LeftHashJoin *op) {}
+void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const LeftHashJoin *op) { DeriveForJoin(); }
 void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const RightHashJoin *op) {}
 void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const OuterHashJoin *op) {}
+void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const LeftSemiHashJoin *op) { DeriveForJoin(); }
 
 void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const Insert *op) {
   std::vector<PropertySet *> child_input_properties;
@@ -256,4 +279,4 @@ void ChildPropertyDeriver::Visit(UNUSED_ATTRIBUTE const DropView *drop_view) {
   output_.emplace_back(new PropertySet(), std::vector<PropertySet *>{});
 }
 
-}  // namespace terrier::optimizer
+}  // namespace noisepage::optimizer

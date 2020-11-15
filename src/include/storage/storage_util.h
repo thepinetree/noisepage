@@ -4,11 +4,12 @@
 #include <utility>
 #include <vector>
 
+#include "catalog/schema.h"
 #include "common/macros.h"
 #include "common/strong_typedef.h"
 #include "storage/storage_defs.h"
 
-namespace terrier::storage {
+namespace noisepage::storage {
 class BlockLayout;
 class ProjectedRow;
 class TupleAccessStrategy;
@@ -94,7 +95,7 @@ class StorageUtil {
    */
   // This const qualifier on ptr lies. Use this really only for pointer arithmetic.
   static byte *AlignedPtr(const uint8_t size, const void *ptr) {
-    TERRIER_ASSERT((size & (size - 1)) == 0, "word_size should be a power of two.");
+    NOISEPAGE_ASSERT((size & (size - 1)) == 0, "word_size should be a power of two.");
     // Because size is a power of two, mask is always all 1s up to the length of size.
     // example, size is 8 (1000), mask is (0111)
     uintptr_t mask = size - 1;
@@ -248,5 +249,14 @@ class StorageUtil {
     delete[] contents;
     return ret;
   }
+
+  /**
+   * Build map from Schema columns to underlying columns
+   * @param col_map map to build up
+   * @param columns Schema columns to build from
+   * @param offsets storage offsets for attributes
+   */
+  static void PopulateColumnMap(ColumnMap *col_map, const std::vector<catalog::Schema::Column> &columns,
+                                std::vector<uint16_t> *offsets);
 };
-}  // namespace terrier::storage
+}  // namespace noisepage::storage

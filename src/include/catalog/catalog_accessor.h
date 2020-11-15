@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -12,22 +13,22 @@
 #include "common/managed_pointer.h"
 #include "type/type_id.h"
 
-namespace terrier::storage {
+namespace noisepage::storage {
 class SqlTable;
 namespace index {
 class Index;
 }
-}  // namespace terrier::storage
+}  // namespace noisepage::storage
 
-namespace terrier::execution::functions {
+namespace noisepage::execution::functions {
 class FunctionContext;
 }
 
-namespace terrier::transaction {
+namespace noisepage::transaction {
 class TransactionContext;
 }
 
-namespace terrier::catalog {
+namespace noisepage::catalog {
 class Catalog;
 class DatabaseCatalog;
 class CatalogCache;
@@ -341,15 +342,15 @@ class EXPORT CatalogAccessor {
   proc_oid_t GetProcOid(const std::string &procname, const std::vector<type_oid_t> &all_arg_types);
 
   /**
-   * Sets the proc context pointer column of proc_oid to udf_context
+   * Sets the proc context pointer column of proc_oid to func_context
    * @param proc_oid The proc_oid whose pointer column we are setting here
-   * @param udf_context The context object to set to
+   * @param func_context The context object to set to
    * @return False if the given proc_oid is invalid, True if else
    */
-  bool SetProcCtxPtr(proc_oid_t proc_oid, const execution::functions::FunctionContext *udf_context);
+  bool SetProcCtxPtr(proc_oid_t proc_oid, const execution::functions::FunctionContext *func_context);
 
   /**
-   * Gets the proc context pointer column of proc_oid to udf_context
+   * Gets the proc context pointer column of proc_oid
    * @param proc_oid The proc_oid whose pointer column we are getting here
    * @return nullptr if proc_oid is either invalid or there is no context object set for this proc_oid
    */
@@ -381,6 +382,19 @@ class EXPORT CatalogAccessor {
   common::ManagedPointer<transaction::TransactionContext> GetTxn() const { return txn_; }
 
   /**
+   * Registers a temporary table in this accessor
+   * @param table_oid The temporary oid of this table
+   * @param table The temp table being registered
+   */
+  void RegisterTempTable(table_oid_t table_oid, common::ManagedPointer<storage::SqlTable> table);
+
+  /**
+   * Allocates and returns a new temporary oid. These oids are only valid for the lifetime of this accessor
+   * @return The newly allocated temporary oid
+   */
+  uint32_t GetNewTempOid() { return TEMP_OID_MASK | (++temp_oid_counter_); }
+
+  /**
    * Instantiates a new accessor into the catalog for the given database.
    * @param catalog pointer to the catalog being accessed
    * @param dbc pointer to the database catalog being accessed
@@ -407,6 +421,14 @@ class EXPORT CatalogAccessor {
   const common::ManagedPointer<CatalogCache> cache_ = nullptr;
 
   /**
+   * temporary table catalog that hosts mappings from a temporary table oid
+   * to sql tables that represent this temporary table. Operators such as CTE/iterative
+   * cte scan iterators will interact with this and handle the lifetime of these temporary tables.
+   */
+  std::unordered_map<catalog::table_oid_t, common::ManagedPointer<storage::SqlTable>> temp_tables_;
+  uint32_t temp_oid_counter_{0};
+
+  /**
    * A helper function to ensure that user-defined object names are standardized prior to doing catalog operations
    * @param name of object that should be sanitized/normalized
    */
@@ -415,4 +437,4 @@ class EXPORT CatalogAccessor {
   }
 };
 
-}  // namespace terrier::catalog
+}  // namespace noisepage::catalog

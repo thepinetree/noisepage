@@ -1,7 +1,7 @@
 #include "parser/expression/column_value_expression.h"
 #include "common/json.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 
 std::unique_ptr<AbstractExpression> ColumnValueExpression::Copy() const {
   auto expr = std::make_unique<ColumnValueExpression>(GetDatabaseOid(), GetTableOid(), GetColumnOid());
@@ -23,6 +23,7 @@ common::hash_t ColumnValueExpression::Hash() const {
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(database_oid_));
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(table_oid_));
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(column_oid_));
+  hash = common::HashUtil::CombineHashes(hash, parser::AliasType::HashKey()(alias_));
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(param_idx_));
   return hash;
 }
@@ -36,15 +37,20 @@ bool ColumnValueExpression::operator==(const AbstractExpression &rhs) const {
   if (GetTableName() != other.GetTableName()) return false;
   if (GetColumnOid() != other.GetColumnOid()) return false;
   if (GetTableOid() != other.GetTableOid()) return false;
+  if (!(GetAlias() == rhs.GetAlias())) return false;
   if (param_idx_ != other.GetParamIdx()) return false;
   return GetDatabaseOid() == other.GetDatabaseOid();
 }
 
 void ColumnValueExpression::DeriveExpressionName() {
-  if (!(this->GetAlias().empty()))
-    this->SetExpressionName(this->GetAlias());
+  if (!(this->GetAlias().Empty()))
+    this->SetExpressionName(this->GetAlias().GetName());
   else
     this->SetExpressionName(column_name_);
+}
+
+void ColumnValueExpression::Accept(common::ManagedPointer<binder::SqlNodeVisitor> v) {
+  v->Visit(common::ManagedPointer(this));
 }
 
 nlohmann::json ColumnValueExpression::ToJson() const {
@@ -71,4 +77,4 @@ std::vector<std::unique_ptr<AbstractExpression>> ColumnValueExpression::FromJson
 
 DEFINE_JSON_BODY_DECLARATIONS(ColumnValueExpression);
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

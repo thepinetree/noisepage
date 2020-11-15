@@ -3,11 +3,15 @@
 #include <memory>
 #include <utility>
 #include <vector>
+
 #include "parser/expression/abstract_expression.h"
 
-namespace terrier::parser {
+namespace noisepage::parser {
 /**
  * TypeCastExpression represents cast expressions of the form CAST(expr) or expr::TYPE.
+ * TypeCastExpression should not exist beyond the optimizer, and the child should be used instead.
+ * The role of a TypeCastExpression is to annotate the type of expr from above in the BinderSherpa.
+ * For example, Postgres does not allow CAST('1+1' AS BIGINT) nor '1+1'::BIGINT, throwing error 22P02.
  */
 class TypeCastExpression : public AbstractExpression {
   // TODO(Ling):  Do we need a separate class for operator_cast? We can put it in operatorExpression
@@ -34,9 +38,9 @@ class TypeCastExpression : public AbstractExpression {
   std::unique_ptr<AbstractExpression> CopyWithChildren(
       std::vector<std::unique_ptr<AbstractExpression>> &&children) const override;
 
-  void Accept(common::ManagedPointer<binder::SqlNodeVisitor> v) override { v->Visit(common::ManagedPointer(this)); }
+  void Accept(common::ManagedPointer<binder::SqlNodeVisitor> v) override;
 };
 
 DEFINE_JSON_HEADER_DECLARATIONS(TypeCastExpression);
 
-}  // namespace terrier::parser
+}  // namespace noisepage::parser

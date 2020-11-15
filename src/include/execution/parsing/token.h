@@ -2,15 +2,7 @@
 
 #include <cstdint>
 
-#ifdef TRUE
-#undef TRUE
-#endif
-
-#ifdef FALSE
-#undef FALSE
-#endif
-
-namespace terrier::execution::parsing {
+namespace noisepage::execution::parsing {
 
 #undef NIL  // pg_list.h defined this symbol, but TPL uses it as a different symbol so need to undef it
 
@@ -72,7 +64,6 @@ namespace terrier::execution::parsing {
   K(FUN, "fun", 0)                                 \
   K(IF, "if", 0)                                   \
   K(IN, "in", 0)                                   \
-  K(LAMBDA, "lambda", 0)                           \
   K(MAP, "map", 0)                                 \
   K(NIL, "nil", 0)                                 \
   K(RETURN, "return", 0)                           \
@@ -166,4 +157,4 @@ class Token {
   static const uint32_t TOKEN_PRECEDENCES[];
 };
 
-}  // namespace terrier::execution::parsing
+}  // namespace noisepage::execution::parsing

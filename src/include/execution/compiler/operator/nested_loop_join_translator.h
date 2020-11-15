@@ -2,11 +2,11 @@
 
 #include "execution/compiler/operator/operator_translator.h"
 
-namespace terrier::planner {
+namespace noisepage::planner {
 class NestedLoopJoinPlanNode;
-}  // namespace terrier::planner
+}  // namespace noisepage::planner
 
-namespace terrier::execution::compiler {
+namespace noisepage::execution::compiler {
 
 /**
  * A translator for nested-loop joins.
@@ -23,6 +23,8 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
   NestedLoopJoinTranslator(const planner::NestedLoopJoinPlanNode &plan, CompilationContext *compilation_context,
                            Pipeline *pipeline);
 
+  void RegisterNeedValue(const OperatorTranslator *requester, uint32_t child_idx, uint32_t attr_idx) override;
+
   /**
    * Generate the join condition from the two child inputs.
    * @param context The context of the work.
@@ -34,9 +36,11 @@ class NestedLoopJoinTranslator : public OperatorTranslator {
     UNREACHABLE("Nested-loop joins do not produce columns from base tables.");
   }
 
+  bool IsCountersPassThrough() const override { return true; }
+
  private:
   // Get the NLJ plan node.
   const planner::NestedLoopJoinPlanNode &GetNLJPlan() const { return GetPlanAs<planner::NestedLoopJoinPlanNode>(); }
 };
 
-}  // namespace terrier::execution::compiler
+}  // namespace noisepage::execution::compiler
