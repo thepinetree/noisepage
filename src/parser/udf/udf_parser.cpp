@@ -69,6 +69,11 @@ std::unique_ptr<FunctionAST> PLpgSQLParser::ParsePLpgSQL(std::vector<std::string
     throw PARSER_EXCEPTION("Function list has size other than 1");
   }
 
+  size_t i = 0;
+  for(auto udf_name : param_names){
+    udf_ast_context_->AddVariable(udf_name);
+    udf_ast_context_->SetVariableType(udf_name, param_types[i++]);
+  }
   const auto function = function_list[0][kPLpgSQL_function];
   std::unique_ptr<FunctionAST> function_ast(
       new FunctionAST(ParseFunction(function), std::move(param_names), std::move(param_types)));
@@ -229,14 +234,14 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseSQL(const nlohmann::json &sql_stmt)
     PARSER_LOG_DEBUG("Bad SQL statement");
     return nullptr;
   }
-  try {
-    // TODO(Matt): I don't think the binder should need the database name. It's already bound in the ConnectionContext
-    binder::BindNodeVisitor visitor(accessor_, db_oid_);
-    visitor.BindNameToNode(common::ManagedPointer(parse_result), nullptr, nullptr);
-  } catch (BinderException &b) {
-    PARSER_LOG_DEBUG("Bad SQL statement");
-    return nullptr;
-  }
+//  try {
+//    // TODO(Matt): I don't think the binder should need the database name. It's already bound in the ConnectionContext
+//    binder::BindNodeVisitor visitor(accessor_, db_oid_);
+//    visitor.BindNameToNode(common::ManagedPointer(parse_result), nullptr, nullptr);
+//  } catch (BinderException &b) {
+//    PARSER_LOG_DEBUG("Bad SQL statement");
+//    return nullptr;
+//  }
 
 
 

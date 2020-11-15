@@ -3,6 +3,8 @@
 #include "execution/ast/type.h"
 #include "execution/sema/sema.h"
 
+#include <iostream>
+
 namespace terrier::execution::sema {
 
 namespace {
@@ -1435,7 +1437,7 @@ void Sema::CheckBuiltinVectorFilterCall(ast::CallExpr *call) {
   }
 
   // The fourth argument is either an integer or a pointer to a generic value.
-  if (!call_args[3]->GetType()->IsSpecificBuiltin(int32_kind)
+  if (!call_args[3]->GetType()->IsSpecificBuiltin(int32_kind) && !call_args[3]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Integer)
       && !call_args[3]->GetType()->IsPointerType() && !call_args[3]->GetType()->GetPointeeType()->IsSqlValueType()) {
     ReportIncorrectCallArg(call, 3, GetBuiltinType(int32_kind));
     return;
@@ -2373,9 +2375,9 @@ void Sema::CheckBuiltinAbortCall(ast::CallExpr *call) {
 }
 
 void Sema::CheckBuiltinParamCall(ast::CallExpr *call, ast::Builtin builtin) {
-  if (!CheckArgCount(call, 2)) {
-    return;
-  }
+//  if (!CheckArgCount(call, 1)) {
+//    return;
+//  }
 
   // first argument is an exec ctx
   auto exec_ctx_kind = ast::BuiltinType::ExecutionContext;
@@ -2385,48 +2387,91 @@ void Sema::CheckBuiltinParamCall(ast::CallExpr *call, ast::Builtin builtin) {
   }
 
   // second argument is the index of the parameter
-  if (!call->Arguments()[1]->GetType()->IsIntegerType()) {
-    ReportIncorrectCallArg(call, 0, GetBuiltinType(ast::BuiltinType::Kind::Uint32));
+  if(builtin < ast::Builtin::StartNewParams) {
+    if (!call->Arguments()[1]->GetType()->IsIntegerType()) {
+      ReportIncorrectCallArg(call, 1, GetBuiltinType(ast::BuiltinType::Kind::Uint32));
+      return;
+    }
+    // Type output sql value
+    ast::BuiltinType::Kind sql_type;
+    switch (builtin) {
+      case ast::Builtin::GetParamBool: {
+        sql_type = ast::BuiltinType::Boolean;
+        break;
+      }
+      case ast::Builtin::GetParamTinyInt:
+      case ast::Builtin::GetParamSmallInt:
+      case ast::Builtin::GetParamInt:
+      case ast::Builtin::GetParamBigInt: {
+        sql_type = ast::BuiltinType::Integer;
+        break;
+      }
+      case ast::Builtin::GetParamReal:
+      case ast::Builtin::GetParamDouble: {
+        sql_type = ast::BuiltinType::Real;
+        break;
+      }
+      case ast::Builtin::GetParamDate: {
+        sql_type = ast::BuiltinType::Date;
+        break;
+      }
+      case ast::Builtin::GetParamTimestamp: {
+        sql_type = ast::BuiltinType::Timestamp;
+        break;
+      }
+      case ast::Builtin::GetParamString: {
+        sql_type = ast::BuiltinType::StringVal;
+        break;
+      }
+      default:
+        UNREACHABLE("Undefined parameter call!!");
+    }
+
+    // Return sql type
+    call->SetType(ast::BuiltinType::Get(GetContext(), sql_type));
     return;
+  }else{
+    if(builtin > ast::Builtin::FinishNewParams){
+      ast::BuiltinType::Kind add_sql_type;
+      switch (builtin) {
+        case ast::Builtin::AddParamBool: {
+          add_sql_type = ast::BuiltinType::Boolean;
+          break;
+        }
+        case ast::Builtin::AddParamTinyInt:
+        case ast::Builtin::AddParamSmallInt:
+        case ast::Builtin::AddParamInt:
+        case ast::Builtin::AddParamBigInt: {
+          add_sql_type = ast::BuiltinType::Integer;
+          break;
+        }
+        case ast::Builtin::AddParamReal:
+        case ast::Builtin::AddParamDouble: {
+          add_sql_type = ast::BuiltinType::Real;
+          break;
+        }
+        case ast::Builtin::AddParamDate: {
+          add_sql_type = ast::BuiltinType::Date;
+          break;
+        }
+        case ast::Builtin::AddParamTimestamp: {
+          add_sql_type = ast::BuiltinType::Timestamp;
+          break;
+        }
+        case ast::Builtin::AddParamString: {
+          add_sql_type = ast::BuiltinType::StringVal;
+          break;
+        }
+        default:
+          UNREACHABLE("Undefined parameter call!!");
+      }
+      if (!IsPointerToSpecificBuiltin(call->Arguments()[1]->GetType(), add_sql_type)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(add_sql_type)->PointerTo());
+        return;
+      }
+    }
   }
-
-  // Type output sql value
-  ast::BuiltinType::Kind sql_type;
-  switch (builtin) {
-    case ast::Builtin::GetParamBool: {
-      sql_type = ast::BuiltinType::Boolean;
-      break;
-    }
-    case ast::Builtin::GetParamTinyInt:
-    case ast::Builtin::GetParamSmallInt:
-    case ast::Builtin::GetParamInt:
-    case ast::Builtin::GetParamBigInt: {
-      sql_type = ast::BuiltinType::Integer;
-      break;
-    }
-    case ast::Builtin::GetParamReal:
-    case ast::Builtin::GetParamDouble: {
-      sql_type = ast::BuiltinType::Real;
-      break;
-    }
-    case ast::Builtin::GetParamDate: {
-      sql_type = ast::BuiltinType::Date;
-      break;
-    }
-    case ast::Builtin::GetParamTimestamp: {
-      sql_type = ast::BuiltinType::Timestamp;
-      break;
-    }
-    case ast::Builtin::GetParamString: {
-      sql_type = ast::BuiltinType::StringVal;
-      break;
-    }
-    default:
-      UNREACHABLE("Undefined parameter call!!");
-  }
-
-  // Return sql type
-  call->SetType(ast::BuiltinType::Get(GetContext(), sql_type));
+  call->SetType(ast::BuiltinType::Get(GetContext(), ast::BuiltinType::Nil));
 }
 
 void Sema::CheckBuiltinStringCall(ast::CallExpr *call, ast::Builtin builtin) {
@@ -3127,7 +3172,19 @@ void Sema::CheckBuiltinCall(ast::CallExpr *call) {
     case ast::Builtin::GetParamDouble:
     case ast::Builtin::GetParamDate:
     case ast::Builtin::GetParamTimestamp:
-    case ast::Builtin::GetParamString: {
+    case ast::Builtin::GetParamString:
+    case ast::Builtin::AddParamBool:
+    case ast::Builtin::AddParamTinyInt:
+    case ast::Builtin::AddParamSmallInt:
+    case ast::Builtin::AddParamInt:
+    case ast::Builtin::AddParamBigInt:
+    case ast::Builtin::AddParamReal:
+    case ast::Builtin::AddParamDouble:
+    case ast::Builtin::AddParamDate:
+    case ast::Builtin::AddParamTimestamp:
+    case ast::Builtin::AddParamString:
+    case ast::Builtin::StartNewParams:
+    case ast::Builtin::FinishNewParams: {
       CheckBuiltinParamCall(call, builtin);
       break;
     }

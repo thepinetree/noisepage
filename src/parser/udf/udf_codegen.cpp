@@ -142,7 +142,7 @@ void UDFCodegen::Visit(FunctionAST *ast) {
 void UDFCodegen::Visit(VariableExprAST *ast) {
     auto it = str_to_ident_.find(ast->name);
     TERRIER_ASSERT(it != str_to_ident_.end(), "variable not declared");
-  dst_ = codegen_->MakeExpr(it->second);
+    dst_ = codegen_->MakeExpr(it->second);
   }
 
 void UDFCodegen::Visit(ValueExprAST *ast) {
@@ -290,7 +290,13 @@ void UDFCodegen::Visit(RetStmtAST *ast) {
 void UDFCodegen::Visit(SQLStmtAST *ast) {
   needs_exec_ctx_ = true;
   const auto query = common::ManagedPointer(ast->query);
+
+  // TODO(Matt): I don't think the binder should need the database name. It's already bound in the ConnectionContext
+  binder::BindNodeVisitor visitor(common::ManagedPointer(accessor_), db_oid_);
+  auto query_params = visitor.BindAndGetUDFParams(query, common::ManagedPointer(udf_ast_context_));
+
   auto stats = optimizer::StatsStorage();
+
   std::unique_ptr<planner::AbstractPlanNode> plan = trafficcop::TrafficCopUtil::Optimize(accessor_->GetTxn(),
                                                    common::ManagedPointer(accessor_), query, db_oid_, common::ManagedPointer(&stats),
                                                                                          std::make_unique<optimizer::TrivialCostModel>(), 1000000);
@@ -332,8 +338,60 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
   auto query_state = codegen_->MakeFreshIdentifier("query_state");
   fb_->Append(codegen_->DeclareVarNoInit(query_state,
                              codegen_->MakeExpr(exec_query->GetQueryStateType()->Name())));
+  // set its execution context to whatever exec context was passed in here
+  auto exec_ctx = fb_->GetParameterByPosition(0);
+  fb_->Append(codegen_->CallBuiltin(execution::ast::Builtin::StartNewParams, {exec_ctx}));
+  std::vector<std::unordered_map<std::string, size_t>::iterator> sorted_vec;
+  for(auto it = query_params.begin();it != query_params.end();it++){
+    sorted_vec.push_back(it);
+  }
+
+  std::sort(sorted_vec.begin(), sorted_vec.end(), [](auto x, auto y){ return x->second < y->second; });
+  for(auto entry : sorted_vec){
+    // TODO(order these dudes)
+    type::TypeId type;
+    auto ret = udf_ast_context_->GetVariableType(entry->first, &type);
+    TERRIER_ASSERT(ret, "didn't find param in udf ast context");
+
+    execution::ast::Builtin builtin;
+    switch (type) {
+      case type::TypeId::BOOLEAN:
+        builtin = execution::ast::Builtin::AddParamBool;
+        break;
+      case type::TypeId::TINYINT:
+        builtin = execution::ast::Builtin::AddParamTinyInt;
+        break;
+      case type::TypeId::SMALLINT:
+        builtin = execution::ast::Builtin::AddParamSmallInt;
+        break;
+      case type::TypeId::INTEGER:
+        builtin = execution::ast::Builtin::AddParamInt;
+        break;
+      case type::TypeId::BIGINT:
+        builtin = execution::ast::Builtin::AddParamBigInt;
+        break;
+      case type::TypeId::DECIMAL:
+        builtin = execution::ast::Builtin::AddParamDouble;
+        break;
+      case type::TypeId::DATE:
+        builtin = execution::ast::Builtin::AddParamDate;
+        break;
+      case type::TypeId::TIMESTAMP:
+        builtin = execution::ast::Builtin::AddParamTimestamp;
+        break;
+      case type::TypeId::VARCHAR:
+        builtin = execution::ast::Builtin::AddParamString;
+        break;
+      default:
+        UNREACHABLE("Unsupported parameter type");
+    }
+    fb_->Append(codegen_->CallBuiltin(builtin, {exec_ctx, codegen_->AddressOf(codegen_->MakeExpr(str_to_ident_[entry->first]))}));
+  }
+  // set param 1
+  // set param 2
+  // etc etc
   fb_->Append(codegen_->Assign(codegen_->AccessStructMember(codegen_->MakeExpr(query_state), codegen_->MakeIdentifier("execCtx")),
-                               fb_->GetParameterByPosition(0)));
+                               exec_ctx));
   // set its execution context to whatever exec context was passed in here
 
   for(auto &sub_fn : fns){
@@ -346,6 +404,8 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
                                  {codegen_->AddressOf(query_state)}));
     }
   }
+
+  fb_->Append(codegen_->CallBuiltin(execution::ast::Builtin::FinishNewParams, {exec_ctx}));
 
   return;
 }

@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "parser/expression/constant_value_expression.h"
 #include "common/managed_pointer.h"
 #include "execution/exec/output.h"
 #include "execution/exec_defs.h"
@@ -112,6 +113,20 @@ class EXPORT ExecutionContext {
    */
   void EndPipelineTracker(query_id_t query_id, pipeline_id_t pipeline_id);
 
+  void StartParams(){
+    udf_param_stack_.push_back({});
+  }
+
+  void PopParams() {
+    udf_param_stack_.pop_back();
+  }
+
+  template <typename T>
+  void AddParam(T *val){
+    // figure out how to get the typeid
+    udf_param_stack_.back().emplace_back(type::TypeId::INTEGER, *val);
+  }
+
   /**
    * @return the db oid
    */
@@ -143,7 +158,9 @@ class EXPORT ExecutionContext {
    * @param param_idx index of parameter to access
    * @return immutable parameter at provided index
    */
-  const parser::ConstantValueExpression &GetParam(uint32_t param_idx) const;
+  const parser::ConstantValueExpression &GetParam(uint32_t param_idx) const {  return udf_param_stack_.empty()
+                                                                               ? (*params_)[param_idx]
+                                                                                : udf_param_stack_.back()[param_idx]; }
 
   /**
    * INSERT, UPDATE, and DELETE queries return a number for the rows affected, so this should be incremented in the root
@@ -177,6 +194,9 @@ class EXPORT ExecutionContext {
   common::ManagedPointer<brain::PipelineOperatingUnits> pipeline_operating_units_;
   common::ManagedPointer<catalog::CatalogAccessor> accessor_;
   common::ManagedPointer<const std::vector<parser::ConstantValueExpression>> params_;
+
+  // for UDF's
+  std::vector<std::vector<parser::ConstantValueExpression>> udf_param_stack_;
   uint8_t execution_mode_;
   uint64_t rows_affected_ = 0;
 };

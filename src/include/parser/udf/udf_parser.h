@@ -39,8 +39,8 @@ class PLpgSQLParser {
   std::unique_ptr<ExprAST> ParseExpr(common::ManagedPointer<parser::AbstractExpression>);
 
   common::ManagedPointer<UDFASTContext> udf_ast_context_;
-  const common::ManagedPointer<catalog::CatalogAccessor> accessor_;
-  catalog::db_oid_t db_oid_;
+  UNUSED_ATTRIBUTE const common::ManagedPointer<catalog::CatalogAccessor> accessor_;
+  UNUSED_ATTRIBUTE catalog::db_oid_t db_oid_;
 //  common::ManagedPointer<parser::PostgresParser> sql_parser_;
   std::unordered_map<std::string, type::TypeId> symbol_table_;
 };

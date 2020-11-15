@@ -11,6 +11,7 @@ std::unique_ptr<AbstractExpression> ColumnValueExpression::Copy() const {
   expr->SetDatabaseOID(this->database_oid_);
   expr->SetTableOID(this->table_oid_);
   expr->SetColumnOID(this->column_oid_);
+  expr->SetParamIdx(param_idx_);
   return expr;
 }
 
@@ -22,6 +23,7 @@ common::hash_t ColumnValueExpression::Hash() const {
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(database_oid_));
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(table_oid_));
   hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(column_oid_));
+  hash = common::HashUtil::CombineHashes(hash, common::HashUtil::Hash(param_idx_));
   return hash;
 }
 
@@ -34,6 +36,7 @@ bool ColumnValueExpression::operator==(const AbstractExpression &rhs) const {
   if (GetTableName() != other.GetTableName()) return false;
   if (GetColumnOid() != other.GetColumnOid()) return false;
   if (GetTableOid() != other.GetTableOid()) return false;
+  if (param_idx_ != other.GetParamIdx()) return false;
   return GetDatabaseOid() == other.GetDatabaseOid();
 }
 

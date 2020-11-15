@@ -56,8 +56,5 @@ void ExecutionContext::EndPipelineTracker(query_id_t query_id, pipeline_id_t pip
   }
 }
 
-const parser::ConstantValueExpression &ExecutionContext::GetParam(const uint32_t param_idx) const {
-  return (*params_)[param_idx];
-}
 
 }  // namespace terrier::execution::exec

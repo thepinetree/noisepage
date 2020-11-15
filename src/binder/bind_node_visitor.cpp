@@ -59,6 +59,18 @@ void BindNodeVisitor::BindNameToNode(
       common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
 }
 
+std::unordered_map<std::string, size_t> BindNodeVisitor::BindAndGetUDFParams(common::ManagedPointer<parser::ParseResult> parse_result,
+                                                            common::ManagedPointer<parser::udf::UDFASTContext> udf_ast_context)
+{
+  TERRIER_ASSERT(parse_result != nullptr, "We shouldn't be trying to bind something without a ParseResult.");
+  sherpa_ = std::make_unique<BinderSherpa>(parse_result, nullptr, nullptr);
+  TERRIER_ASSERT(sherpa_->GetParseResult()->GetStatements().size() == 1, "Binder can only bind one at a time.");
+  udf_ast_context_ = udf_ast_context;
+  sherpa_->GetParseResult()->GetStatement(0)->Accept(
+      common::ManagedPointer(this).CastManagedPointerTo<SqlNodeVisitor>());
+  return udf_params_;
+}
+
 void BindNodeVisitor::Visit(common::ManagedPointer<parser::AnalyzeStatement> node) {
   BINDER_LOG_TRACE("Visiting AnalyzeStatement ...");
   SqlNodeVisitor::Visit(node);
@@ -591,6 +603,16 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::ColumnValueExpression
 
     // Table name not specified in the expression. Loop through all the table in the binder context.
     if (table_name.empty()) {
+      type::TypeId type;
+      if(udf_ast_context_ != nullptr && udf_ast_context_->GetVariableType(expr->GetColumnName(), &type)) {
+        expr->SetReturnValueType(type);
+        auto idx = 0;
+        if (udf_params_.count(expr->GetColumnName()) == 0) {
+          udf_params_[expr->GetColumnName()] = udf_params_.size();
+          idx = udf_params_.size() - 1;
+        }
+        expr->SetParamIdx(idx);
+      }else
       if (context_ == nullptr || !context_->SetColumnPosTuple(expr)) {
         throw BINDER_EXCEPTION(fmt::format("column \"{}\" does not exist", col_name),
                                common::ErrorCode::ERRCODE_UNDEFINED_COLUMN);
@@ -618,6 +640,20 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::ComparisonExpression>
   SqlNodeVisitor::Visit(expr);
   sherpa_->CheckDesiredType(expr.CastManagedPointerTo<parser::AbstractExpression>());
   sherpa_->SetDesiredTypePair(expr->GetChild(0), expr->GetChild(1));
+
+  for(size_t i = 0;i < expr->GetChildrenSize();i++){
+    auto child = expr->GetChild(i);
+    if(child->GetExpressionType() == parser::ExpressionType::COLUMN_VALUE){
+      auto index = child.CastManagedPointerTo<parser::ColumnValueExpression>()->GetParamIdx();
+      if(index >= 0){
+        // replace with PVE
+        std::unique_ptr<parser::AbstractExpression> pve = std::make_unique<parser::ParameterValueExpression>(index);
+        pve->SetReturnValueType(child->GetReturnValueType());
+        expr->SetChild(i, common::ManagedPointer(pve));
+        sherpa_->GetParseResult()->AddExpression(std::move(pve));
+      }
+    }
+  }
   SqlNodeVisitor::Visit(expr);
 }
 
@@ -682,6 +718,9 @@ void BindNodeVisitor::Visit(common::ManagedPointer<parser::OperatorExpression> e
 void BindNodeVisitor::Visit(common::ManagedPointer<parser::ParameterValueExpression> expr) {
   BINDER_LOG_TRACE("Visiting ParameterValueExpression ...");
   SqlNodeVisitor::Visit(expr);
+  if(sherpa_ == nullptr || sherpa_->GetParameters() == nullptr){
+    return;
+  }
   const common::ManagedPointer<parser::ConstantValueExpression> param =
       common::ManagedPointer(&((*(sherpa_->GetParameters()))[expr->GetValueIdx()]));
   const auto desired_type = sherpa_->GetDesiredType(expr.CastManagedPointerTo<parser::AbstractExpression>());

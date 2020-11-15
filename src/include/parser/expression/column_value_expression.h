@@ -107,6 +107,8 @@ class ColumnValueExpression : public AbstractExpression {
   /** @return column oid */
   catalog::col_oid_t GetColumnOid() const { return column_oid_; }
 
+  int32_t GetParamIdx() const { return param_idx_; }
+
   /**
    * Get Column Full Name [tbl].[col]
    */
@@ -164,6 +166,8 @@ class ColumnValueExpression : public AbstractExpression {
    */
   std::vector<std::unique_ptr<AbstractExpression>> FromJson(const nlohmann::json &j) override;
 
+  void SetParamIdx(uint32_t param_idx) { param_idx_ = static_cast<int32_t>(param_idx); }
+
  private:
   friend class binder::BinderContext;
   /** @param database_oid Database OID to be assigned to this expression */
@@ -190,6 +194,8 @@ class ColumnValueExpression : public AbstractExpression {
 
   /** OID of the column */
   catalog::col_oid_t column_oid_ = catalog::INVALID_COLUMN_OID;
+
+  int32_t param_idx_{-1};
 };
 
 DEFINE_JSON_HEADER_DECLARATIONS(ColumnValueExpression);

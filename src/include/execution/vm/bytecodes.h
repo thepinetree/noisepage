@@ -623,6 +623,18 @@ namespace terrier::execution::vm {
   F(GetParamDateVal, OperandType::Local, OperandType::Local, OperandType::Local)                                      \
   F(GetParamTimestampVal, OperandType::Local, OperandType::Local, OperandType::Local)                                 \
   F(GetParamString, OperandType::Local, OperandType::Local, OperandType::Local)                                       \
+  F(AddParamBool, OperandType::Local, OperandType::Local)                                         \
+  F(AddParamTinyInt, OperandType::Local, OperandType::Local)                                      \
+  F(AddParamSmallInt, OperandType::Local, OperandType::Local)                                     \
+  F(AddParamInt, OperandType::Local, OperandType::Local)                                          \
+  F(AddParamBigInt, OperandType::Local, OperandType::Local)                                       \
+  F(AddParamReal, OperandType::Local, OperandType::Local)                                         \
+  F(AddParamDouble, OperandType::Local, OperandType::Local)                                       \
+  F(AddParamDateVal, OperandType::Local, OperandType::Local)                                      \
+  F(AddParamTimestampVal, OperandType::Local, OperandType::Local)                                 \
+  F(AddParamString, OperandType::Local, OperandType::Local)                                       \
+  F(StartNewParams, OperandType::Local)                                                           \
+  F(FinishParams, OperandType::Local)                                                             \
                                                                                                                       \
   /* FOR TESTING ONLY */                                                                                              \
   F(TestCatalogLookup, OperandType::Local, OperandType::Local, OperandType::StaticLocal, OperandType::UImm4,          \

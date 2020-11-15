@@ -135,7 +135,7 @@ class BytecodeGenerator::BytecodePositionScope {
 // Bytecode Generator begins
 // ---------------------------------------------------------
 
-BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_) {functions_.reserve(10);}
+BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_) {functions_.reserve(20);}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   IfThenElseBuilder if_builder(this);
@@ -2297,8 +2297,14 @@ void BytecodeGenerator::VisitBuiltinStorageInterfaceCall(ast::CallExpr *call, as
 
 void BytecodeGenerator::VisitBuiltinParamCall(ast::CallExpr *call, ast::Builtin builtin) {
   LocalVar exec_ctx = VisitExpressionForRValue(call->Arguments()[0]);
-  LocalVar param_idx = VisitExpressionForRValue(call->Arguments()[1]);
-  LocalVar ret = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  LocalVar param_idx;
+  if(builtin !=  ast::Builtin::StartNewParams && builtin != ast::Builtin::FinishNewParams) {
+    param_idx = VisitExpressionForRValue(call->Arguments()[1]);
+  }
+  LocalVar ret;
+  if (builtin < ast::Builtin::StartNewParams) {
+    ret = GetExecutionResult()->GetOrCreateDestination(call->GetType());
+  }
   switch (builtin) {
     case ast::Builtin::GetParamBool:
       GetEmitter()->Emit(Bytecode::GetParamBool, ret, exec_ctx, param_idx);
@@ -2329,6 +2335,42 @@ void BytecodeGenerator::VisitBuiltinParamCall(ast::CallExpr *call, ast::Builtin 
       break;
     case ast::Builtin::GetParamString:
       GetEmitter()->Emit(Bytecode::GetParamString, ret, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamBool:
+      GetEmitter()->Emit(Bytecode::AddParamBool, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamTinyInt:
+      GetEmitter()->Emit(Bytecode::AddParamTinyInt, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamSmallInt:
+      GetEmitter()->Emit(Bytecode::AddParamSmallInt, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamInt:
+      GetEmitter()->Emit(Bytecode::AddParamInt, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamBigInt:
+      GetEmitter()->Emit(Bytecode::AddParamBigInt, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamReal:
+      GetEmitter()->Emit(Bytecode::AddParamReal, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamDouble:
+      GetEmitter()->Emit(Bytecode::AddParamDouble, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamDate:
+      GetEmitter()->Emit(Bytecode::AddParamDateVal, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamTimestamp:
+      GetEmitter()->Emit(Bytecode::AddParamTimestampVal, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::AddParamString:
+      GetEmitter()->Emit(Bytecode::AddParamString, exec_ctx, param_idx);
+      break;
+    case ast::Builtin::StartNewParams:
+      GetEmitter()->Emit(Bytecode::StartNewParams, exec_ctx);
+      break;
+    case ast::Builtin::FinishNewParams:
+      GetEmitter()->Emit(Bytecode::FinishParams, exec_ctx);
       break;
     default:
       UNREACHABLE("Impossible parameter call!");
@@ -2777,7 +2819,19 @@ void BytecodeGenerator::VisitBuiltinCallExpr(ast::CallExpr *call) {
     case ast::Builtin::GetParamDouble:
     case ast::Builtin::GetParamDate:
     case ast::Builtin::GetParamTimestamp:
-    case ast::Builtin::GetParamString: {
+    case ast::Builtin::GetParamString:
+    case ast::Builtin::AddParamBool:
+    case ast::Builtin::AddParamTinyInt:
+    case ast::Builtin::AddParamSmallInt:
+    case ast::Builtin::AddParamInt:
+    case ast::Builtin::AddParamBigInt:
+    case ast::Builtin::AddParamReal:
+    case ast::Builtin::AddParamDouble:
+    case ast::Builtin::AddParamDate:
+    case ast::Builtin::AddParamTimestamp:
+    case ast::Builtin::AddParamString:
+    case ast::Builtin::StartNewParams:
+    case ast::Builtin::FinishNewParams: {
       VisitBuiltinParamCall(call, builtin);
       break;
     }
