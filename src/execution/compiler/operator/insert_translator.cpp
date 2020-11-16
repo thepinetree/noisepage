@@ -58,6 +58,7 @@ void InsertTranslator::PerformPipelineWork(WorkContext *context, FunctionBuilder
   // col_oids[i] = ...
   // var inserter : StorageInterface
   // @storageInterfaceInit(inserter, execCtx, table_oid, col_oids, true)
+  DeclareInserter(function);
   // var insert_pr : *ProjectedRow
   DeclareInsertPR(function);
 
@@ -94,7 +95,8 @@ void InsertTranslator::DeclareInserter(noisepage::execution::compiler::FunctionB
   // var inserter : StorageInterface
   // @storageInterfaceInit(inserter, execCtx, table_oid, col_oids, true)
   ast::Expr *inserter_setup = GetCodeGen()->StorageInterfaceInit(
-      inserter_.GetPtr(GetCodeGen()), GetExecutionContext(), GetPlanAs<planner::InsertPlanNode>().GetTableOid().UnderlyingValue(), col_oids_,
+      inserter_.GetPtr(GetCodeGen()), GetExecutionContext(),
+      GetPlanAs<planner::InsertPlanNode>().GetTableOid().UnderlyingValue(), col_oids_,
       true);
   builder->Append(GetCodeGen()->MakeStmt(inserter_setup));
 }

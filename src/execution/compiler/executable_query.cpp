@@ -40,6 +40,7 @@ void ExecutableQuery::Fragment::Run(byte query_state[], vm::ExecutionMode mode) 
   }
   for (const auto &func_name : functions_) {
     Function func;
+    std::cout << "running " << func_name << "\n";
     if (!module_->GetFunction(func_name, mode, &func)) {
       throw EXECUTION_EXCEPTION(fmt::format("Could not find function '{}' in query fragment.", func_name),
                                 common::ErrorCode::ERRCODE_INTERNAL_ERROR);

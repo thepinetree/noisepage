@@ -1,4 +1,7 @@
 #include "parser/expression/column_value_expression.h"
+
+#include "binder/sql_node_visitor.h"
+#include "common/hash_util.h"
 #include "common/json.h"
 
 namespace noisepage::parser {

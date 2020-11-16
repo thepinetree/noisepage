@@ -237,7 +237,7 @@ void Sema::VisitFunctionLitExpr(ast::FunctionLitExpr *node) {
     auto &params = func_type->GetParams();
     auto captures = params[params.size() - 1];
     auto capture_type = captures.type_->As<ast::StructType>();
-    for(auto field : capture_type->GetFields()){
+    for(auto field : capture_type->GetFieldsWithoutPadding()){
       GetCurrentScope()->Declare(field.name_, field.type_->GetPointeeType()->ReferenceTo());
     }
   }
@@ -428,7 +428,7 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
 
   ast::Type *member_type = obj_type->As<ast::StructType>()->LookupFieldByName(member);
 //  if(member_type == nullptr) {
-    for (auto &f : obj_type->As<ast::StructType>()->GetFields()) {
+    for (auto &f : obj_type->As<ast::StructType>()->GetAllFields()) {
       std::cout << f.name_.GetData() << " " << (void *)f.name_.GetData() << "\n";
     }
 //  }

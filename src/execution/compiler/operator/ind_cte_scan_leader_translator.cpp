@@ -173,7 +173,12 @@ void IndCteScanLeaderTranslator::FillPRFromChild(WorkContext *context, FunctionB
     auto val = GetChildOutput(context, child_idx, col_ind);
     // TODO(Rohan): Figure how to get the general schema of a child node in case the field is Nullable
     // Right now it is only Non Null
-    auto pr_set_call = codegen->PRSet(codegen->MakeExpr(insert_pr_), col.Type(), false, col_ind, val, true);
+    auto insertion_val = codegen->MakeFreshIdentifier("set-val");
+    auto set_decl = codegen->DeclareVar(insertion_val,
+                                        codegen->TplType(execution::sql::GetTypeId(col.Type())), val);
+    builder->Append(set_decl);
+    auto pr_set_call = codegen->PRSet(codegen->MakeExpr(insert_pr_), col.Type(), false, col_ind,
+                                      codegen->AddressOf(insertion_val), true);
     builder->Append(codegen->MakeStmt(pr_set_call));
   }
 }

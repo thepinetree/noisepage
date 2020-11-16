@@ -94,7 +94,7 @@ CompilationContext::CompilationContext(ExecutableQuery *query, catalog::CatalogA
       query_state_type_(codegen_.MakeIdentifier(output_callback == nullptr ? "QueryState"
                                                                            : output_callback->GetName().GetString() + "QueryState")),
       query_state_(query_state_type_, [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }),
-      output_callback_(output_callback) {}
+      output_callback_(output_callback),
       counters_enabled_(settings.GetIsCountersEnabled()),
       pipeline_metrics_enabled_(settings.GetIsPipelineMetricsEnabled()) {}
 

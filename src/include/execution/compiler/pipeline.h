@@ -140,7 +140,7 @@ class Pipeline {
    * Generate all functions to execute this pipeline in the provided container.
    * @param builder The builder for the executable query container.
    */
-  void GeneratePipeline(ExecutableQueryFragmentBuilder *builder, ast::LambdaExpr *output_callback = nullptr) const;
+  void GeneratePipeline(ExecutableQueryFragmentBuilder *builder, query_id_t query_id, ast::LambdaExpr *output_callback = nullptr) const;
 
   /**
    * @return True if the pipeline is parallel; false otherwise.
@@ -241,6 +241,8 @@ class Pipeline {
   ast::Identifier GetTearDownPipelineStateFunctionName() const;
   ast::Identifier GetWorkFunctionName() const;
 
+  ast::FunctionDecl *GeneratePipelineWrapperFunction(ast::LambdaExpr *output_callback) const;
+
   // Generate the pipeline state initialization logic.
   ast::FunctionDecl *GenerateSetupPipelineStateFunction() const;
 
@@ -248,16 +250,16 @@ class Pipeline {
   ast::FunctionDecl *GenerateTearDownPipelineStateFunction() const;
 
   // Generate pipeline initialization logic.
-  ast::FunctionDecl *GenerateInitPipelineFunction() const;
+  ast::FunctionDecl *GenerateInitPipelineFunction(ast::LambdaExpr *output_callback) const;
 
   // Generate the main pipeline work function.
   ast::FunctionDecl *GeneratePipelineWorkFunction(ast::LambdaExpr *output_callback) const;
 
   // Generate the main pipeline logic.
-  ast::FunctionDecl *GenerateRunPipelineFunction(ast::LambdaExpr *output_callback) const;
+  ast::FunctionDecl *GenerateRunPipelineFunction(query_id_t query_id, ast::LambdaExpr *output_callback) const;
 
   // Generate pipeline tear-down logic.
-  ast::FunctionDecl *GenerateTearDownPipelineFunction() const;
+  ast::FunctionDecl *GenerateTearDownPipelineFunction(ast::LambdaExpr *output_callback) const;
 
   void MarkNested() { nested_ = true; }
 

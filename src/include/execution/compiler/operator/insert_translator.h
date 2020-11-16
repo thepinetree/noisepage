@@ -43,7 +43,7 @@ class InsertTranslator : public OperatorTranslator, public PipelineDriver {
    * @param pipeline The current pipeline.
    * @param function The pipeline generating function.
    */
-  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {}
+  void InitializePipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override;
 
   /**
    * Implement insertion logic where it fills in the insert PR obtained from the StorageInterface struct
@@ -52,10 +52,6 @@ class InsertTranslator : public OperatorTranslator, public PipelineDriver {
    * @param function The pipeline generating function.
    */
   void PerformPipelineWork(WorkContext *context, FunctionBuilder *function) const override;
-
-  void TearDownPipelineState(const Pipeline &pipeline, FunctionBuilder *function) const override {
-    GenInserterFree(function);
-  }
 
   /**
    * @return The child's output at the given index.

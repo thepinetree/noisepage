@@ -50,9 +50,7 @@ void OutputTranslator::TearDownPipelineState(const Pipeline &pipeline, FunctionB
 
 void OutputTranslator::PerformPipelineWork(noisepage::execution::compiler::WorkContext *context,
                                            noisepage::execution::compiler::FunctionBuilder *function) const {
-  // First generate the call @resultBufferAllocRow(execCtx)
   auto out_buffer = output_buffer_.Get(GetCodeGen());
-  ast::Expr *alloc_call = GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {out_buffer});
   ast::Expr *cast_call;
   auto callback = GetCompilationContext()->GetOutputCallback();
   if(callback){
@@ -61,7 +59,7 @@ void OutputTranslator::PerformPipelineWork(noisepage::execution::compiler::WorkC
     function->Append(row_alloc);
     cast_call = GetCodeGen()->AddressOf(GetCodeGen()->MakeExpr(output));
   }else{
-    ast::Expr *alloc_call = GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {exec_ctx});
+    ast::Expr *alloc_call = GetCodeGen()->CallBuiltin(ast::Builtin::ResultBufferAllocOutRow, {out_buffer});
     cast_call = GetCodeGen()->PtrCast(output_struct_, alloc_call);
   }
   function->Append(GetCodeGen()->DeclareVar(output_var_, nullptr, cast_call));

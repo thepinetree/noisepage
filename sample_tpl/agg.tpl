@@ -63,9 +63,9 @@ fun execQuery(execCtx: *ExecutionContext, qs: *State, lam : lambda [(Integer)->n
 
 fun main(execCtx: *ExecutionContext) -> int32 {
     var count : Integer
-    count = @intToSqlInt(0)
+    count = @intToSql(0)
     var lam = lambda (x : Integer) -> nil {
-                        count = x
+                        count = count + 1
                     }
     var state: State
 
@@ -74,5 +74,8 @@ fun main(execCtx: *ExecutionContext) -> int32 {
     tearDownState(&state)
 
     var ret = state.count
-    return count
+    if(count > 9999) {
+        return 0
+    }
+    return 1
 }
