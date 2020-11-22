@@ -175,7 +175,7 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   for(auto local : locals){
     auto name = local.first;
     auto type = local.second;
-    ast::Expr *type_repr;
+    ast::Expr *type_repr = nullptr;
     if(type->IsBuiltinType()) {
       type_repr = factory->NewPointerType(SourcePosition(),
                                           factory->NewIdentifierExpr(SourcePosition(), GetContext()->GetIdentifier(ast::BuiltinType::Get(GetContext(),

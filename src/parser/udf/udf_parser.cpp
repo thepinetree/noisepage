@@ -71,7 +71,7 @@ std::unique_ptr<FunctionAST> PLpgSQLParser::ParsePLpgSQL(std::vector<std::string
 
   size_t i = 0;
   for(auto udf_name : param_names){
-    udf_ast_context_->AddVariable(udf_name);
+//    udf_ast_context_->AddVariable(udf_name);
     udf_ast_context_->SetVariableType(udf_name, param_types[i++]);
   }
   const auto function = function_list[0][kPLpgSQL_function];

@@ -2210,31 +2210,31 @@ void BytecodeGenerator::VisitBuiltinPRCall(ast::CallExpr *call, ast::Builtin bui
     }
     case ast::Builtin::PRSetRealNull: {
       auto col_idx = static_cast<uint16_t>(call->Arguments()[1]->As<ast::LitExpr>()->Int64Val());
-      LocalVar val = VisitExpressionForLValue(call->Arguments()[2]);
+      LocalVar val = VisitExpressionForRValue(call->Arguments()[2]);
       GetEmitter()->EmitPRSet(Bytecode::PRSetRealNull, pr, col_idx, val);
       break;
     }
     case ast::Builtin::PRSetDoubleNull: {
       auto col_idx = static_cast<uint16_t>(call->Arguments()[1]->As<ast::LitExpr>()->Int64Val());
-      LocalVar val = VisitExpressionForLValue(call->Arguments()[2]);
+      LocalVar val = VisitExpressionForRValue(call->Arguments()[2]);
       GetEmitter()->EmitPRSet(Bytecode::PRSetDoubleNull, pr, col_idx, val);
       break;
     }
     case ast::Builtin::PRSetDateNull: {
       auto col_idx = static_cast<uint16_t>(call->Arguments()[1]->As<ast::LitExpr>()->Int64Val());
-      LocalVar val = VisitExpressionForLValue(call->Arguments()[2]);
+      LocalVar val = VisitExpressionForRValue(call->Arguments()[2]);
       GetEmitter()->EmitPRSet(Bytecode::PRSetDateValNull, pr, col_idx, val);
       break;
     }
     case ast::Builtin::PRSetTimestampNull: {
       auto col_idx = static_cast<uint16_t>(call->Arguments()[1]->As<ast::LitExpr>()->Int64Val());
-      LocalVar val = VisitExpressionForLValue(call->Arguments()[2]);
+      LocalVar val = VisitExpressionForRValue(call->Arguments()[2]);
       GetEmitter()->EmitPRSet(Bytecode::PRSetTimestampValNull, pr, col_idx, val);
       break;
     }
     case ast::Builtin::PRSetVarlenNull: {
       auto col_idx = static_cast<uint16_t>(call->Arguments()[1]->As<ast::LitExpr>()->Int64Val());
-      LocalVar val = VisitExpressionForLValue(call->Arguments()[2]);
+      LocalVar val = VisitExpressionForRValue(call->Arguments()[2]);
       LocalVar own = VisitExpressionForRValue(call->Arguments()[3]);
       GetEmitter()->EmitPRSetVarlen(Bytecode::PRSetVarlenNull, pr, col_idx, val, own);
       break;

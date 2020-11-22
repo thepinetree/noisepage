@@ -87,7 +87,8 @@ void OutputPrinter::operator()(byte *tuples, uint32_t num_tuples, uint32_t tuple
     }
     ss << std::endl;
   }
-  EXECUTION_LOG_TRACE("Output batch {}: \n{}", printed_, ss.str());
+//  EXECUTION_LOG_TRACE("Output batch {}: \n{}", printed_, ss.str());
+  std::cout << ss.str();
   printed_++;
 }
 

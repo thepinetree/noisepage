@@ -53,9 +53,10 @@ llvm::cl::opt<bool> PRINT_TBC("print-tbc", llvm::cl::desc("Print the generated T
 llvm::cl::opt<bool> PRETTY_PRINT("pretty-print", llvm::cl::desc("Pretty-print the source from the parsed AST"), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
 llvm::cl::opt<bool> IS_SQL("sql", llvm::cl::desc("Is the input a SQL query?"), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
 llvm::cl::opt<bool> TPCH("tpch", llvm::cl::desc("Should the TPCH database be loaded? Requires '-schema' and '-data' directories."), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
+llvm::cl::opt<bool> ASYNC("async", llvm::cl::desc("Should we have a db instance open asynchronously")); // NOLINT
 llvm::cl::opt<std::string> DATA_DIR("data", llvm::cl::desc("Where to find data files of tables to load"), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
 llvm::cl::opt<std::string> INPUT_FILE(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
-llvm::cl::opt<std::string> OUTPUT_NAME("output-name", llvm::cl::desc("Print the output name"), llvm::cl::init("schema10"), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
+llvm::cl::opt<std::string> OUTPUT_NAME("output-name", llvm::cl::desc("Print the output name"), llvm::cl::init("schema10"), llvm::cl::cat(TPL_OPTIONS_CATEGORY));// NOLINT
 // clang-format on
 
 tbb::task_scheduler_init scheduler;
@@ -69,46 +70,27 @@ static constexpr const char *K_EXIT_KEYWORD = ".exit";
  * @param source The TPL source.
  * @param name The name of the TPL file.
  */
-static void CompileAndRun(const std::string &source, const std::string &name = "tmp-tpl") {
+static void CompileAndRun(const std::string &source,
+                          exec::ExecutionContext &exec_ctx, common::ManagedPointer<DBMain> db_main,
+
+                          const std::string &name = "tmp-tpl") {
   // Initialize noisepage objects
-  auto db_main_builder = noisepage::DBMain::Builder().SetUseGC(true).SetUseCatalog(true).SetUseGCThread(true);
-  auto db_main = db_main_builder.Build();
+  // Generate Settings Manager map
 
-  // Get the correct output format for this test
-  exec::SampleOutput sample_output;
-  sample_output.InitTestOutput();
-  const auto *output_schema = sample_output.GetSchema(OUTPUT_NAME.data());
-
-  auto catalog = db_main->GetCatalogLayer()->GetCatalog();
-  auto txn_manager = db_main->GetTransactionLayer()->GetTransactionManager();
-
-  auto *txn = txn_manager->BeginTransaction();
-
-  auto db_oid = catalog->CreateDatabase(common::ManagedPointer(txn), "test_db", true);
-  auto accessor = catalog->GetAccessor(common::ManagedPointer(txn), db_oid, DISABLED);
-  auto ns_oid = accessor->GetDefaultNamespace();
-
-  // Make the execution context
-  exec::ExecutionSettings exec_settings{};
-  exec::OutputPrinter printer(output_schema);
-  exec::OutputCallback callback = printer;
-  exec::ExecutionContext exec_ctx{
-      db_oid,        common::ManagedPointer(txn), callback, output_schema, common::ManagedPointer(accessor),
-      exec_settings, db_main->GetMetricsManager()};
   // Add dummy parameters for tests
-  std::vector<parser::ConstantValueExpression> params;
-  params.emplace_back(type::TypeId::INTEGER, sql::Integer(37));
-  params.emplace_back(type::TypeId::DECIMAL, sql::Real(37.73));
-  params.emplace_back(type::TypeId::DATE, sql::DateVal(sql::Date::FromYMD(1937, 3, 7)));
-  auto string_val = sql::ValueUtil::CreateStringVal(std::string_view("37 Strings"));
-  params.emplace_back(type::TypeId::VARCHAR, string_val.first, std::move(string_val.second));
-  exec_ctx.SetParams(common::ManagedPointer<const std::vector<parser::ConstantValueExpression>>(&params));
+//  std::vector<parser::ConstantValueExpression> params;
+//  params.emplace_back(type::TypeId::INTEGER, sql::Integer(37));
+//  params.emplace_back(type::TypeId::DECIMAL, sql::Real(37.73));
+//  params.emplace_back(type::TypeId::DATE, sql::DateVal(sql::Date::FromYMD(1937, 3, 7)));
+//  auto string_val = sql::ValueUtil::CreateStringVal(std::string_view("37 Strings"));
+//  params.emplace_back(type::TypeId::VARCHAR, string_val.first, std::move(string_val.second));
+//  exec_ctx.SetParams(common::ManagedPointer<const std::vector<parser::ConstantValueExpression>>(&params));
 
   // Generate test tables
-  sql::TableGenerator table_generator{&exec_ctx, db_main->GetStorageLayer()->GetBlockStore(), ns_oid};
-  table_generator.GenerateTestTables();
+//  sql::TableGenerator table_generator{&exec_ctx, db_main->GetStorageLayer()->GetBlockStore(), ns_oid};
+//  table_generator.GenerateTestTables();
   // Comment out to make more tables available at runtime
-  // table_generator.GenerateTPCHTables(<path_to_tpch_dir>);
+//   table_generator.GenerateTPCHTables(<path_to_tpch_dir>);
   // table_generator.GenerateTableFromFile(<path_to_schema>, <path_to_data>);
 
   // Let's parse the source
@@ -119,6 +101,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
 
   parsing::Scanner scanner(source.data(), source.length());
   parsing::Parser parser(&scanner, &context);
+  auto txn_manager = db_main->GetTransactionLayer()->GetTransactionManager();
 
   double parse_ms = 0.0,       // Time to parse the source
       typecheck_ms = 0.0,      // Time to perform semantic analysis
@@ -178,7 +161,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
   }
 
   // Dump Bytecode
-  if (PRINT_TBC) {
+  if (PRINT_TBC || true) {
     bytecode_module->Dump(std::cout);  // NOLINT
   }
 
@@ -192,7 +175,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     exec_ctx.SetExecutionMode(static_cast<uint8_t>(vm::ExecutionMode::Interpret));
     util::ScopedTimer<std::milli> timer(&interp_exec_ms);
 
-    if (IS_SQL) {
+    if (IS_SQL || true) {
       std::function<int32_t(exec::ExecutionContext *)> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Interpret, &main)) {
         EXECUTION_LOG_ERROR("Missing 'main' entry function with signature (*ExecutionContext)->int32");
@@ -216,21 +199,21 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
   exec_ctx.SetExecutionMode(static_cast<uint8_t>(vm::ExecutionMode::Adaptive));
   util::ScopedTimer<std::milli> timer(&adaptive_exec_ms);
 
-  if (IS_SQL) {
-    std::function<int32_t(exec::ExecutionContext *)> main;
-    if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, &main)) {
-      EXECUTION_LOG_ERROR("Missing 'main' entry function with signature (*ExecutionContext)->int32");
-      return;
-    }
-    EXECUTION_LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
-  } else {
-    std::function<int32_t()> main;
-    if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, &main)) {
-      EXECUTION_LOG_ERROR("Missing 'main' entry function with signature ()->int32");
-      return;
-    }
-    EXECUTION_LOG_INFO("ADAPTIVE main() returned: {}", main());
-  }
+//  if (IS_SQL || true) {
+//    std::function<int32_t(exec::ExecutionContext *)> main;
+//    if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, &main)) {
+//      EXECUTION_LOG_ERROR("Missing 'main' entry function with signature (*ExecutionContext)->int32");
+//      return;
+//    }
+//    EXECUTION_LOG_INFO("ADAPTIVE main() returned: {}", main(&exec_ctx));
+//  } else {
+//    std::function<int32_t()> main;
+//    if (!module->GetFunction("main", vm::ExecutionMode::Adaptive, &main)) {
+//      EXECUTION_LOG_ERROR("Missing 'main' entry function with signature ()->int32");
+//      return;
+//    }
+//    EXECUTION_LOG_INFO("ADAPTIVE main() returned: {}", main());
+//  }
 
   //
   // JIT
@@ -239,7 +222,7 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
     exec_ctx.SetExecutionMode(static_cast<uint8_t>(vm::ExecutionMode::Compiled));
     util::ScopedTimer<std::milli> timer(&jit_exec_ms);
 
-    if (IS_SQL) {
+    if (IS_SQL || true) {
       std::function<int32_t(exec::ExecutionContext *)> main;
       if (!module->GetFunction("main", vm::ExecutionMode::Compiled, &main)) {
         EXECUTION_LOG_ERROR("Missing 'main' entry function with signature (*ExecutionContext)->int32");
@@ -265,14 +248,14 @@ static void CompileAndRun(const std::string &source, const std::string &name = "
       "Parse: {} ms, Type-check: {} ms, Code-gen: {} ms, Interp. Exec.: {} ms, "
       "Adaptive Exec.: {} ms, Jit+Exec.: {} ms",
       parse_ms, typecheck_ms, codegen_ms, interp_exec_ms, adaptive_exec_ms, jit_exec_ms);
-  txn_manager->Commit(txn, transaction::TransactionUtil::EmptyCallback, nullptr);
+  txn_manager->Commit(exec_ctx.GetTxn().Get(), transaction::TransactionUtil::EmptyCallback, nullptr);
 }
 
 /**
  * Compile and run the TPL program contained in the file with the given filename @em filename.
  * @param filename The name of TPL file to compile and run.
  */
-static void RunFile(const std::string &filename) {
+static void RunFile(const std::string &filename, common::ManagedPointer<DBMain> db_main) {
   auto file = llvm::MemoryBuffer::getFile(filename);
   if (std::error_code error = file.getError()) {
     EXECUTION_LOG_ERROR("There was an error reading file '{}': {}", filename, error.message());
@@ -281,14 +264,40 @@ static void RunFile(const std::string &filename) {
 
   EXECUTION_LOG_INFO("Compiling and running file: {}", filename);
 
+  // Get the correct output format for this test
+  noisepage::execution::exec::SampleOutput sample_output;
+  sample_output.InitTestOutput();
+
+  std::vector<planner::OutputSchema::Column> cols;
+  cols.emplace_back("col1", type::TypeId::INTEGER, nullptr);
+  cols.emplace_back("col2", type::TypeId::DECIMAL, nullptr);
+  planner::OutputSchema schema(std::move(cols));
+  const auto *output_schema = &schema;
+
+  auto txn_manager = db_main->GetTransactionLayer()->GetTransactionManager();
+  auto catalog = db_main->GetCatalogLayer()->GetCatalog();
+  auto *txn = txn_manager->BeginTransaction();
+
+  auto db_oid = catalog->GetDatabaseOid(noisepage::common::ManagedPointer(txn), catalog::DEFAULT_DATABASE);
+  auto accessor = catalog->GetAccessor(noisepage::common::ManagedPointer(txn), db_oid, DISABLED);
+//  auto ns_oid = accessor->GetDefaultNamespace();
+
+  // Make the execution context
+  noisepage::execution::exec::ExecutionSettings exec_settings{};
+  noisepage::execution::exec::OutputPrinter printer(output_schema);
+  noisepage::execution::exec::OutputCallback callback = printer;
+  noisepage::execution::exec::ExecutionContext exec_ctx{
+      db_oid,        noisepage::common::ManagedPointer(txn), callback, output_schema, noisepage::common::ManagedPointer(accessor),
+      exec_settings, db_main->GetMetricsManager()};
+
   // Copy the source into a temporary, compile, and run
-  CompileAndRun((*file)->getBuffer().str(), filename);
+  CompileAndRun((*file)->getBuffer().str(), exec_ctx, db_main, filename);
 }
 
 /**
  * Run the REPL.
  */
-static void RunRepl() {
+static void RunRepl(common::ManagedPointer<DBMain> db_main) {
   const auto prompt_and_read_line = [] {
     std::string line;
     printf(">>> ");  // NOLINT
@@ -307,18 +316,18 @@ static void RunRepl() {
     // Run file?
     if (llvm::StringRef line_ref(line); line_ref.startswith_lower(".run")) {
       auto pair = line_ref.split(' ');
-      RunFile(pair.second);
+      RunFile(pair.second, db_main);
       continue;
     }
 
-    // Code ...
-    std::string input;
-    while (!line.empty()) {
-      input.append(line).append("\n");
-      line = prompt_and_read_line();
-    }
-    // Try to compile and run it
-    CompileAndRun(input);
+//    // Code ...
+//    std::string input;
+//    while (!line.empty()) {
+//      input.append(line).append("\n");
+//      line = prompt_and_read_line();
+//    }
+//    // Try to compile and run it
+//    CompileAndRun(input);
   }
 }
 
@@ -381,11 +390,31 @@ int main(int argc, char **argv) {
 
   EXECUTION_LOG_INFO("Welcome to TPL (ver. {}.{})", TPL_VERSION_MAJOR, TPL_VERSION_MINOR);
 
+  ::gflags::ParseCommandLineFlags(&argc, &argv, true);
+  std::unordered_map<noisepage::settings::Param, noisepage::settings::ParamInfo> param_map;
+  noisepage::settings::SettingsManager::ConstructParamMap(param_map);
+  auto db_main_builder = noisepage::DBMain::Builder()
+      .SetSettingsParameterMap(std::move(param_map))
+      .SetUseSettingsManager(true)
+      .SetUseGC(true)
+      .SetUseCatalog(true)
+      .SetUseGCThread(true)
+      .SetUseStatsStorage(true)
+      .SetUseExecution(true)
+      .SetUseTrafficCop(true)
+      .SetUseNetwork(true)
+      .SetExecutionMode(noisepage::execution::vm::ExecutionMode::Compiled);
+  auto db_main = db_main_builder.Build();
+  auto db_main_ptr = db_main.get();
+
+  std::thread db_runner([db_main_ptr](){db_main_ptr->Run();});
+
+
   // Either execute a TPL program from a source file, or run REPL
   if (!INPUT_FILE.empty()) {
-    noisepage::execution::RunFile(INPUT_FILE);
+    noisepage::execution::RunFile(INPUT_FILE, noisepage::common::ManagedPointer(db_main));
   } else {
-    noisepage::execution::RunRepl();
+    noisepage::execution::RunRepl(noisepage::common::ManagedPointer(db_main));
   }
 
   // Cleanup

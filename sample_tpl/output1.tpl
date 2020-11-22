@@ -28,7 +28,7 @@ fun main(execCtx: *ExecutionContext) -> int {
     }
   }
   @resultBufferFinalize(output_buffer)
-  @resultBufferFree(output_buffer)
+  @resultBufferFree(output_buffer)`
   @tableIterClose(&tvi)
   return count
 }

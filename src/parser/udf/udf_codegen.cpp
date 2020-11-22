@@ -350,8 +350,8 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
   for(auto entry : sorted_vec){
     // TODO(order these dudes)
     type::TypeId type;
-    auto ret = udf_ast_context_->GetVariableType(entry->first, &type);
-    NOISEPAGE_ASSERT(ret, "didn't find param in udf ast context");
+    udf_ast_context_->GetVariableType(entry->first, &type);
+//    NOISEPAGE_ASSERT(ret, "didn't find param in udf ast context");
 
     execution::ast::Builtin builtin;
     switch (type) {
