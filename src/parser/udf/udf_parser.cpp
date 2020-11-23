@@ -177,7 +177,7 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseDecl(const nlohmann::json &decl) {
       udf_ast_context_->SetVariableType(var_name, type::TypeId::INTEGER);
       return std::unique_ptr<DeclStmtAST>(
           new DeclStmtAST(var_name, type::TypeId::INTEGER, std::move(initial)));
-    } else if (type == "double") {
+    } else if (type == "double" || type.rfind("numeric") == 0) {
       udf_ast_context_->SetVariableType(var_name, type::TypeId::DECIMAL);
       return std::unique_ptr<DeclStmtAST>(
           new DeclStmtAST(var_name, type::TypeId::DECIMAL, std::move(initial)));
@@ -284,8 +284,8 @@ std::unique_ptr<ExprAST> PLpgSQLParser::ParseExpr(
     return std::unique_ptr<VariableExprAST>(new VariableExprAST(
         expr.CastManagedPointerTo<parser::ColumnValueExpression>()
             ->GetColumnName()));
-  } else if (parser::ExpressionUtil::IsOperatorExpression(
-      expr->GetExpressionType()) ||
+  } else if ((parser::ExpressionUtil::IsOperatorExpression(
+      expr->GetExpressionType()) && expr->GetChildrenSize() == 2) ||
       (parser::ExpressionUtil::IsComparisonExpression(expr->GetExpressionType()))) {
     return std::unique_ptr<BinaryExprAST>(new BinaryExprAST(
         expr->GetExpressionType(), ParseExpr(expr->GetChild(0)),
@@ -302,6 +302,10 @@ std::unique_ptr<ExprAST> PLpgSQLParser::ParseExpr(
   } else if (expr->GetExpressionType() == parser::ExpressionType::VALUE_CONSTANT) {
     return std::unique_ptr<ValueExprAST>(new ValueExprAST(
         expr->Copy()));
+  } else if (expr->GetExpressionType() == parser::ExpressionType::OPERATOR_IS_NOT_NULL){
+    return std::unique_ptr<IsNullExprAST>(new IsNullExprAST(false, ParseExpr(expr->GetChild(0))));
+  } else if (expr->GetExpressionType() == parser::ExpressionType::OPERATOR_IS_NULL){
+    return std::unique_ptr<IsNullExprAST>(new IsNullExprAST(true, ParseExpr(expr->GetChild(0))));
   }
   throw PARSER_EXCEPTION("PL/pgSQL parser : Expression type not supported");
 }

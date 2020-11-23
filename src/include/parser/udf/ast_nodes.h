@@ -50,6 +50,17 @@ class ValueExprAST : public ExprAST {
   void Accept(ASTNodeVisitor *visitor) override { visitor->Visit(this); };
 };
 
+class IsNullExprAST : public ExprAST {
+ public:
+  bool is_null_check_;
+  std::unique_ptr<ExprAST> child_;
+
+  IsNullExprAST(bool is_null_check, std::unique_ptr<ExprAST> child) : is_null_check_(is_null_check),
+                                                                                         child_(std::move(child)) {}
+
+  void Accept(ASTNodeVisitor *visitor) override { visitor->Visit(this); };
+};
+
 // VariableExprAST - Expression class for referencing a variable, like "a".
 class VariableExprAST : public ExprAST {
  public:

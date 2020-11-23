@@ -172,9 +172,25 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
   const auto &locals = GetCurrentScope()->GetLocals();
   auto factory = GetContext()->GetNodeFactory();
   util::RegionVector<ast::FieldDecl *> fields(GetContext()->GetRegion());
-  for(auto local : locals){
-    auto name = local.first;
-    auto type = local.second;
+  std::unordered_set<ast::Identifier> used_idents;
+  // TODO support more than just assignment statements
+  for(auto s : node->GetFunctionLitExpr()->Body()->Statements()){
+    if(s->IsAssignmentStmt()) {
+      auto expr = s->As<ast::AssignmentStmt>()->Destination()->As<ast::IdentifierExpr>();
+      used_idents.insert(expr->Name());
+      auto s_expr = s->As<ast::AssignmentStmt>()->Source()->SafeAs<ast::IdentifierExpr>();
+      if(s_expr != nullptr){
+        used_idents.insert(s_expr->Name());
+      }
+    }
+  }
+  for(auto local : used_idents){
+    auto name = local;
+    auto iter = std::find_if(locals.begin(), locals.end(), [=](auto p){ return p.first == name; });
+    if(iter == locals.end()){
+      continue;
+    }
+    auto type = iter->second;
     ast::Expr *type_repr = nullptr;
     if(type->IsBuiltinType()) {
       type_repr = factory->NewPointerType(SourcePosition(),
@@ -182,6 +198,9 @@ void Sema::VisitLambdaExpr(ast::LambdaExpr *node) {
                                                                     type->As<ast::BuiltinType>()->GetKind())
                                                   ->GetTplName())));
     }else{
+      if(type->IsLambdaType()){
+        continue;
+      }
       NOISEPAGE_ASSERT(false, "UNSUPPORTED CAPTURED TYPE");
     }
     type_repr->SetType(type->PointerTo());

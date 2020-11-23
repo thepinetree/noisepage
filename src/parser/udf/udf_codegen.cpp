@@ -124,11 +124,14 @@ void UDFCodegen::Visit(DeclStmtAST *ast) {
     }
     execution::ast::Identifier ident = codegen_->MakeFreshIdentifier(ast->name);
     str_to_ident_.emplace(ast->name, ident);
+    auto prev_type = current_type_;
+    current_type_ = ast->type;
     if(ast->initial != nullptr) {
 //      Visit(ast->initial.get());
       ast->initial->Accept(this);
     }
   fb_->Append(codegen_->DeclareVar(ident, codegen_->TplType(execution::sql::GetTypeId(ast->type)), dst_));
+  current_type_ = prev_type;
 }
 
 void UDFCodegen::Visit(FunctionAST *ast) {
@@ -147,6 +150,10 @@ void UDFCodegen::Visit(VariableExprAST *ast) {
 
 void UDFCodegen::Visit(ValueExprAST *ast) {
   auto val = common::ManagedPointer(ast->value_).CastManagedPointerTo<parser::ConstantValueExpression>();
+  if(val->IsNull()){
+    dst_ = codegen_->ConstNull(current_type_);
+    return;
+  }
   auto type_id = execution::sql::GetTypeId(val->GetReturnValueType());
   switch (type_id) {
     case execution::sql::TypeId::Boolean:
@@ -263,6 +270,15 @@ void UDFCodegen::Visit(IfStmtAST *ast) {
     ast->else_stmt->Accept(this);
   }
   branch.EndIf();
+}
+
+void UDFCodegen::Visit(IsNullExprAST *ast) {
+  ast->child_->Accept(this);
+  auto chld = dst_;
+  dst_ = codegen_->CallBuiltin(execution::ast::Builtin::IsValNull, {chld});
+  if(!ast->is_null_check_){
+    dst_ = codegen_->UnaryOp(execution::parsing::Token::Type::BANG, dst_);
+  }
 }
 
 void UDFCodegen::Visit(SeqStmtAST *ast) {

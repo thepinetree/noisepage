@@ -47,6 +47,7 @@ class UDFCodegen : ASTNodeVisitor {
   void Visit(VariableExprAST *) override;
   void Visit(BinaryExprAST *) override;
   void Visit(CallExprAST *) override;
+  void Visit(IsNullExprAST *) override;
   void Visit(SeqStmtAST *) override;
   void Visit(DeclStmtAST *) override;
   void Visit(IfStmtAST *) override;
@@ -75,6 +76,7 @@ class UDFCodegen : ASTNodeVisitor {
   FunctionBuilder *fb_;
   UDFASTContext *udf_ast_context_;
   CodeGen *codegen_;
+  type::TypeId current_type_{type::TypeId::INVALID};
   execution::ast::Expr *dst_;
   std::unordered_map<std::string, execution::ast::Identifier> str_to_ident_;
   execution::util::RegionVector<execution::ast::Decl *> aux_decls_;
