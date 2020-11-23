@@ -96,7 +96,7 @@ CompilationContext::CompilationContext(ExecutableQuery *query, catalog::CatalogA
       query_state_(query_state_type_, [this](CodeGen *codegen) { return codegen->MakeExpr(query_state_var_); }),
       output_callback_(output_callback),
       counters_enabled_(settings.GetIsCountersEnabled()),
-      pipeline_metrics_enabled_(settings.GetIsPipelineMetricsEnabled()) {}
+      pipeline_metrics_enabled_(output_callback ? false : settings.GetIsPipelineMetricsEnabled()) {}
 
 ast::FunctionDecl *CompilationContext::GenerateInitFunction() {
   const auto name = codegen_.MakeIdentifier(GetFunctionPrefix() + "_Init");
@@ -203,7 +203,8 @@ std::unique_ptr<ExecutableQuery> CompilationContext::Compile(const planner::Abst
                                                              const exec::ExecutionSettings &exec_settings,
                                                              catalog::CatalogAccessor *accessor, CompilationMode mode,
                                                              common::ManagedPointer<const std::string> query_text,
-                                                             ast::LambdaExpr *output_callback, common::ManagedPointer<ast::Context> context) {
+                                                             ast::LambdaExpr *output_callback,
+                                                             common::ManagedPointer<ast::Context> context) {
   // The query we're generating code for.
   auto query = std::make_unique<ExecutableQuery>(plan, exec_settings, context.Get());
   // TODO(Lin): Hacking... remove this after getting the counters in

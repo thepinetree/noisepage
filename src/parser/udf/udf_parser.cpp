@@ -185,6 +185,10 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseDecl(const nlohmann::json &decl) {
       udf_ast_context_->SetVariableType(var_name, type::TypeId::VARCHAR);
       return std::unique_ptr<DeclStmtAST>(
           new DeclStmtAST(var_name, type::TypeId::VARCHAR, std::move(initial)));
+    } else if (type.find("date") != std::string::npos) {
+      udf_ast_context_->SetVariableType(var_name, type::TypeId::DATE);
+      return std::unique_ptr<DeclStmtAST>(
+          new DeclStmtAST(var_name, type::TypeId::DATE, std::move(initial)));
     } else {
       NOISEPAGE_ASSERT(false, "Unsupported ");
 //      udf_ast_context_->SetVariableType(var_name, type::TypeId::INVALID);

@@ -185,7 +185,25 @@ class EXPORT ExecutionContext {
   template <typename T>
   void AddParam(T *val){
     // figure out how to get the typeid
-    udf_param_stack_.back().emplace_back(type::TypeId::INTEGER, *val);
+    type::TypeId ret_type;
+    if (std::is_same<T, execution::sql::Val>::value) {
+      UNREACHABLE("Impossible to be here");
+    } else if (std::is_same<T, execution::sql::BoolVal>::value) {
+      ret_type = type::TypeId::BOOLEAN;
+    } else if (std::is_same<T, execution::sql::Integer>::value) {
+      ret_type = type::TypeId::INTEGER;
+    } else if (std::is_same<T, execution::sql::Real>::value) {
+      ret_type = type::TypeId::DECIMAL;
+    } else if (std::is_same<T, execution::sql::DateVal>::value) {
+      ret_type = type::TypeId::DATE;
+    } else if (std::is_same<T, execution::sql::TimestampVal>::value) {
+      ret_type = type::TypeId::TIMESTAMP;
+    } else if (std::is_same<T, execution::sql::StringVal>::value) {
+      ret_type = type::TypeId::VARCHAR;
+    } else {
+      UNREACHABLE("Impossible to be here");
+    }
+    udf_param_stack_.back().emplace_back(ret_type, *val);
   }
 
   /**

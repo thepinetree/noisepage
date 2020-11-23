@@ -184,11 +184,13 @@ void SeqScanTranslator::GenerateFilterClauseFunctions(util::RegionVector<ast::Fu
       }
       auto const_val = codegen->CallBuiltin(
           builtin, {codegen->MakeExpr(codegen->MakeIdentifier("execCtx")), codegen->Const32(param_idx)});
+      auto decl = codegen->DeclareVarWithInit(codegen->MakeFreshIdentifier("const_val"), const_val);
+      builder.Append(decl);
       builder.Append(codegen->VPIFilter(exec_ctx,                        // The execution context
                                         vector_proj,                     // The vector projection
                                         predicate->GetExpressionType(),  // Comparison type
                                         col_index,                       // Column index
-                                        const_val,                       // Constant value
+                                        codegen->AddressOf(const_val),                       // Constant value
                                         tid_list));                      // TID list
     } else if (parser::ExpressionUtil::IsConstCompareWithColumn(*predicate)) {
       throw NOT_IMPLEMENTED_EXCEPTION("const <op> col vector filter comparison not implemented");

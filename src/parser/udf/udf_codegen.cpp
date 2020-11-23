@@ -129,8 +129,10 @@ void UDFCodegen::Visit(DeclStmtAST *ast) {
     if(ast->initial != nullptr) {
 //      Visit(ast->initial.get());
       ast->initial->Accept(this);
+      fb_->Append(codegen_->DeclareVar(ident, codegen_->TplType(execution::sql::GetTypeId(ast->type)), dst_));
+    }else{
+      fb_->Append(codegen_->DeclareVarNoInit(ident, codegen_->TplType(execution::sql::GetTypeId(ast->type))));
     }
-  fb_->Append(codegen_->DeclareVar(ident, codegen_->TplType(execution::sql::GetTypeId(ast->type)), dst_));
   current_type_ = prev_type;
 }
 
@@ -291,7 +293,7 @@ void UDFCodegen::Visit(WhileStmtAST *ast) {
   ast->cond_expr->Accept(this);
   auto cond = dst_;
 //  cond = codegen_->Compare(execution::parsing::Token::Type::EQUAL_EQUAL, cond, )
-  cond = codegen_->CallBuiltin(execution::ast::Builtin::SqlToBool, {cond});
+//  cond = codegen_->CallBuiltin(execution::ast::Builtin::SqlToBool, {cond});
   Loop loop(fb_, cond);
   ast->body_stmt->Accept(this);
   loop.EndLoop();
@@ -318,13 +320,17 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
                                                                                          std::make_unique<optimizer::TrivialCostModel>(), 1000000);
   // make lambda that just writes into this
   auto count_var = str_to_ident_.find(ast->var_name)->second;
+
   auto lam_var = codegen_->MakeFreshIdentifier("lamb");
   NOISEPAGE_ASSERT(plan->GetOutputSchema()->GetColumns().size() == 1, "Can't support non scalars yet!");
+  auto type = codegen_->TplType(execution::sql::GetTypeId(plan->GetOutputSchema()
+                                                              ->GetColumn(0).GetType()));
+  fb_->Append(codegen_->Assign(codegen_->MakeExpr(count_var), codegen_->ConstNull(plan->GetOutputSchema()
+                                                                                      ->GetColumn(0).GetType())));
 
   execution::util::RegionVector<execution::ast::FieldDecl *> params(codegen_->GetAstContext()->GetRegion());
   auto input_param = codegen_->MakeFreshIdentifier("input");
-  params.push_back(codegen_->MakeField(input_param, codegen_->TplType(execution::sql::GetTypeId(plan->GetOutputSchema()
-                                                                          ->GetColumn(0).GetType()))));
+  params.push_back(codegen_->MakeField(input_param, type));
   execution::ast::LambdaExpr *lambda_expr;
   FunctionBuilder fn(codegen_, std::move(params), codegen_->BuiltinType(execution::ast::BuiltinType::Nil));
   {

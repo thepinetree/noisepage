@@ -476,13 +476,13 @@ void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {
     }
     case ast::CastKind::FloatToSqlReal: {
       LocalVar dest = GetExecutionResult()->GetOrCreateDestination(node->GetType());
-      GetEmitter()->Emit(Bytecode::InitReal, dest, input);
+      GetEmitter()->Emit(Bytecode::InitReal, dest.AddressOf(), input.AddressOf());
       GetExecutionResult()->SetDestination(dest);
       break;
     }
     case ast::CastKind::SqlIntToSqlReal: {
       LocalVar dest = GetExecutionResult()->GetOrCreateDestination(node->GetType());
-      GetEmitter()->Emit(Bytecode::IntegerToReal, dest, input);
+      GetEmitter()->Emit(Bytecode::IntegerToReal, dest.AddressOf(), input.AddressOf());
       GetExecutionResult()->SetDestination(dest);
       break;
     }

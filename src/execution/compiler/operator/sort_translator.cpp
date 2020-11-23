@@ -21,7 +21,8 @@ SortTranslator::SortTranslator(const planner::OrderByPlanNode &plan, Compilation
                                Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline, brain::ExecutionOperatingUnitType::DUMMY),
       sort_row_var_(GetCodeGen()->MakeFreshIdentifier("sortRow")),
-      sort_row_type_(GetCodeGen()->MakeFreshIdentifier("SortRow")),
+      sort_row_type_(GetCodeGen()->MakeFreshIdentifier("SortRow" + std::to_string(compilation_context
+                                                                                      ->GetQueryId().UnderlyingValue()))),
       lhs_row_(GetCodeGen()->MakeIdentifier("lhs")),
       rhs_row_(GetCodeGen()->MakeIdentifier("rhs")),
       compare_func_(GetCodeGen()->MakeFreshIdentifier(pipeline->CreatePipelineFunctionName("Compare"))),

@@ -18,7 +18,8 @@ OutputTranslator::OutputTranslator(const planner::AbstractPlanNode &plan, Compil
                                    Pipeline *pipeline)
     : OperatorTranslator(plan, compilation_context, pipeline, brain::ExecutionOperatingUnitType::OUTPUT),
       output_var_(GetCodeGen()->MakeFreshIdentifier("outRow")),
-      output_struct_(GetCodeGen()->MakeFreshIdentifier("OutputStruct")) {
+      output_struct_(GetCodeGen()->MakeFreshIdentifier("OutputStruct"
+                                                       + std::to_string(compilation_context->GetQueryId().UnderlyingValue()))) {
   // Prepare the child.
   //pipeline->UpdateParallelism(Pipeline::Parallelism::Serial);
   compilation_context->Prepare(plan, pipeline);
