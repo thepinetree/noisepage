@@ -185,11 +185,12 @@ void UDFCodegen::Visit(ValueExprAST *ast) {
 }
 
 void UDFCodegen::Visit(AssignStmtAST *ast) {
-  reinterpret_cast<AbstractAST *>(ast->rhs.get())->Accept(this);
-  auto rhs_expr = dst_;
-
   type::TypeId left_type;
   udf_ast_context_->GetVariableType(ast->lhs->name, &left_type);
+  current_type_ = left_type;
+
+  reinterpret_cast<AbstractAST *>(ast->rhs.get())->Accept(this);
+  auto rhs_expr = dst_;
 
   auto it = str_to_ident_.find(ast->lhs->name);
   NOISEPAGE_ASSERT(it != str_to_ident_.end(), "Variable not found");

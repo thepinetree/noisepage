@@ -1674,6 +1674,8 @@ std::unique_ptr<ReturnType> PostgresParser::ReturnTypeTransform(ParseResult *par
     data_type = BaseFunctionParameter::DataType::TINYINT;
   } else if (strcmp(name, "bool") == 0) {
     data_type = BaseFunctionParameter::DataType::BOOL;
+  } else if (strcmp(name, "date") == 0){
+    data_type = BaseFunctionParameter::DataType::DATE;
   } else {
     PARSER_LOG_AND_THROW("ReturnTypeTransform", "ReturnType", name);
   }

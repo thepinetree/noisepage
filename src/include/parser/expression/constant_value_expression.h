@@ -21,7 +21,7 @@ namespace noisepage::parser {
 /**
  * ConstantValueExpression represents a constant, e.g. numbers, string literals.
  */
-class EXPORT ConstantValueExpression : public AbstractExpression {
+class ConstantValueExpression : public AbstractExpression {
  public:
   /**
    * Construct a NULL CVE of provided type
@@ -120,6 +120,10 @@ class EXPORT ConstantValueExpression : public AbstractExpression {
   execution::sql::Integer GetInteger() const {
     NOISEPAGE_ASSERT(std::holds_alternative<execution::sql::Integer>(value_), "Invalid variant type for Get.");
     return std::get<execution::sql::Integer>(value_);
+  }
+
+  common::ManagedPointer<const execution::sql::Val> GetVal() const {
+    return common::ManagedPointer<const execution::sql::Val>(&std::get<execution::sql::Val>(value_));
   }
 
   /**

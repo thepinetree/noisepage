@@ -135,7 +135,7 @@ class BytecodeGenerator::BytecodePositionScope {
 // Bytecode Generator begins
 // ---------------------------------------------------------
 
-BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_) {functions_.reserve(20);}
+BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_) {functions_.reserve(40);}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   IfThenElseBuilder if_builder(this);
@@ -3794,7 +3794,7 @@ void BytecodeGenerator::BuildAssign(LocalVar dest, LocalVar val, ast::Type *dest
     GetEmitter()->EmitAssign(Bytecode::Assign2, dest, val);
   } else if (size == 4) {
     GetEmitter()->EmitAssign(Bytecode::Assign4, dest, val);
-  } else if (size == 8) {
+  } else if (size == 8 && dest_type != ast::BuiltinType::Get(dest_type->GetContext(), ast::BuiltinType::Date)) {
     GetEmitter()->EmitAssign(Bytecode::Assign8, dest, val);
   } else {
     GetEmitter()->EmitAssignN(dest, val, size);

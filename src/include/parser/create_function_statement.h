@@ -30,7 +30,8 @@ struct BaseFunctionParameter {
     VARCHAR,
     TEXT,
     BOOL,
-    BOOLEAN
+    BOOLEAN,
+    DATE
   };
 
   /** @param datatype data type of the parameter */
@@ -70,6 +71,8 @@ struct BaseFunctionParameter {
         return type::TypeId::BOOLEAN;
       case DataType::BOOLEAN:
         return type::TypeId::BOOLEAN;
+      case DataType::DATE:
+        return type::TypeId::DATE;
     }
   }
 

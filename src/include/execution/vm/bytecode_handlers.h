@@ -169,7 +169,9 @@ VM_OP_HOT void OpAssign2(int16_t *dest, int16_t src) { *dest = src; }
 
 VM_OP_HOT void OpAssign4(int32_t *dest, int32_t src) { *dest = src; }
 
-VM_OP_HOT void OpAssign8(int64_t *dest, int64_t src) { *dest = src; }
+VM_OP_HOT void OpAssign8(int64_t *dest, int64_t src) {
+  *dest = src;
+}
 
 VM_OP_HOT void OpAssignN(noisepage::byte *dest, const noisepage::byte *const src, uint32_t len) {
   std::memcpy(dest, src, len);
@@ -2081,12 +2083,8 @@ VM_OP_WARM void OpAbortTxn(noisepage::execution::exec::ExecutionContext *exec_ct
 #define GEN_SCALAR_PARAM_GET(Name, SqlType)                                                                     \
   VM_OP_HOT void OpGetParam##Name(noisepage::execution::sql::SqlType *ret,                                      \
                                   noisepage::execution::exec::ExecutionContext *exec_ctx, uint32_t param_idx) { \
-    const auto &cve = exec_ctx->GetParam(param_idx);                                                            \
-    if (cve.IsNull()) {                                                                                         \
-      ret->is_null_ = true;                                                                                     \
-    } else {                                                                                                    \
-      *ret = cve.Get##SqlType();                                                                                \
-    }                                                                                                           \
+    const auto &val = *reinterpret_cast<const noisepage::execution::sql::SqlType*>(exec_ctx->GetParam(param_idx).Get());                                                            \
+    *ret = val;                                                                                                      \
   }
 
 GEN_SCALAR_PARAM_GET(Bool, BoolVal)
@@ -2102,22 +2100,22 @@ GEN_SCALAR_PARAM_GET(String, StringVal)
 #undef GEN_SCALAR_PARAM_GET
 
 // Parameter calls
-#define GEN_SCALAR_PARAM_ADD(Name, SqlType)                                                          \
+#define GEN_SCALAR_PARAM_ADD(Name, SqlType, typeId)                                                          \
   VM_OP_HOT void OpAddParam##Name(noisepage::execution::exec::ExecutionContext *exec_ctx,              \
                                   noisepage::execution::sql::SqlType *ret) {                           \
-    exec_ctx->AddParam<noisepage::execution::sql::SqlType>(ret);                                       \
+    exec_ctx->AddParam(noisepage::common::ManagedPointer<noisepage::execution::sql::Val>(reinterpret_cast<noisepage::execution::sql::Val*>(ret)));                                       \
   }
 
-GEN_SCALAR_PARAM_ADD(Bool, BoolVal)
-GEN_SCALAR_PARAM_ADD(TinyInt, Integer)
-GEN_SCALAR_PARAM_ADD(SmallInt, Integer)
-GEN_SCALAR_PARAM_ADD(Int, Integer)
-GEN_SCALAR_PARAM_ADD(BigInt, Integer)
-GEN_SCALAR_PARAM_ADD(Real, Real)
-GEN_SCALAR_PARAM_ADD(Double, Real)
-GEN_SCALAR_PARAM_ADD(DateVal, DateVal)
-GEN_SCALAR_PARAM_ADD(TimestampVal, TimestampVal)
-GEN_SCALAR_PARAM_ADD(String, StringVal)
+GEN_SCALAR_PARAM_ADD(Bool, BoolVal, BOOLEAN)
+GEN_SCALAR_PARAM_ADD(TinyInt, Integer, TINYINT)
+GEN_SCALAR_PARAM_ADD(SmallInt, Integer, SMALLINT)
+GEN_SCALAR_PARAM_ADD(Int, Integer, INTEGER)
+GEN_SCALAR_PARAM_ADD(BigInt, Integer, BIGINT)
+GEN_SCALAR_PARAM_ADD(Real, Real, DECIMAL)
+GEN_SCALAR_PARAM_ADD(Double, Real, DECIMAL)
+GEN_SCALAR_PARAM_ADD(DateVal, DateVal, DATE)
+GEN_SCALAR_PARAM_ADD(TimestampVal, TimestampVal, TIMESTAMP)
+GEN_SCALAR_PARAM_ADD(String, StringVal, VARCHAR)
 #undef GEN_SCALAR_PARAM_ADD
 
 VM_OP_HOT void OpStartNewParams(noisepage::execution::exec::ExecutionContext *exec_ctx) {

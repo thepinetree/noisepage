@@ -1,14 +1,21 @@
 // Expected output: 70
 
-fun f(lam : lambda[(int32)->nil], z : int ) -> nil { (lam)(z)  }
+fun f(z : Date ) -> Date { return z  }
 
-fun main() -> int32 {
-    var y = 20
-    var x = 10
+fun main(exec : *ExecutionContext) -> int32 {
+    var y = @dateToSql(1998, 2, 11)
     //var f = 25
-    var lam = lambda (z : int ) -> nil {
-                    y = z + x
+    var lam = lambda (z : Date ) -> nil {
+                    y = z
                 }
-    f(lam, 24)
-    return y
+    var d = @dateToSql(1998, 2, 11)
+    //f(lam, d)
+    var k : Date
+    //var h = &k
+    //*h = d
+    k = f(d)
+    if(@datePart(k, @intToSql(21)) == @intToSql(1998)){
+        return 1
+    }
+    return 0
 }

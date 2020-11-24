@@ -420,7 +420,12 @@ TrafficCopResult TrafficCop::RunExecutableQuery(const common::ManagedPointer<net
       connection_ctx->GetDatabaseOid(), connection_ctx->Transaction(), callback, physical_plan->GetOutputSchema().Get(),
       connection_ctx->Accessor(), exec_settings, metrics);
 
-  exec_ctx->SetParams(portal->Parameters());
+  std::vector<common::ManagedPointer<const execution::sql::Val>> params;
+  for(auto cve : *(portal->Parameters())){
+    params.push_back(cve.GetVal());
+  }
+
+  exec_ctx->SetParams(common::ManagedPointer(&params));
 
   const auto exec_query = portal->GetStatement()->GetExecutableQuery();
 
