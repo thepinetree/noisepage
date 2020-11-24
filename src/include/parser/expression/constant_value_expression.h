@@ -21,7 +21,7 @@ namespace noisepage::parser {
 /**
  * ConstantValueExpression represents a constant, e.g. numbers, string literals.
  */
-class ConstantValueExpression : public AbstractExpression {
+class EXPORT ConstantValueExpression : public AbstractExpression {
  public:
   /**
    * Construct a NULL CVE of provided type
