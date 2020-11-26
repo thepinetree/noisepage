@@ -975,11 +975,12 @@ void LLVMEngine::CompiledModuleBuilder::Verify() {
   if (bool has_error = llvm::verifyModule(*llvm_module_, &ostream); has_error) {
     // TODO(pmenon): Do something more here ...
     EXECUTION_LOG_ERROR("ERROR IN MODULE:\n{}", ostream.str());
-    std::ofstream myfile;
-    myfile.open ("llvm.txt");
-    myfile << DumpModuleIR();
-    myfile.close();
   }
+
+  //std::ofstream myfile;
+  //myfile.open ("llvm.txt");
+  //myfile << DumpModuleIR();
+  //myfile.close();
 }
 
 void LLVMEngine::CompiledModuleBuilder::Simplify() {

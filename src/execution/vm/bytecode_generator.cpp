@@ -991,12 +991,14 @@ void BytecodeGenerator::VisitBuiltinVPICall(ast::CallExpr *call, ast::Builtin bu
     LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType()); \
     const uint32_t col_idx = call->Arguments()[1]->As<ast::LitExpr>()->Int64Val();   \
     GetEmitter()->EmitVPIGet(Bytecode, result, vpi, col_idx);                        \
+    GetExecutionResult()->SetDestination(result.ValueOf());                          \
     break;                                                                           \
   }                                                                                  \
   case ast::Builtin::BuiltinName##Null: {                                            \
     LocalVar result = GetExecutionResult()->GetOrCreateDestination(call->GetType()); \
     const uint32_t col_idx = call->Arguments()[1]->As<ast::LitExpr>()->Int64Val();   \
     GetEmitter()->EmitVPIGet(Bytecode##Null, result, vpi, col_idx);                  \
+    GetExecutionResult()->SetDestination(result.ValueOf());                          \
     break;                                                                           \
   }
 

@@ -349,8 +349,9 @@ class DBMain {
       }
 
       std::unique_ptr<common::DedicatedThreadRegistry> thread_registry = DISABLED;
-      if (use_thread_registry_ || use_logging_ || use_network_)
+      if (use_thread_registry_ || use_logging_ || use_network_) {
         thread_registry = std::make_unique<common::DedicatedThreadRegistry>(common::ManagedPointer(metrics_manager));
+      }
 
       auto buffer_segment_pool =
           std::make_unique<storage::RecordBufferSegmentPool>(record_buffer_segment_size_, record_buffer_segment_reuse_);

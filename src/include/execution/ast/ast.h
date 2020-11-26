@@ -760,6 +760,13 @@ class ForStmt : public IterationStmt {
   }
 
  private:
+  friend class sema::Sema;
+
+  void SetCond(Expr *cond) {
+    cond_ = cond;
+  }
+
+ private:
   Stmt *init_;
   Expr *cond_;
   Stmt *next_;

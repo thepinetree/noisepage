@@ -368,8 +368,8 @@ int main(int argc, char **argv) {
   noisepage::LoggersUtil::Initialize();
 
   // Parse options
-  llvm::cl::HideUnrelatedOptions(TPL_OPTIONS_CATEGORY);
-  llvm::cl::ParseCommandLineOptions(argc, argv);
+  //llvm::cl::HideUnrelatedOptions(TPL_OPTIONS_CATEGORY);
+  //llvm::cl::ParseCommandLineOptions(argc, argv);
 
   // Initialize a signal handler to call SignalHandler()
   struct sigaction sa;  // NOLINT
@@ -399,6 +399,7 @@ int main(int argc, char **argv) {
       .SetUseGC(true)
       .SetUseCatalog(true)
       .SetUseGCThread(true)
+      .SetUseLogging(false)
       .SetUseStatsStorage(true)
       .SetUseExecution(true)
       .SetUseTrafficCop(true)

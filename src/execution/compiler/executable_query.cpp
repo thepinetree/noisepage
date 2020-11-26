@@ -179,13 +179,13 @@ void ExecutableQuery::Run(common::ManagedPointer<exec::ExecutionContext> exec_ct
   *reinterpret_cast<exec::ExecutionContext **>(query_state.get()) = exec_ctx.Get();
   exec_ctx->SetQueryState(query_state.get());
 
+  exec_ctx->SetExecutionMode(static_cast<uint8_t>(mode));
+  exec_ctx->SetPipelineOperatingUnits(GetPipelineOperatingUnits());
+  exec_ctx->SetQueryId(query_id_);
+
   double elapsed_ms;
   {
     util::ScopedTimer timer(&elapsed_ms);
-    exec_ctx->SetExecutionMode(static_cast<uint8_t>(mode));
-    exec_ctx->SetPipelineOperatingUnits(GetPipelineOperatingUnits());
-    exec_ctx->SetQueryId(query_id_);
-
     // Now run through fragments.
 
     for (const auto &fragment : fragments_) {
