@@ -234,34 +234,34 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
   if(!GetExecutionResult()->HasDestination()){
     return;
   }
-  auto captures = GetCurrentFunction()->NewLocal(node->GetCaptureStructType(), "captures");
+  auto captures = GetCurrentFunction()->NewLocal(node->GetCaptureStructType(), node->GetName().GetString() + "captures");
   auto fields = node->GetCaptureStructType()->As<ast::StructType>()->GetFieldsWithoutPadding();
-  auto &locals = GetCurrentFunction()->GetLocals();
-  auto size = locals.size();
-  for(size_t j = 0;j < size;j++){
-    auto local = locals[j];
-
-    size_t i = 0;
-
-    // TODO(tanujnay112) this is sad, make it faster
-    while(i < fields.size()) {
-      if(local.GetName() == fields[i].name_.GetString()){
-        break;
-      }
-      i++;
-    }
-    if(i >= fields.size()){
-      continue;
-    }
-    auto localvar = GetCurrentFunction()->LookupLocal(local.GetName());
+//  auto &locals = GetCurrentFunction()->GetLocals();
+  for(size_t i = 0;i < fields.size() - 1;i++){
+    auto field = fields[i];
+    ast::IdentifierExpr ident(node->Position(), field.name_);
+    ident.SetType(field.type_->GetPointeeType());
+    auto local = VisitExpressionForLValue(&ident);
+//    auto local_it = std::find_if(locals.begin(), locals.end(), [=](const auto &loc){ return loc.GetName() == field.name_.GetString();});
+//    bool is_capture = false;
+//    LocalVar local;
+//    if(local_it == locals.end()){
+//      // should be inside captures
+//      NOISEPAGE_ASSERT(GetCurrentFunction()->IsLambda(), "not lambda and local to capture not found");
+//      is_capture = true;
+//      auto caller_captures = GetCurrentFunction()->GetFuncType()->GetCapturesType()->GetFieldsWithoutPadding();
+//
+//      auto cap_it = std::find_if(caller_captures.begin(), caller_captures.end(),
+//                                 [=](const auto &loc){ return loc.GetName() == field.name_.GetString();});
+//      NOISEPAGE_ASSERT(cap_it != caller_captures.end(), "local to capture straight up not found");
+//      GetEmitter()->
+//    }
     LocalVar fieldvar = GetCurrentFunction()->NewLocal(
-        fields[i].type_,
-        local.GetName() + "ptr");
+        fields[i].type_, "");
     GetEmitter()->EmitLea(fieldvar, captures.AddressOf(),
                                        node->GetCaptureStructType()
                                            ->As<ast::StructType>()->GetOffsetOfFieldByName(fields[i].name_));
-    GetEmitter()->EmitAssign(Bytecode::Assign8, fieldvar.ValueOf(), localvar.AddressOf());
-    i++;
+    GetEmitter()->EmitAssign(Bytecode::Assign8, fieldvar.ValueOf(), local);
   }
 
   GetEmitter()->EmitAssign(Bytecode::Assign8, GetExecutionResult()->GetDestination(), captures.AddressOf());
@@ -277,6 +277,9 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
       EnterFunction(func_info->GetId());
       BytecodePositionScope position_scope(this, func_info);
       Visit(node->GetFunctionLitExpr()->Body());
+    }
+    for(auto f : func_info->actions_){
+      f();
     }
   });
 }
@@ -357,15 +360,18 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
   const std::string local_name = node->Name().GetData();
   LocalVar local = GetCurrentFunction()->LookupLocal(local_name);
   std::string suffix;
+  bool capture = false;
 
   if(local.IsInvalid() && GetCurrentFunction()->is_lambda_) {
-    if (GetExecutionResult()->IsRValue()) {
-      local = GetCurrentFunction()->LookupLocal(local_name + "val");
-      suffix = "val";
-    } else {
-      local = GetCurrentFunction()->LookupLocal(local_name + "ptr");
-      suffix = "ptr";
-    }
+     local = GetCurrentFunction()->LookupLocal(local_name + "ptr").ValueOf();
+     suffix = "ptr";
+     if(!local.IsInvalid()) {
+       if (GetExecutionResult()->IsRValue()) {
+         auto local_val = GetCurrentFunction()->NewLocal(node->GetType(), "");
+         GetEmitter()->EmitDerefN(local_val, local.ValueOf(), node->GetType()->GetSize());
+         local = local_val;
+       }
+     }
   }
 
   if(local.IsInvalid()){
@@ -383,16 +389,18 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
                               captures->GetOffsetOfFieldByName(field.name_));
         auto local_ptr_2 = GetCurrentFunction()->NewLocal(field.type_, local_name + "ptr");
         GetEmitter()->EmitDerefN(local_ptr_2, local_ptr.ValueOf(), field.type_->GetSize());
-        local = GetCurrentFunction()->NewLocal(field.type_->GetPointeeType(), local_name + "val");
-        GetEmitter()->EmitDerefN(local, local_ptr_2.ValueOf(), field.type_->GetPointeeType()->GetSize());
-        suffix = "val";
-        if(GetExecutionResult()->IsLValue()) {
-          local = local_ptr_2.ValueOf();
-          suffix = "ptr";
+        local = local_ptr_2;
+        suffix =   "ptr";
+        if(GetExecutionResult()->IsRValue()) {
+          local = GetCurrentFunction()->NewLocal(field.type_->GetPointeeType(), "");
+          GetEmitter()->EmitDerefN(local, local_ptr_2.ValueOf(), field.type_->GetPointeeType()->GetSize());
+          suffix = "val";
         }
+        local = local.ValueOf();
         break;
       }
     }
+    capture = true;
   }
   NOISEPAGE_ASSERT(!local.IsInvalid(), "Local not found");
 
@@ -415,17 +423,17 @@ void BytecodeGenerator::VisitIdentifierExpr(ast::IdentifierExpr *node) {
 
   // If the local we want the R-Value of is a parameter, we can't take its
   // pointer for the deref, so we use an assignment. Otherwise, a deref is good.
-  auto *local_info = GetCurrentFunction()->LookupLocalInfoByName(local_name);
-  if(local_info == nullptr){
-    local_info = GetCurrentFunction()->LookupLocalInfoByName(local_name + suffix);
-  }
+  auto *local_info = GetCurrentFunction()->LookupLocalInfoByOffset(local.GetOffset());
+//  if(local_info == nullptr){
+//    local_info = GetCurrentFunction()->LookupLocalInfoByName(local_name + suffix);
+//  }
   if (local_info->IsParameter()) {
     BuildAssign(dest, local.ValueOf(), node->GetType());
   } else {
     BuildDeref(dest, local, node->GetType());
   }
 
-  GetExecutionResult()->SetDestination(dest);
+  GetExecutionResult()->SetDestination(capture ? dest.ValueOf() : dest);
 }
 
 void BytecodeGenerator::VisitImplicitCastExpr(ast::ImplicitCastExpr *node) {

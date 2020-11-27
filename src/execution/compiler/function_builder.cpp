@@ -73,7 +73,7 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
   return decl_.fn_decl_;
 }
 
-ast::LambdaExpr *FunctionBuilder::FinishLambda(ast::Expr *ret) {
+ast::LambdaExpr *FunctionBuilder::FinishLambda(util::RegionVector<ast::Expr*> &&captures, ast::Expr *ret) {
   NOISEPAGE_ASSERT(is_lambda_, "Asking to finish a lambda function that's not actually a lambda function");
   if (decl_.lambda_expr_ != nullptr) {
     return decl_.lambda_expr_;
@@ -97,7 +97,7 @@ ast::LambdaExpr *FunctionBuilder::FinishLambda(ast::Expr *ret) {
 
   // Create the declaration.
   auto func_lit = codegen_->GetFactory()->NewFunctionLitExpr(func_type, statements_);
-  decl_.lambda_expr_ = codegen_->GetFactory()->NewLambdaExpr(start_, func_lit);
+  decl_.lambda_expr_ = codegen_->GetFactory()->NewLambdaExpr(start_, func_lit, std::move(captures));
 
   // Done
   return decl_.lambda_expr_;

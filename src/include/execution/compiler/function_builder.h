@@ -67,7 +67,7 @@ class FunctionBuilder {
    */
   ast::FunctionDecl *Finish(ast::Expr *ret = nullptr);
 
-  ast::LambdaExpr *FinishLambda(ast::Expr *ret = nullptr);
+  ast::LambdaExpr *FinishLambda(util::RegionVector<ast::Expr*> &&captures, ast::Expr *ret = nullptr);
 
   /**
    * @return The final constructed function; null if the builder hasn't been constructed through

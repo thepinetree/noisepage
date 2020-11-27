@@ -68,14 +68,18 @@ void OutputTranslator::PerformPipelineWork(noisepage::execution::compiler::WorkC
 
   // Now fill up the output row
   // For each column in the output, set out.col_i = col_i
+  std::vector<ast::Expr*> callback_args{GetExecutionContext()};
   for (uint32_t attr_idx = 0; attr_idx < GetPlan().GetOutputSchema()->NumColumns(); attr_idx++) {
     ast::Identifier attr_name = GetCodeGen()->MakeIdentifier(OUTPUT_COL_PREFIX + std::to_string(attr_idx));
     ast::Expr *lhs = GetCodeGen()->AccessStructMember(GetCodeGen()->MakeExpr(output_var_), attr_name);
     ast::Expr *rhs = child_translator->GetOutput(context, attr_idx);
     function->Append(GetCodeGen()->Assign(lhs, rhs));
     if(callback) {
-      function->Append(GetCodeGen()->Call(callback->As<ast::LambdaExpr>()->GetName(), {lhs}));
+      callback_args.push_back(lhs);
     }
+  }
+  if(callback) {
+    function->Append(GetCodeGen()->Call(callback->As<ast::LambdaExpr>()->GetName(), std::move(callback_args)));
   }
 
   CounterAdd(function, num_output_, 1);

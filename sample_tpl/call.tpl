@@ -5,7 +5,7 @@ fun f(z : Date ) -> Date { return z  }
 fun main(exec : *ExecutionContext) -> int32 {
     var y = @dateToSql(1998, 2, 11)
     //var f = 25
-    var lam = lambda (z : Date ) -> nil {
+    var lam = lambda [y] (z : Date ) -> nil {
                     y = z
                 }
     var d = @dateToSql(1998, 2, 11)

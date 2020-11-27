@@ -28,6 +28,7 @@ class RetStmtAST;
 class AssignStmtAST;
 class SQLStmtAST;
 class DynamicSQLStmtAST;
+class ForStmtAST;
 
 class UDFCodegen : ASTNodeVisitor {
  public:
@@ -56,6 +57,7 @@ class UDFCodegen : ASTNodeVisitor {
   void Visit(AssignStmtAST *) override;
   void Visit(SQLStmtAST *) override;
   void Visit(DynamicSQLStmtAST *) override;
+  void Visit(ForStmtAST *) override;
 
   execution::ast::File *Finish(){
     auto fn = fb_->Finish();

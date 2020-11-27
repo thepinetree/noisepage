@@ -25,6 +25,7 @@ const std::string kPLpgSQL_stmt_block = "PLpgSQL_stmt_block";
 const std::string kPLpgSQL_stmt_return = "PLpgSQL_stmt_return";
 const std::string kPLpgSQL_stmt_if = "PLpgSQL_stmt_if";
 const std::string kPLpgSQL_stmt_while = "PLpgSQL_stmt_while";
+const std::string kPLpgSQL_stmt_fors = "PLpgSQL_stmt_fors";
 const std::string kCond = "cond";
 const std::string kThenBody = "then_body";
 const std::string kElseBody = "else_body";
@@ -133,6 +134,8 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseBlock(const nlohmann::json &block) 
       stmts.push_back(std::move(ass_expr_ast));
     } else if (stmt_names.key() == kPLpgSQL_stmt_while) {
       stmts.push_back(ParseWhile(stmt[kPLpgSQL_stmt_while]));
+    } else if (stmt_names.key() == kPLpgSQL_stmt_fors) {
+      stmts.push_back(ParseFor(stmt[kPLpgSQL_stmt_fors]));
     } else if (stmt_names.key() == kPLpgSQL_stmt_execsql) {
       stmts.push_back(ParseSQL(stmt[kPLpgSQL_stmt_execsql]));
     } else if (stmt_names.key() == kPLpgSQL_stmt_dynexecute) {
@@ -227,6 +230,24 @@ std::unique_ptr<StmtAST> PLpgSQLParser::ParseWhile(const nlohmann::json &loop) {
   auto body_stmt = ParseBlock(loop[kBody]);
   return std::unique_ptr<WhileStmtAST>(
       new WhileStmtAST(std::move(cond_expr), std::move(body_stmt)));
+}
+
+std::unique_ptr<StmtAST> PLpgSQLParser::ParseFor(const nlohmann::json &loop) {
+  PARSER_LOG_DEBUG("ParseFor");
+  auto sql_query = loop[kQuery][kPLpgSQL_expr][kQuery].get<std::string>();;
+  auto parse_result = PostgresParser::BuildParseTree(sql_query.c_str());
+  if (parse_result == nullptr) {
+    PARSER_LOG_DEBUG("Bad SQL statement");
+    return nullptr;
+  }
+  auto body_stmt = ParseBlock(loop[kBody]);
+  auto var_array = loop[kRow][kPLpgSQL_row][kFields];
+  std::vector<std::string> var_vec;
+  for(auto var : var_array){
+    var_vec.push_back(var[kName].get<std::string>());
+  }
+  return std::unique_ptr<ForStmtAST>(
+      new ForStmtAST(std::move(var_vec), std::move(parse_result), std::move(body_stmt)));
 }
 
 std::unique_ptr<StmtAST> PLpgSQLParser::ParseSQL(const nlohmann::json &sql_stmt) {

@@ -17,6 +17,7 @@ class RetStmtAST;
 class AssignStmtAST;
 class SQLStmtAST;
 class DynamicSQLStmtAST;
+class ForStmtAST;
 class FunctionAST;
 
 class ASTNodeVisitor {
@@ -38,6 +39,7 @@ class ASTNodeVisitor {
   virtual void Visit(WhileStmtAST *){};
   virtual void Visit(RetStmtAST *){};
   virtual void Visit(AssignStmtAST *){};
+  virtual void Visit(ForStmtAST *){};
   virtual void Visit(SQLStmtAST *){};
   virtual void Visit(DynamicSQLStmtAST *){};
 };

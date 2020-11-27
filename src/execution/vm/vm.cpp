@@ -2719,6 +2719,10 @@ const uint8_t *VM::ExecuteCall(const uint8_t *ip, VM::Frame *caller) {
     raw_frame = static_cast<uint8_t *>(alloca(frame_size));
   }
 
+  if(func_info->GetName() == "looplamb1"){
+    std::cout << "lets go?\n";
+  }
+
   // Set up the arguments to the function
   for (uint32_t i = 0; i < num_params; i++) {
     const LocalInfo &param_info = func_info->GetLocals()[i];

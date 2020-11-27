@@ -165,7 +165,7 @@ VM_OP_HOT void OpDerefN(noisepage::byte *dest, const noisepage::byte *const src,
 
 VM_OP_HOT void OpAssign1(int8_t *dest, int8_t src) { *dest = src; }
 
-VM_OP_HOT void OpAssign2(int16_t *dest, int16_t src) { *dest = src; }
+VM_OP_HOT void OpAssign2(int16_t *dest, int16_t src) {  *dest = src; }
 
 VM_OP_HOT void OpAssign4(int32_t *dest, int32_t src) { *dest = src; }
 

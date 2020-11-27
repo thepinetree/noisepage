@@ -176,8 +176,12 @@ AstNode *AstCloneImpl::VisitIndexExpr(IndexExpr *node) {
 }
 
 AstNode *AstCloneImpl::VisitLambdaExpr(LambdaExpr *node) {
+  util::RegionVector<ast::Expr*> capture_idents(new_context_->GetRegion());
+  for(auto ident : node->GetCaptureIdents()){
+    capture_idents.push_back(reinterpret_cast<ast::Expr*>(Visit(ident)));
+  }
   return factory_->NewLambdaExpr(node->Position(), reinterpret_cast<FunctionLitExpr*>(Visit(
-            node->GetFunctionLitExpr())));
+            node->GetFunctionLitExpr())), std::move(capture_idents));
 }
 
 AstNode *AstCloneImpl::VisitLitExpr(LitExpr *node) {

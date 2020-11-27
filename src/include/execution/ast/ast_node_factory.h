@@ -45,8 +45,9 @@ class AstNodeFactory {
     return new (region_) FunctionDecl(pos, name, fun);
   }
 
-  LambdaExpr *NewLambdaExpr(const SourcePosition &pos, FunctionLitExpr *fun) {
-    return new (region_) LambdaExpr(pos, fun);
+  LambdaExpr *NewLambdaExpr(const SourcePosition &pos, FunctionLitExpr *fun,
+                            util::RegionVector<ast::Expr*> &&captures) {
+    return new (region_) LambdaExpr(pos, fun, std::move(captures));
   }
 
   /**

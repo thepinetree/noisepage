@@ -430,12 +430,27 @@ ast::Expr *Parser::ParseLambdaExpr() {
 
   const SourcePosition &position = scanner_->CurrentPosition();
 
+  util::RegionVector<ast::Expr*> captures(Region());
+
+  Expect(Token::Type::LEFT_BRACKET);
+
+  while(Peek() != Token::Type::RIGHT_BRACKET) {
+    auto var = GetSymbol();
+    captures.push_back(new (Region()) ast::IdentifierExpr(position, var));
+
+    if (!Matches(Token::Type::COMMA)) {
+      break;
+    }
+  }
+
+  Expect(Token::Type::RIGHT_BRACKET);
+
   // The function literal
   auto *fun = ParseFunctionLitExpr()->As<ast::FunctionLitExpr>();
 
   // Create declaration
 //  ast::FunctionDecl *decl = node_factory_->NewFunctionDecl(position, name fun);
-  auto *lambda = node_factory_->NewLambdaExpr(position, fun);
+  auto *lambda = node_factory_->NewLambdaExpr(position, fun, std::move(captures));
 
   // Done
   return lambda;

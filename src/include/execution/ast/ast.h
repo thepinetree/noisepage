@@ -1076,8 +1076,8 @@ class BinaryOpExpr : public Expr {
 
 class LambdaExpr : public Expr {
  public:
-  LambdaExpr(const SourcePosition &pos, FunctionLitExpr *func)
-      : Expr(Kind::LambdaExpr, pos), captures_{nullptr}, func_lit_(func) {}
+  LambdaExpr(const SourcePosition &pos, FunctionLitExpr *func, util::RegionVector<ast::Expr*> &&captures)
+      : Expr(Kind::LambdaExpr, pos), captures_{nullptr}, func_lit_(func), capture_idents_{std::move(captures)} {}
 
   FunctionLitExpr *GetFunctionLitExpr() const { return func_lit_; }
 
@@ -1086,6 +1086,8 @@ class LambdaExpr : public Expr {
   ast::Type *GetCaptureStructType() const { return capture_type_; }
 
   const Identifier &GetName() const { return name_; }
+
+  const util::RegionVector<ast::Expr*> &GetCaptureIdents() const { return capture_idents_; }
 
   void SetName(Identifier name) { name_ = name; }
 
@@ -1096,6 +1098,7 @@ class LambdaExpr : public Expr {
   ast::StructTypeRepr *captures_;
   ast::Type *capture_type_;
   FunctionLitExpr *func_lit_;
+  util::RegionVector<ast::Expr*> capture_idents_;
 };
 
 /**

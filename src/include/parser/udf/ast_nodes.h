@@ -145,6 +145,19 @@ class IfStmtAST : public StmtAST {
         else_stmt(std::move(else_stmt)) {}
 };
 
+class ForStmtAST : public StmtAST {
+ public:
+  std::vector<std::string> vars_;
+  std::unique_ptr<parser::ParseResult> query_;
+  std::unique_ptr<StmtAST> body_stmt_;
+
+  void Accept(ASTNodeVisitor *visitor) override { visitor->Visit(this); };
+
+  ForStmtAST(std::vector<std::string> &&vars_vec, std::unique_ptr<parser::ParseResult> query,
+               std::unique_ptr<StmtAST> body_stmt)
+      : vars_(std::move(vars_vec)), query_(std::move(query)), body_stmt_(std::move(body_stmt)) {}
+};
+
 // WhileAST - Statement class for while loop
 class WhileStmtAST : public StmtAST {
  public:

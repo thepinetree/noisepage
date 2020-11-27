@@ -31,6 +31,7 @@ class PLpgSQLParser {
   std::unique_ptr<StmtAST> ParseDecl(const nlohmann::json &decl);
   std::unique_ptr<StmtAST> ParseIf(const nlohmann::json &branch);
   std::unique_ptr<StmtAST> ParseWhile(const nlohmann::json &loop);
+  std::unique_ptr<StmtAST> ParseFor(const nlohmann::json &loop);
   std::unique_ptr<StmtAST> ParseSQL(const nlohmann::json &sql_stmt);
   std::unique_ptr<StmtAST> ParseDynamicSQL(const nlohmann::json &sql_stmt);
   // Feed the expression (as a sql string) to our parser then transform the
