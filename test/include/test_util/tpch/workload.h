@@ -44,10 +44,36 @@ class Workload {
   /**
    * Function to invoke for a single worker thread to invoke the TPCH queries
    * @param worker_id 1-indexed thread id
-   */
+   * @param execution_us_per_worker max execution time for single worker
+   * @param avg_interval_us interval timing
+   * @param query_num number of queries to run
+   * @param mode execution mode
+   * */
   void Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint64_t avg_interval_us, uint32_t query_num,
                execution::vm::ExecutionMode mode);
-  uint32_t GetQueryNum() { return query_and_plan_.size(); }
+
+  /**
+   * Function to invoke a single TPCH query and collect runtime
+   * @param query_ind index of query into query_and_plan_
+   * @param avg_interval_us interval timing
+   * @param mode execution mode
+   * @param print_output boolean flag to determine whether timing output should be printed
+   * @return time taken to run query
+   */
+  uint64_t TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, bool print_output = false);
+
+  /**
+   * Function to get number of queries in plan
+   * @return size of query plan vector
+   */
+  uint32_t GetQueryNum() const { return query_and_plan_.size(); }
+
+
+  /**
+   * Function to get number of queries in plan
+   * @return size of query plan vector
+   */
+  std::string GetQueryName(int32_t query_ind) const { return query_names_[query_ind]; }
 
  private:
   void GenerateTables(execution::exec::ExecutionContext *exec_ctx, const std::string &dir_name,
@@ -67,6 +93,7 @@ class Workload {
   std::vector<
       std::tuple<std::unique_ptr<execution::compiler::ExecutableQuery>, std::unique_ptr<planner::AbstractPlanNode>>>
       query_and_plan_;
+  std::vector<std::string> query_names_;
 };
 
 }  // namespace noisepage::tpch

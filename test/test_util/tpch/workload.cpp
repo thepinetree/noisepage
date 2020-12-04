@@ -16,6 +16,7 @@
 #include "planner/plannodes/seq_scan_plan_node.h"
 #include "test_util/ssb/star_schema_query.h"
 #include "test_util/tpch/tpch_query.h"
+#include "common/scoped_timer.h"
 
 namespace noisepage::tpch {
 
@@ -165,5 +166,44 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
   // Unregister from the metrics manager
   db_main_->GetMetricsManager()->UnregisterThread();
 }
+
+uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, bool print_output) {
+  NOISEPAGE_ASSERT(query_ind < this->GetQueryNum() && 0 <= query_ind, "query plans index out of range");
+  // Register to the metrics manager
+  db_main_->GetMetricsManager()->RegisterThread();
+  auto txn = txn_manager_->BeginTransaction();
+  auto accessor =
+      catalog_->GetAccessor(common::ManagedPointer<transaction::TransactionContext>(txn), db_oid_, DISABLED);
+
+  auto output_schema = std::get<1>(query_and_plan_[query_ind])->GetOutputSchema().Get();
+
+  // Uncomment this line and change output.cpp:90 to EXECUTION_LOG_INFO to print output
+  // execution::exec::OutputPrinter printer(output_schema);
+  execution::exec::NoOpResultConsumer printer;
+  auto exec_ctx = execution::exec::ExecutionContext(
+      db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), printer, output_schema,
+      common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_, db_main_->GetMetricsManager());
+
+  uint64_t elapsed_ms = 0;
+  {
+    common::ScopedTimer<std::chrono::milliseconds> timer(&elapsed_ms);
+    std::get<0>(query_and_plan_[query_ind])
+        ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
+  }
+  if (print_output) std::cout << query_names_[query_ind] << "," << elapsed_ms << std::endl;
+
+  // Commit transaction
+  txn_manager_->Commit(txn, transaction::TransactionUtil::EmptyCallback, nullptr);
+
+  // Add sleep time pause
+  std::this_thread::sleep_for(std::chrono::microseconds(100));
+
+
+  // Unregister from the metrics manager
+  db_main_->GetMetricsManager()->UnregisterThread();
+
+  return elapsed_ms;
+}
+
 
 }  // namespace noisepage::tpch
