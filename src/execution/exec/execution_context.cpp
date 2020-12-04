@@ -95,18 +95,18 @@ void ExecutionContext::InitializeExecOUFeatureVector(brain::ExecOUFeatureVector 
 void ExecutionContext::InitializeParallelOUFeatureVector(brain::ExecOUFeatureVector *ouvec, pipeline_id_t pipeline_id) {
   ouvec->pipeline_id_ = pipeline_id;
 
-  bool found_blocking = false;
+  //bool found_blocking = false;
   brain::ExecutionOperatingUnitFeature feature;
   auto features = pipeline_operating_units_->GetPipelineFeatures(pipeline_id);
   for (auto &feat : features) {
     if (brain::OperatingUnitUtil::IsOperatingUnitTypeBlocking(feat.GetExecutionOperatingUnitType())) {
-      TERRIER_ASSERT(!found_blocking, "Pipeline should only have 1 blocking");
-      found_blocking = true;
+      //TERRIER_ASSERT(!found_blocking, "Pipeline should only have 1 blocking");
+      //found_blocking = true;
       feature = feat;
     }
   }
 
-  TERRIER_ASSERT(found_blocking, "Pipeline should have 1 blocking");
+  //TERRIER_ASSERT(found_blocking, "Pipeline should have 1 blocking");
   switch (feature.GetExecutionOperatingUnitType()) {
     case brain::ExecutionOperatingUnitType::HASHJOIN_BUILD:
       ouvec->pipeline_features_.emplace_back(brain::ExecutionOperatingUnitType::PARALLEL_MERGE_HASHJOIN, feature);

@@ -100,8 +100,8 @@ void Workload::LoadQueries(const std::unique_ptr<catalog::CatalogAccessor> &acce
       query_names_.emplace_back("Q11");
       query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ18(accessor, exec_settings_));
       query_names_.emplace_back("Q18");
-//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ19(accessor, exec_settings_));
-//      query_names_.emplace_back("Q19");
+      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ19(accessor, exec_settings_));
+      query_names_.emplace_back("Q19");
       break;
     case tpch::Workload::BenchmarkType::SSB:
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part1(accessor, exec_settings_));
@@ -172,7 +172,7 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
 }
 
 uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, bool print_output) {
-  TERRIER_ASSERT(query_ind < this->GetQueryNum() && 0 <= query_ind, "query plans index out of range");
+  // TERRIER_ASSERT(query_ind < this->GetQueryNum() && 0 <= query_ind, "query plans index out of range");
   // Register to the metrics manager
   db_main_->GetMetricsManager()->RegisterThread();
   auto txn = txn_manager_->BeginTransaction();
