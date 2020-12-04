@@ -22,8 +22,9 @@
 #include "metrics/pipeline_metric.h"
 #include "metrics/query_trace_metric.h"
 #include "metrics/transaction_metric.h"
+#include "parser/expression/constant_value_expression.h"
 
-namespace terrier::metrics {
+namespace noisepage::metrics {
 
 class MetricsManager;
 
@@ -51,7 +52,7 @@ class MetricsStore {
       METRICS_LOG_WARN(
           "RecordSerializerData() called without logging metrics enabled. Was it recently disabled and the component "
           "is just lagging?");
-    TERRIER_ASSERT(logging_metric_ != nullptr, "LoggingMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(logging_metric_ != nullptr, "LoggingMetric not allocated. Check MetricsStore constructor.");
     logging_metric_->RecordSerializerData(num_bytes, num_records, num_txns, interval, resource_metrics);
   }
 
@@ -68,7 +69,7 @@ class MetricsStore {
       METRICS_LOG_WARN(
           "RecordConsumerData() called without logging metrics enabled. Was it recently disabled and the component is "
           "just lagging?");
-    TERRIER_ASSERT(logging_metric_ != nullptr, "LoggingMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(logging_metric_ != nullptr, "LoggingMetric not allocated. Check MetricsStore constructor.");
     logging_metric_->RecordConsumerData(num_bytes, num_records, interval, resource_metrics);
   }
 
@@ -88,7 +89,7 @@ class MetricsStore {
       METRICS_LOG_WARN(
           "RecordUnlinkData() called without GC metrics enabled. Was it recently disabled and the component is just "
           "lagging?");
-    TERRIER_ASSERT(gc_metric_ != nullptr, "GarbageCollectionMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(gc_metric_ != nullptr, "GarbageCollectionMetric not allocated. Check MetricsStore constructor.");
     gc_metric_->RecordGCData(txns_deallocated, txns_unlinked, buffer_unlinked, readonly_unlinked, interval,
                              resource_metrics);
   }
@@ -102,7 +103,7 @@ class MetricsStore {
       METRICS_LOG_WARN(
           "RecordBeginData() called without transaction metrics enabled. Was it recently disabled and the component is "
           "just lagging?");
-    TERRIER_ASSERT(txn_metric_ != nullptr, "TransactionMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(txn_metric_ != nullptr, "TransactionMetric not allocated. Check MetricsStore constructor.");
     txn_metric_->RecordBeginData(resource_metrics);
   }
 
@@ -116,7 +117,7 @@ class MetricsStore {
       METRICS_LOG_WARN(
           "RecordCommitData() called without transaction metrics enabled. Was it recently disabled and the component "
           "is just lagging?");
-    TERRIER_ASSERT(txn_metric_ != nullptr, "TransactionMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(txn_metric_ != nullptr, "TransactionMetric not allocated. Check MetricsStore constructor.");
     txn_metric_->RecordCommitData(is_readonly, resource_metrics);
   }
 
@@ -131,7 +132,7 @@ class MetricsStore {
                            const common::ResourceTracker::Metrics &resource_metrics) {
     if (!ComponentEnabled(MetricsComponent::EXECUTION))
       METRICS_LOG_WARN("RecordExecutionData() called without execution metrics enabled.");
-    TERRIER_ASSERT(execution_metric_ != nullptr, "ExecutionMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(execution_metric_ != nullptr, "ExecutionMetric not allocated. Check MetricsStore constructor.");
     execution_metric_->RecordExecutionData(feature, len, execution_mode, resource_metrics);
   }
 
@@ -144,11 +145,11 @@ class MetricsStore {
    * @param resource_metrics Metrics
    */
   void RecordPipelineData(execution::query_id_t query_id, execution::pipeline_id_t pipeline_id, uint8_t execution_mode,
-                          std::vector<brain::ExecutionOperatingUnitFeature> &&features,
+                          std::vector<selfdriving::ExecutionOperatingUnitFeature> &&features,
                           const common::ResourceTracker::Metrics &resource_metrics) {
     if (!ComponentEnabled(MetricsComponent::EXECUTION_PIPELINE))
       METRICS_LOG_WARN("RecordPipelineData() called without pipepline metrics enabled.");
-    TERRIER_ASSERT(pipeline_metric_ != nullptr, "PipelineMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(pipeline_metric_ != nullptr, "PipelineMetric not allocated. Check MetricsStore constructor.");
     pipeline_metric_->RecordPipelineData(query_id, pipeline_id, execution_mode, std::move(features), resource_metrics);
   }
 
@@ -160,8 +161,9 @@ class MetricsStore {
    */
   void RecordBindCommandData(uint64_t param_num, uint64_t query_text_size,
                              const common::ResourceTracker::Metrics &resource_metrics) {
-    TERRIER_ASSERT(ComponentEnabled(MetricsComponent::BIND_COMMAND), "BindCommandMetric not enabled.");
-    TERRIER_ASSERT(bind_command_metric_ != nullptr, "BindCommandMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(ComponentEnabled(MetricsComponent::BIND_COMMAND), "BindCommandMetric not enabled.");
+    NOISEPAGE_ASSERT(bind_command_metric_ != nullptr,
+                     "BindCommandMetric not allocated. Check MetricsStore constructor.");
     bind_command_metric_->RecordBindCommandData(param_num, query_text_size, resource_metrics);
   }
 
@@ -171,33 +173,39 @@ class MetricsStore {
    * @param resource_metrics Metrics
    */
   void RecordExecuteCommandData(uint64_t portal_name_size, const common::ResourceTracker::Metrics &resource_metrics) {
-    TERRIER_ASSERT(ComponentEnabled(MetricsComponent::EXECUTE_COMMAND), "ExecuteCommandMetric not enabled.");
-    TERRIER_ASSERT(execute_command_metric_ != nullptr,
-                   "ExecuteCommandMetric not allocated. Check MetricsStore constructor.");
+    NOISEPAGE_ASSERT(ComponentEnabled(MetricsComponent::EXECUTE_COMMAND), "ExecuteCommandMetric not enabled.");
+    NOISEPAGE_ASSERT(execute_command_metric_ != nullptr,
+                     "ExecuteCommandMetric not allocated. Check MetricsStore constructor.");
     execute_command_metric_->RecordExecuteCommandData(portal_name_size, resource_metrics);
   }
 
   /**
    * Record queries generated
+   * @param db_oid database oid
    * @param query_id id of the query
    * @param query_text text of the query
+   * @param param parameter associated with this query
    * @param timestamp time of query generation
    */
-  void RecordQueryText(const execution::query_id_t query_id, const std::string &query_text, const uint64_t timestamp) {
-    TERRIER_ASSERT(ComponentEnabled(MetricsComponent::QUERY_TRACE), "QueryTraceMetric not enabled.");
-    TERRIER_ASSERT(query_trace_metric_ != nullptr, "QueryTraceMetric not allocated. Check MetricsStore constructor.");
-    query_trace_metric_->RecordQueryText(query_id, query_text, timestamp);
+  void RecordQueryText(catalog::db_oid_t db_oid, const execution::query_id_t query_id, const std::string &query_text,
+                       common::ManagedPointer<const std::vector<parser::ConstantValueExpression>> param,
+                       const uint64_t timestamp) {
+    NOISEPAGE_ASSERT(ComponentEnabled(MetricsComponent::QUERY_TRACE), "QueryTraceMetric not enabled.");
+    NOISEPAGE_ASSERT(query_trace_metric_ != nullptr, "QueryTraceMetric not allocated. Check MetricsStore constructor.");
+    query_trace_metric_->RecordQueryText(db_oid, query_id, query_text, param, timestamp);
   }
 
   /**
    * Record query execution history
    * @param query_id id of the query
    * @param timestamp time of the query execution
+   * @param param parameter associated with this query
    */
-  void RecordQueryTrace(const execution::query_id_t query_id, const uint64_t timestamp) {
-    TERRIER_ASSERT(ComponentEnabled(MetricsComponent::QUERY_TRACE), "QueryTraceMetric not enabled.");
-    TERRIER_ASSERT(query_trace_metric_ != nullptr, "QueryTraceMetric not allocated. Check MetricsStore constructor.");
-    query_trace_metric_->RecordQueryTrace(query_id, timestamp);
+  void RecordQueryTrace(const execution::query_id_t query_id, const uint64_t timestamp,
+                        common::ManagedPointer<const std::vector<parser::ConstantValueExpression>> param) {
+    NOISEPAGE_ASSERT(ComponentEnabled(MetricsComponent::QUERY_TRACE), "QueryTraceMetric not enabled.");
+    NOISEPAGE_ASSERT(query_trace_metric_ != nullptr, "QueryTraceMetric not allocated. Check MetricsStore constructor.");
+    query_trace_metric_->RecordQueryTrace(query_id, timestamp, param);
   }
 
   /**
@@ -253,4 +261,4 @@ class MetricsStore {
   std::array<uint32_t, NUM_COMPONENTS> sample_count_{0};
 };
 
-}  // namespace terrier::metrics
+}  // namespace noisepage::metrics
