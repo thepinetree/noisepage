@@ -7,8 +7,8 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
 
   var output_buffer = @resultBufferNew(exec_ctx)
 
-  var TEMP_OID_MASK: uint64 = 2147483648                       // 2^31
-  var col_types: [1]uint32
+  var TEMP_OID_MASK: uint32 = 2147483647 + 1                       // 2^31
+  var col_types: [5]uint32
   col_types[0] = 4
   col_types[1] = 4
   col_types[2] = 4
@@ -49,7 +49,7 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   @prSetInt(insert_pr, 1, &integer_ins)
   integer_ins = @intToSql(0)
   @prSetInt(insert_pr, 2, &integer_ins)
-  integer_ins = @intToSql(5000)
+  integer_ins = @intToSql(50000)
   @prSetInt(insert_pr, 3, &integer_ins)
 
   var bool_ins = @boolToSql(true)

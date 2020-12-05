@@ -41,7 +41,7 @@ void TupleAccessStrategy::InitializeRawBlock(storage::DataTable *const data_tabl
   // not enabled, we should be able to do this step in the GC and still be good.
   // Also need to clean up any potential dangling version pointers (in cases where GC is off, or when a table is deleted
   // and individual tuples in it are not)
-  std::memset(ColumnStart(raw, VERSION_POINTER_COLUMN_ID), 0, sizeof(void *) * layout_.NumSlots());
+  //std::memset(ColumnStart(raw, VERSION_POINTER_COLUMN_ID), 0, sizeof(void *) * layout_.NumSlots());
 }
 
 bool TupleAccessStrategy::Allocate(RawBlock *const block, TupleSlot *const slot) const {

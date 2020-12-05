@@ -43,6 +43,7 @@ public class UDFBenchmark {
     //private static final String SQL_QUERY_3 = "SELECT compTest02(x) FROM sample LIMIT %d;";
 
     private static final String SQL_QUERY_4 = "SELECT margin(part) FROM partkeys;";
+    private static final String SQL_QUERY_5 = "SELECT loop(%d);";
 
     private static final int[] LIMITS = {0,1,10,100,1000,10000,100000, 1000000, 10000000, 50000000, 100000000};
 
@@ -92,8 +93,10 @@ public class UDFBenchmark {
 //            stmt.execute(String.format(SQL_QUERY_1, lim));
 //        }
 //        }
+          for(int j = 0;j < 3;j++){
           for(int i = 0;i < 3;i++){
-            stmt.execute(SQL_QUERY_4);
+            stmt.execute(String.format(SQL_QUERY_5, LIMITS[3*j]));
+          }
           }
 
     }
@@ -107,8 +110,8 @@ public class UDFBenchmark {
         props.setProperty("prepareThreshold", "0");
         props.setProperty("preferQueryMode", "extended");
 //        props.setProperty("prepareThreshold", 0);
-            String url = String.format("jdbc:postgresql://localhost:15721/noisepage");
-            Class.forName("org.postgresql.Driver");
+        String url = String.format("jdbc:postgresql://localhost:15721/noisepage");
+        Class.forName("org.postgresql.Driver");
         conn = DriverManager.getConnection(url, props);
             conn.setAutoCommit(true);
             initDatabase();

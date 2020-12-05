@@ -82,7 +82,7 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
 
   callbacks->EndPhase(Phase::SemanticAnalysis, this);
 
-  ast::AstPrettyPrint::Dump(std::cout, root_);
+//  ast::AstPrettyPrint::Dump(std::cout, root_);
 
   // -------------------------------------------------------
   // Phase 3 : Bytecode Generation
@@ -119,7 +119,7 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
     callbacks->OnError(Phase::ModuleGeneration, this);
     return;
   }
-  module->GetBytecodeModule()->Dump(std::cout);
+//  module->GetBytecodeModule()->Dump(std::cout);
 
   callbacks->EndPhase(Phase::ModuleGeneration, this);
 

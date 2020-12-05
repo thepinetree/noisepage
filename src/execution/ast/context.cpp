@@ -207,17 +207,17 @@ Identifier Context::GetIdentifier(llvm::StringRef str) {
   }
 
   auto iter = Impl()->string_table_.insert(std::make_pair(str, static_cast<char>(0))).first;
-  if(str == "nil"){
-    std::cout << (void*)iter->getKeyData() << "\n";
-  }
+//  if(str == "nil"){
+//    std::cout << (void*)iter->getKeyData() << "\n";
+//  }
   return Identifier(iter->getKeyData());
 }
 
 Type *Context::LookupBuiltinType(Identifier name) const {
   auto iter = Impl()->builtin_types_.find(name);
-  if(name.GetString() == "nil"){
-    std::cout << "bruh " << (void*)name.GetData() << "\n";
-  }
+//  if(name.GetString() == "nil"){
+//    std::cout << "bruh " << (void*)name.GetData() << "\n";
+//  }
   return (iter == Impl()->builtin_types_.end() ? nullptr : iter->second);
 }
 

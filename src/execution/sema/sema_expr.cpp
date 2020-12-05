@@ -460,9 +460,9 @@ void Sema::VisitMemberExpr(ast::MemberExpr *node) {
 
   ast::Type *member_type = obj_type->As<ast::StructType>()->LookupFieldByName(member);
 //  if(member_type == nullptr) {
-    for (auto &f : obj_type->As<ast::StructType>()->GetAllFields()) {
-      std::cout << f.name_.GetData() << " " << (void *)f.name_.GetData() << "\n";
-    }
+//    for (auto &f : obj_type->As<ast::StructType>()->GetAllFields()) {
+//      std::cout << f.name_.GetData() << " " << (void *)f.name_.GetData() << "\n";
+//    }
 //  }
 
   if (member_type == nullptr) {
