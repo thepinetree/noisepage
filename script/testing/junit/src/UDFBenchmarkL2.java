@@ -200,7 +200,7 @@ private static final String SQL_CREATE_FUNCTION_2 =
 }
 
 public static void main(String[] args) throws SQLException, ClassNotFoundException{
-        UDFBenchmark b = new UDFBenchmark();
+        UDFBenchmarkL2 b = new UDFBenchmarkL2();
         b.bottomtext();
 }
 
