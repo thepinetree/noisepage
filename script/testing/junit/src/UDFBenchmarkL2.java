@@ -20,32 +20,89 @@ import java.util.Properties;
 public class UDFBenchmarkL2 {
     private Connection conn;
     private ResultSet rs;
-    private static final String SQL_DROP_TABLE =
-            "DROP TABLE IF EXISTS sample;";
-
-    private static final String SQL_CREATE_TABLE =
-            "CREATE TABLE sample (x integer);";
+//    private static final String SQL_DROP_TABLE =
+//            "DROP TABLE IF EXISTS sample;";
+//
+//    private static final String SQL_CREATE_TABLE =
+//            "CREATE TABLE sample (x integer);";
 
     private static final String SQL_CREATE_FUNCTION =
-            "CREATE FUNCTION compTest02(x integer) RETURNS INT AS\n" +
+"CREATE OR REPLACE FUNCTION L2Norm2(n integer) RETURNS integer AS \n" +
 "$$\n" +
-"DECLARE\n" +
-"  y integer := 0;\n" +
-"BEGIN\n" +
-"  y = x;\n" +
-"  y = y + 1;\n" +
-"  RETURN y;\n" +
-"END;\n" +
-"$$ LANGUAGE plpgsql;";
+"\tDECLARE \n" +
+"\t\tsum integer := NULL;\n" +
+"\t\ti integer := NULL;\n" +
+"\t\tj integer := NULL;\n" +
+"\t\ta integer := NULL;\n" +
+"\t\tb integer := NULL;\n" +
+"\t\trow integer := NULL;\n" +
+"\tBEGIN\n" +
+"\t\tsum := 0;\n" +
+"\t\ti := 1;\n" +
+"\t\tWHILE i <= n LOOP\n" +
+"\t\t\trow := 0;\n" +
+"\t\t\tj := 1;\n" +
+"\t\t\tWHILE j <= n LOOP\n" +
+"\t\t\t\tFOR a,b in (select p.v,q.v  FROM matrix_1 p JOIN matrix_2 q ON p.c = q.r WHERE p.r = i and q.c = j) LOOP\n" +
+"\t\t\t\t\trow := row + a*b;\n" +
+"\t\t\t\tEND LOOP;\n" +
+"\t\t\t\tj := j + 1;\n" +
+"\t\t\tEND LOOP;\n" +
+"\t\t\tsum := sum + row * row;\n" +
+"\t\t\ti := i + 1;\n" +
+"\t\tEND LOOP;\n" +
+"\t\tRETURN sum;\n" +
+"\tEND;\n" +
+"$$\n" +
+"LANGUAGE PLPGSQL;";
+
+private static final String SQL_CREATE_FUNCTION_2 =
+"CREATE OR REPLACE FUNCTION L2Norm(n integer) RETURNS integer AS \n" +
+"$$\n" +
+"\tDECLARE \n" +
+"\t\tsum integer := NULL;\n" +
+"\t\ti integer := NULL;\n" +
+"\t\tj integer := NULL;\n" +
+"\t\ta integer := NULL;\n" +
+"\t\tb integer := NULL;\n" +
+"\t\telem integer := NULL;\n" +
+"\t\trow integer := NULL;\n" +
+"\tBEGIN\n" +
+"\t\tsum := 0;\n" +
+"\t\ti := 1;\n" +
+"\t\tWHILE i <= n LOOP\n" +
+"\t\t\trow := 0;\n" +
+"\t\t\tj := 1;\n" +
+"\t\t\tWHILE j <= n LOOP\n" +
+"\t\t\t\tSELECT SUM(p.v*q.v) into elem FROM matrix_1 p JOIN matrix_2 q ON p.c = q.r WHERE p.r = i and q.c = j;\n" +
+"\t\t\t\t-- RAISE NOTICE '% , % , %', i,j,elem;\n" +
+"\t\t\t\tIF elem IS NULL THEN\n" +
+"\t\t\t\t\telem := 0;\n" +
+"\t\t\t\tEND IF;\n" +
+"\t\t\t\trow := row + elem;\n" +
+"\t\t\t\tj := j + 1;\n" +
+"\t\t\tEND LOOP;\n" +
+"\t\t\tsum := sum + row * row;\n" +
+"\t\t\ti := i + 1;\n" +
+"\t\tEND LOOP;\n" +
+"\t\tRETURN sum;\n" +
+"\tEND;\n" +
+"$$\n" +
+"LANGUAGE PLPGSQL;";
 
     //private static final String SQL_QUERY_1 = "SELECT x FROM sample LIMIT %d;";
     //private static final String SQL_QUERY_2 = "SELECT x+1 FROM sample LIMIT %d;";
     //private static final String SQL_QUERY_3 = "SELECT compTest02(x) FROM sample LIMIT %d;";
 
-    private static final String SQL_QUERY_4 = "SELECT margin(part) FROM partkeys;";
-    private static final String SQL_QUERY_5 = "SELECT loop(%d);";
+//    private static final String SQL_QUERY_4 = "SELECT margin(part) FROM partkeys;";
+    private static final String SQL_QUERY_5 = "SELECT L2Norm(%d);";
+    private static final String SQL_QUERY_6 = "SELECT L2Norm2(%d);";
+
+    private static final String DEMARCATOR = "SELECT 1;";
 
     private static final int[] LIMITS = {0,1,10,100,1000,10000,100000, 1000000, 10000000, 50000000, 100000000};
+
+    private static final int[] N_VALUES = {1,2,3,4,5,10,100};
 
     /**
      * Initialize the database and table for testing
@@ -54,8 +111,8 @@ public class UDFBenchmarkL2 {
         Statement stmt = conn.createStatement();
 //        stmt.execute(SQL_DROP_TABLE);
 //        stmt.execute(SQL_CREATE_TABLE);
-        //stmt.execute(SQL_CREATE_FUNCTION);
-        StringBuffer sb = "INSERT INTO matrix_1 VALUES ";
+        stmt.execute(SQL_CREATE_FUNCTION);
+//        StringBuffer sb = "INSERT INTO matrix_1 VALUES ";
        // assert(false);
 
 //        for(int i = 0;i < 100000;i++){
@@ -96,6 +153,14 @@ public class UDFBenchmarkL2 {
           for(int j = 0;j < LIMITS.length;j++){
           for(int i = 0;i < 3;i++){
             stmt.execute(String.format(SQL_QUERY_5, LIMITS[j]));
+          }
+          }
+
+          stmt.execute(DEMARCATOR);
+
+          for(int j = 0;j < LIMITS.length;j++){
+          for(int i = 0;i < 3;i++){
+            stmt.execute(String.format(SQL_QUERY_6, LIMITS[j]));
           }
           }
 
