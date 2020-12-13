@@ -112,6 +112,7 @@ private static final String SQL_CREATE_FUNCTION_2 =
 //        stmt.execute(SQL_DROP_TABLE);
 //        stmt.execute(SQL_CREATE_TABLE);
         stmt.execute(SQL_CREATE_FUNCTION);
+        stmt.execute(SQL_CREATE_FUNCTION_2);
 //        StringBuffer sb = "INSERT INTO matrix_1 VALUES ";
        // assert(false);
 
