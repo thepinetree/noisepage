@@ -151,17 +151,17 @@ private static final String SQL_CREATE_FUNCTION_2 =
 //            stmt.execute(String.format(SQL_QUERY_1, lim));
 //        }
 //        }
-          for(int j = 0;j < LIMITS.length;j++){
+          for(int j = 0;j < N_VALUES.length;j++){
           for(int i = 0;i < 3;i++){
-            stmt.execute(String.format(SQL_QUERY_5, LIMITS[j]));
+            stmt.execute(String.format(SQL_QUERY_5, N_VALUES[j]));
           }
           }
 
           stmt.execute(DEMARCATOR);
 
-          for(int j = 0;j < LIMITS.length;j++){
+          for(int j = 0;j < N_VALUES.length;j++){
           for(int i = 0;i < 3;i++){
-            stmt.execute(String.format(SQL_QUERY_6, LIMITS[j]));
+            stmt.execute(String.format(SQL_QUERY_6, N_VALUES[j]));
           }
           }
 
