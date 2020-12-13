@@ -325,7 +325,7 @@ ast::FunctionDecl *Pipeline::GenerateInitPipelineFunction(ast::LambdaExpr *outpu
   auto params = compilation_context_->QueryParams();
   ast::FieldDecl *p_state_ptr = nullptr;
   auto &state = GetPipelineStateDescriptor();
-  uint32_t p_state_ind;
+  uint32_t p_state_ind = 0;
   if(nested_ || output_callback){
     p_state_ptr = codegen_->MakeField(codegen_->MakeFreshIdentifier("pipeline_state"),
                                       codegen_->PointerType(
@@ -536,7 +536,7 @@ ast::FunctionDecl *Pipeline::GenerateTearDownPipelineFunction(ast::LambdaExpr *o
   auto params = compilation_context_->QueryParams();
   ast::FieldDecl *p_state_ptr = nullptr;
   auto &state = GetPipelineStateDescriptor();
-  uint32_t p_state_index;
+  uint32_t p_state_index = 0;
   if(nested_ || output_callback){
     p_state_ptr = codegen_->MakeField(codegen_->MakeFreshIdentifier("pipeline_state"), codegen_->PointerType(
                                                                                            codegen_->MakeExpr(state.GetTypeName())));

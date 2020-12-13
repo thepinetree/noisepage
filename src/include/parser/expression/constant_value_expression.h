@@ -231,6 +231,8 @@ class ConstantValueExpression : public AbstractExpression {
   template <typename T>
   T Peek() const;
 
+  const execution::sql::Val *PeekPtr() const;
+
   void Accept(common::ManagedPointer<binder::SqlNodeVisitor> v) override;
 
   /** @return A string representation of this ConstantValueExpression. */

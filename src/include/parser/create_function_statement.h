@@ -74,6 +74,7 @@ struct BaseFunctionParameter {
       case DataType::DATE:
         return type::TypeId::DATE;
     }
+    return type::TypeId::INVALID;
   }
 
  private:

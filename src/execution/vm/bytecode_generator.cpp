@@ -3347,10 +3347,10 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   std::vector<LocalVar> params;
 
   auto *func_type = call->Function()->GetType()->SafeAs<ast::FunctionType>();
-  bool is_lambda = false;
+  //bool is_lambda = false;
   if(func_type == nullptr){
     func_type = call->Function()->GetType()->SafeAs<ast::LambdaType>()->GetFunctionType();
-    is_lambda = true;
+    //is_lambda = true;
   }
 
   if (!func_type->GetReturnType()->IsNilType()) {
@@ -3380,7 +3380,7 @@ void BytecodeGenerator::VisitRegularCallExpr(ast::CallExpr *call) {
   // Emit call
   const auto func_id = LookupFuncIdByName(call->GetFuncName().GetData());
   if(func_id == FunctionInfo::K_INVALID_FUNC_ID){
-    NOISEPAGE_ASSERT(is_lambda, "unknown function and this is not a lambda");
+    //NOISEPAGE_ASSERT(is_lambda, "unknown function and this is not a lambda");
     auto action = GetEmitter()->DeferedEmitCall(params);
     deferred_function_create_actions_[call->GetFuncName().GetString()].push_back(action);
     return;

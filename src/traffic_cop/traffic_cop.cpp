@@ -421,8 +421,8 @@ TrafficCopResult TrafficCop::RunExecutableQuery(const common::ManagedPointer<net
       connection_ctx->Accessor(), exec_settings, metrics);
 
   std::vector<common::ManagedPointer<const execution::sql::Val>> params;
-  for(auto cve : *(portal->Parameters())){
-    params.push_back(cve.GetVal());
+  for(auto &cve : *(portal->Parameters())){
+    params.push_back(common::ManagedPointer(cve.PeekPtr()));
   }
 
   exec_ctx->SetParams(common::ManagedPointer(&params));

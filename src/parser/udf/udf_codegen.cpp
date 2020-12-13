@@ -185,7 +185,7 @@ void UDFCodegen::Visit(ValueExprAST *ast) {
 }
 
 void UDFCodegen::Visit(AssignStmtAST *ast) {
-  type::TypeId left_type;
+  type::TypeId left_type = type::TypeId::INVALID;
   udf_ast_context_->GetVariableType(ast->lhs->name, &left_type);
   current_type_ = left_type;
 
@@ -310,7 +310,7 @@ void UDFCodegen::Visit(ForStmtAST *ast) {
   auto exec_ctx = fb_->GetParameterByPosition(0);
 
   // TODO(Matt): I don't think the binder should need the database name. It's already bound in the ConnectionContext
-  binder::BindNodeVisitor visitor(common::ManagedPointer(accessor_), db_oid_);
+  binder::BindNodeVisitor visitor(common::ManagedPointer<catalog::CatalogAccessor>(accessor_), db_oid_);
   auto query_params = visitor.BindAndGetUDFParams(query, common::ManagedPointer(udf_ast_context_));
 
   auto stats = optimizer::StatsStorage();
@@ -389,7 +389,7 @@ void UDFCodegen::Visit(ForStmtAST *ast) {
   std::sort(sorted_vec.begin(), sorted_vec.end(), [](auto x, auto y){ return x->second < y->second; });
   for(auto entry : sorted_vec){
     // TODO(order these dudes)
-    type::TypeId type;
+    type::TypeId type = tpye::TypeId::INVALID;
     udf_ast_context_->GetVariableType(entry->first, &type);
 //    NOISEPAGE_ASSERT(ret, "didn't find param in udf ast context");
 
@@ -462,7 +462,7 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
   const auto query = common::ManagedPointer(ast->query);
 
   // TODO(Matt): I don't think the binder should need the database name. It's already bound in the ConnectionContext
-  binder::BindNodeVisitor visitor(common::ManagedPointer(accessor_), db_oid_);
+  binder::BindNodeVisitor visitor(common::ManagedPointer<catalog::CatalogAccessor>(accessor_), db_oid_);
   auto query_params = visitor.BindAndGetUDFParams(query, common::ManagedPointer(udf_ast_context_));
 
   auto stats = optimizer::StatsStorage();
@@ -527,7 +527,7 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
   std::sort(sorted_vec.begin(), sorted_vec.end(), [](auto x, auto y){ return x->second < y->second; });
   for(auto entry : sorted_vec){
     // TODO(order these dudes)
-    type::TypeId type;
+    type::TypeId type = type::TypeId::INVALID;
     udf_ast_context_->GetVariableType(entry->first, &type);
 //    NOISEPAGE_ASSERT(ret, "didn't find param in udf ast context");
 

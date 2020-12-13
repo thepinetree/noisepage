@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Properties;
 
 
-public class UDFBenchmark {
+public class UDFBenchmarkL2 {
     private Connection conn;
     private ResultSet rs;
     private static final String SQL_DROP_TABLE =
@@ -55,7 +55,7 @@ public class UDFBenchmark {
 //        stmt.execute(SQL_DROP_TABLE);
 //        stmt.execute(SQL_CREATE_TABLE);
         //stmt.execute(SQL_CREATE_FUNCTION);
-        //String insert_SQL_1 = "INSERT INTO sample VALUES (1);";
+        StringBuffer sb = "INSERT INTO matrix_1 VALUES ";
        // assert(false);
 
 //        for(int i = 0;i < 100000;i++){

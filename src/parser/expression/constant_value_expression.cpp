@@ -90,6 +90,12 @@ T ConstantValueExpression::Peek() const {
   UNREACHABLE("Invalid type for Peek.");
 }
 
+const execution::sql::Val *ConstantValueExpression::PeekPtr() const {
+  // NOLINTNEXTLINE: bugprone-suspicious-semicolon: seems like a false positive because of constexpr
+  return reinterpret_cast<const execution::sql::Val *>(&std::get<execution::sql::Integer>(value_));
+//  UNREACHABLE("Invalid type for Peek.");
+}
+
 ConstantValueExpression &ConstantValueExpression::operator=(const ConstantValueExpression &other) {
   if (this != &other) {  // self-assignment check expected
     // AbstractExpression fields we need copied over

@@ -16,16 +16,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.lang.StringBuilder;
+import java.util.Random;
 
 
 public class TupleInserter {
     private Connection conn;
     private ResultSet rs;
     private static final String SQL_DROP_TABLE =
-            "DROP TABLE IF EXISTS sample;";
+            "DROP TABLE IF EXISTS matrix_1;DROP TABLE IF EXISTS matrix_2;";
 
     private static final String SQL_CREATE_TABLE =
-            "CREATE TABLE sample (x integer);";
+            "CREATE TABLE matrix_1 (r integer, c integer, v integer);CREATE TABLE matrix_2 (r integer, c integer, v integer);";
 
     private static final String SQL_CREATE_FUNCTION =
             "CREATE FUNCTION compTest02(x integer) RETURNS INT AS\n" +
@@ -49,27 +50,61 @@ public class TupleInserter {
      * Initialize the database and table for testing
      */
     private void initDatabase() throws SQLException {
+        Random rand = new Random();
         Statement stmt = conn.createStatement();
-//        stmt.execute(SQL_DROP_TABLE);
-//        stmt.execute(SQL_CREATE_TABLE);
+        stmt.execute(SQL_DROP_TABLE);
+        stmt.execute(SQL_CREATE_TABLE);
 //        stmt.execute(SQL_CREATE_FUNCTION);
-        StringBuilder sb = new StringBuilder("INSERT INTO sample VALUES (1)");
+//
+        StringBuilder sb = new StringBuilder("INSERT INTO matrix_1 VALUES (?,?,?);");
+        PreparedStatement insertstmt = conn.prepareStatement(sb.toString());
 //        assert(false);
         int rows_inserted = 0;
-        for(int i = 0;i < 10000;i++){
-            sb.append(",(1)");
+        int n = 100;
+
+        for(int i = 0;i < n*n;i++){
+            int r = i / n;
+            int c = i % n;
+            int v = rand.nextInt();
+//            if(i != 0){
+//                sb.append(",");
+//            }
+//            sb.append(String.format("(%d,%d,%d)", r,c,v));
+            insertstmt.setInt(1, r);
+            insertstmt.setInt(2, c);
+            insertstmt.setInt(3, v);
+            insertstmt.executeUpdate();
         }
-        sb.append(";");
 
+        sb = new StringBuilder("INSERT INTO matrix_2 VALUES (?,?,?);");
+        insertstmt = conn.prepareStatement(sb.toString());
 
-        String insert_SQL_1 = sb.toString();
-        System.out.println("INSERTING NOW");
-
-        for(int i = 0;i < 100000;i++){
-            stmt.execute(insert_SQL_1);
-            rows_inserted += 10000;
-            System.out.printf("%d\n", rows_inserted);
+        for(int i = 0;i < n*n;i++){
+            int r = i / n;
+            int c = i % n;
+            int v = rand.nextInt();
+//            if(i != 0){
+//                sb.append(",");
+//            }
+//            sb.append(String.format("(%d,%d,%d)", r,c,v));
+            insertstmt.setInt(1, r);
+            insertstmt.setInt(2, c);
+            insertstmt.setInt(3, v);
+            insertstmt.executeUpdate();
         }
+
+//        conn.commit();
+//        sb.append(";");
+
+
+//        String insert_SQL_1 = sb.toString();
+//        System.out.println("INSERTING NOW");
+//
+//        for(int i = 0;i < 100000;i++){
+//            stmt.execute(insert_SQL_1);
+//            rows_inserted += n*n;
+//            System.out.printf("%d\n", rows_inserted);
+//        }
 
 
     }
@@ -83,7 +118,7 @@ public class TupleInserter {
         props.setProperty("prepareThreshold", "0");
         props.setProperty("preferQueryMode", "extended");
 //        props.setProperty("prepareThreshold", 0);
-            String url = String.format("jdbc:postgresql://localhost:15721/terrier");
+            String url = String.format("jdbc:postgresql://localhost:15721/noisepage");
             Class.forName("org.postgresql.Driver");
         conn = DriverManager.getConnection(url, props);
             conn.setAutoCommit(true);

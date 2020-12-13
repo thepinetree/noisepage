@@ -49,7 +49,7 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   @prSetInt(insert_pr, 1, &integer_ins)
   integer_ins = @intToSql(0)
   @prSetInt(insert_pr, 2, &integer_ins)
-  integer_ins = @intToSql(50000)
+  integer_ins = @intToSql(50000000)
   @prSetInt(insert_pr, 3, &integer_ins)
 
   var bool_ins = @boolToSql(true)

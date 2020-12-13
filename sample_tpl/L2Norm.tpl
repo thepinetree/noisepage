@@ -86,7 +86,7 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
 
   var insert_pr = @indCteScanGetInsertTempTablePR(&cte_scan)
   var integer_ins : Integer
-  var init_n = @intToSql(3)
+  var init_n = @intToSql(10)
   integer_ins = @initSqlNull(&integer_ins)
   var null_int = integer_ins
   @prSetIntNull(insert_pr, 0, &null_int)
@@ -106,8 +106,8 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   @prSetBool(insert_pr, 8, &bool_ins)
   var base_insert_temp_table_slot = @indCteScanTableInsert(&cte_scan)
 
-  var table_id_1 = @testCatalogLookup(execCtx, "matrix_1", "")
-  var table_id_2 = @testCatalogLookup(execCtx, "matrix_2", "")
+  var table_id_1 = @testCatalogLookup(exec_ctx, "matrix_1", "")
+  var table_id_2 = @testCatalogLookup(exec_ctx, "matrix_2", "")
 
 
   for(@indCteScanAccumulate(&cte_scan)){
@@ -128,29 +128,29 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
         var label = @vpiGetBoolNull(vpi, 7)
         var rec = @vpiGetBool(vpi, 8)
 
-        var sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = @intToSql(12345679)
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = res
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = elem
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = i
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = j
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = n
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = row
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = sum
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = @vpiGetIntNull(vpi, 7)
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = @vpiGetIntNull(vpi, 8)
-
-        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out.col1 = @intToSql(12345)
+        //var sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = @intToSql(12345679)
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = res
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = elem
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = i
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = j
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = n
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = row
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = sum
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = @vpiGetIntNull(vpi, 7)
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = @vpiGetIntNull(vpi, 8)
+//
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = @intToSql(12345)
 
         if(@sqlToBool(rec)){
 
@@ -180,8 +180,8 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
             var pred_2 = i <= n
 
             if(!@sqlToBool(pred_2)){
-            sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                    sample_out.col1 = @intToSql(6578)
+            //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+            //        sample_out.col1 = @intToSql(6578)
 
                var bool_98 = @boolToSql(false)
                if_result11_rec = bool_98
@@ -195,17 +195,17 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                if_result11_row = row
                if_result11_sum = sum
             } else {
-            sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                sample_out.col1 = @intToSql(212119)
+            //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+            //                    sample_out.col1 = @intToSql(212119)
 
                var bool_198 = @boolToSql(true)
                if_result11_rec = bool_198
-               sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-               if(@sqlToBool(bool_198)){
-                                   sample_out.col1 = @intToSql(11)
-                                   }else{
-                                       sample_out.col1 = @intToSql(22)
-                                   }
+               //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+               //if(@sqlToBool(bool_198)){
+               //                    sample_out.col1 = @intToSql(11)
+               //                    }else{
+               //                        sample_out.col1 = @intToSql(22)
+               //                    }
                if_result11_label = bool_198
                var int_198 : Integer
                int_198 = @initSqlNull(&int_198)
@@ -228,12 +228,12 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
             out_sum = if_result11_sum
             out_label = if_result11_label
             out_rec = if_result11_rec
-            sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-            if(@sqlToBool(if_result11_rec)){
-                    sample_out.col1 = @intToSql(11)
-                    }else{
-                        sample_out.col1 = @intToSql(22)
-                    }
+            //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+            //if(@sqlToBool(if_result11_rec)){
+            //        sample_out.col1 = @intToSql(11)
+            //        }else{
+            //            sample_out.col1 = @intToSql(22)
+            //        }
         } else {
             var if_result17_res : Integer
             var if_result17_elem : Integer
@@ -246,8 +246,8 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
             var if_result17_rec : Boolean
 
             var pred_5 = j <= n
-            sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                            sample_out.col1 = @intToSql(572932348)
+            //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+            //                sample_out.col1 = @intToSql(572932348)
             if(!@sqlToBool(pred_5)){
                 var bool_538 = @boolToSql(true)
                 if_result17_rec = bool_538
@@ -263,8 +263,8 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                 if_result17_row = row
                 if_result17_sum = sum
             } else {
-                var sample_out2 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                sample_out2.col1 = @intToSql(572938)
+                //var sample_out2 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                //sample_out2.col1 = @intToSql(572938)
                 //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
                 //sample_out.col1 = @intT
 
@@ -312,14 +312,14 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                                 for (; @vpiHasNextFiltered(vpi55); @vpiAdvanceFiltered(vpi55)) {
                                     if (@sqlToBool(@vpiGetIntNull(vpi55, 2) == @vpiGetIntNull(vpi155, 1))) {
                                         var aggValues: AggValues
-                                        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                        sample_out.col1 = @vpiGetIntNull(vpi55, 1)
-                                        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                        sample_out.col1 = @vpiGetIntNull(vpi155, 2)
+                                        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                                        //sample_out.col1 = @vpiGetIntNull(vpi55, 1)
+                                        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                                        //sample_out.col1 = @vpiGetIntNull(vpi155, 2)
                                         aggValues.agg_term_attr0 = @vpiGetIntNull(vpi55, 1) * @vpiGetIntNull(vpi155, 2)
                                         @aggAdvance(&queryState.aggs.agg_term_attr0, &aggValues.agg_term_attr0)
-                                        sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                        sample_out.col1 = @aggResult(&queryState.aggs.agg_term_attr0)
+                                        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                                        //sample_out.col1 = @aggResult(&queryState.aggs.agg_term_attr0)
                                     }
                                 }
                             }
@@ -332,10 +332,10 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
 
                    var aggRow = &queryState.aggs
                    var output = @aggResult(&aggRow.agg_term_attr0)
-                   var sample_out1 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                   sample_out1.col1 = @intToSql(9870)
-                   sample_out1 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                   sample_out1.col1 = output
+                   //var sample_out1 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                   //sample_out1.col1 = @intToSql(9870)
+                   //sample_out1 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                   //sample_out1.col1 = output
                    var q6_5 = @isValNull(output)
                    @aggReset(&queryState.aggs.agg_term_attr0)
                    if (q6_5) {
