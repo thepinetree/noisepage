@@ -389,7 +389,7 @@ void UDFCodegen::Visit(ForStmtAST *ast) {
   std::sort(sorted_vec.begin(), sorted_vec.end(), [](auto x, auto y){ return x->second < y->second; });
   for(auto entry : sorted_vec){
     // TODO(order these dudes)
-    type::TypeId type = tpye::TypeId::INVALID;
+    type::TypeId type = type::TypeId::INVALID;
     udf_ast_context_->GetVariableType(entry->first, &type);
 //    NOISEPAGE_ASSERT(ret, "didn't find param in udf ast context");
 
