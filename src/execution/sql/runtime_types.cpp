@@ -220,7 +220,8 @@ Date Date::FromString(const char *str, std::size_t len) {
     if (static_cast<bool>(std::isdigit(c))) {
       day = day * 10 + (c - '0');
     } else {
-      DATE_ERROR;
+      break;
+//      DATE_ERROR;
     }
   }
 

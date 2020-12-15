@@ -92,7 +92,7 @@ T ConstantValueExpression::Peek() const {
 
 const execution::sql::Val *ConstantValueExpression::PeekPtr() const {
   // NOLINTNEXTLINE: bugprone-suspicious-semicolon: seems like a false positive because of constexpr
-  return reinterpret_cast<const execution::sql::Val *>(&std::get<execution::sql::Integer>(value_));
+  return reinterpret_cast<const execution::sql::Val *>(&value_);
 //  UNREACHABLE("Invalid type for Peek.");
 }
 

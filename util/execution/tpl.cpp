@@ -89,9 +89,9 @@ static void CompileAndRun(const std::string &source,
   // Generate test tables
 //  sql::TableGenerator table_generator{&exec_ctx, db_main->GetStorageLayer()->GetBlockStore(), ns_oid};
 //  table_generator.GenerateTestTables();
-  // Comment out to make more tables available at runtime
+//   Comment out to make more tables available at runtime
 //   table_generator.GenerateTPCHTables(<path_to_tpch_dir>);
-  // table_generator.GenerateTableFromFile(<path_to_schema>, <path_to_data>);
+//   table_generator.GenerateTableFromFile(<path_to_schema>, <path_to_data>);
 
   // Let's parse the source
   util::Region err_region{"tmp-error-region"};

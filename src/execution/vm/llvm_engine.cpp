@@ -665,6 +665,11 @@ void LLVMEngine::CompiledModuleBuilder::BuildSimpleCFG(const FunctionInfo &func_
 void LLVMEngine::CompiledModuleBuilder::DefineFunction(const FunctionInfo &func_info, llvm::IRBuilder<> *ir_builder) {
   llvm::LLVMContext &ctx = ir_builder->getContext();
   llvm::Function *func = llvm_module_->getFunction(func_info.GetName());
+//  std::cout << func->getName().str() << "\n";
+  if(func->getName().str().find("inline") != std::string::npos) {
+    func->setLinkage(llvm::Function::LinkOnceAnyLinkage);
+    func->addFnAttr(llvm::Attribute::AlwaysInline);
+  }
   llvm::BasicBlock *first_bb = llvm::BasicBlock::Create(ctx, "BB0", func);
   llvm::BasicBlock *entry_bb = llvm::BasicBlock::Create(ctx, "EntryBB", func, first_bb);
 
@@ -1010,9 +1015,9 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
   pm_builder.populateFunctionPassManager(function_passes);
   pm_builder.populateModulePassManager(module_passes);
-//  for(auto &func : *llvm_module_) {
-//    func.print(llvm::outs());
-//  }
+  for(auto &func : *llvm_module_) {
+    func.print(llvm::outs());
+  }
 
   // Run optimization passes on module
   function_passes.doInitialization();
