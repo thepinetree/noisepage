@@ -61,43 +61,43 @@ public class UDFBenchmark {
 //        for(int i = 0;i < 100000;i++){
 //            stmt.execute(insert_SQL_1);
 //        }
-//        for(int lim : LIMITS){
-//            System.out.printf("limit %d\n", lim);
-//
-//        System.out.println("QUERY 3");
-//        stmt.execute(String.format(SQL_QUERY_3, lim));
-//
-//        for(int i = 0;i < 5;i++){
-//            stmt.execute(String.format(SQL_QUERY_3, lim));
-//        }
-//        }
-//
-//        for(int lim : LIMITS){
-//            System.out.printf("limit %d\n", lim);
-//
-//        System.out.println("QUERY 2");
-//        stmt.execute(String.format(SQL_QUERY_2, lim));
-//
-//        for(int i = 0;i < 5;i++){
-//            stmt.execute(String.format(SQL_QUERY_2, lim));
-//        }
-//        }
-//
-//        for(int lim : LIMITS){
-//            System.out.printf("limit %d\n", lim);
-//
-//        System.out.println("QUERY 1");
-//        stmt.execute(String.format(SQL_QUERY_1, lim));
-//
-//        for(int i = 0;i < 5;i++){
-//            stmt.execute(String.format(SQL_QUERY_1, lim));
-//        }
-//        }
-          for(int j = 0;j < LIMITS.length;j++){
-          for(int i = 0;i < 3;i++){
-            stmt.execute(String.format(SQL_QUERY_5, LIMITS[j]));
-          }
-          }
+        for(int lim : LIMITS){
+            System.out.printf("limit %d\n", lim);
+
+        System.out.println("QUERY 3");
+        stmt.execute(String.format(SQL_QUERY_3, lim));
+
+        for(int i = 0;i < 5;i++){
+            stmt.execute(String.format(SQL_QUERY_3, lim));
+        }
+        }
+
+        for(int lim : LIMITS){
+            System.out.printf("limit %d\n", lim);
+
+        System.out.println("QUERY 2");
+        stmt.execute(String.format(SQL_QUERY_2, lim));
+
+        for(int i = 0;i < 5;i++){
+            stmt.execute(String.format(SQL_QUERY_2, lim));
+        }
+        }
+
+        for(int lim : LIMITS){
+            System.out.printf("limit %d\n", lim);
+
+        System.out.println("QUERY 1");
+        stmt.execute(String.format(SQL_QUERY_1, lim));
+
+        for(int i = 0;i < 5;i++){
+            stmt.execute(String.format(SQL_QUERY_1, lim));
+        }
+        }
+//          for(int j = 0;j < LIMITS.length;j++){
+//          for(int i = 0;i < 3;i++){
+//            stmt.execute(String.format(SQL_QUERY_5, LIMITS[j]));
+//          }
+//          }
 
     }
 
