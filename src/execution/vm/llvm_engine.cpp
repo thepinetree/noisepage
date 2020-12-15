@@ -1015,9 +1015,9 @@ void LLVMEngine::CompiledModuleBuilder::Optimize() {
   pm_builder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
   pm_builder.populateFunctionPassManager(function_passes);
   pm_builder.populateModulePassManager(module_passes);
-  for(auto &func : *llvm_module_) {
-    func.print(llvm::outs());
-  }
+//  for(auto &func : *llvm_module_) {
+//    func.print(llvm::outs());
+//  }
 
   // Run optimization passes on module
   function_passes.doInitialization();

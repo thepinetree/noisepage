@@ -165,7 +165,7 @@ void BytecodeGenerator::VisitIterationStatement(ast::IterationStmt *iteration, L
 
 void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
   LoopBuilder *prev = current_loop_;
-  LoopBuilder loop_builder(this);
+  LoopBuilder loop_builder(this, prev);
 
   if (node->Init() != nullptr) {
     Visit(node->Init());
@@ -190,8 +190,8 @@ void BytecodeGenerator::VisitForStmt(ast::ForStmt *node) {
 }
 
 void BytecodeGenerator::VisitBreakStmt(ast::BreakStmt *node) {
-  if(current_loop_ != nullptr) {
-    current_loop_->Break();
+  if(current_loop_ != nullptr && current_loop_->GetPrev() != nullptr) {
+    current_loop_->GetPrev()->Break();
   }
 }
 

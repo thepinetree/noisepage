@@ -77,7 +77,8 @@ class LoopBuilder : public BreakableBlockBuilder {
    * Construct a loop builder.
    * @param generator The generator the loop writes.
    */
-  explicit LoopBuilder(BytecodeGenerator *generator) : BreakableBlockBuilder(generator) {}
+  explicit LoopBuilder(BytecodeGenerator *generator, LoopBuilder *prev = nullptr) : BreakableBlockBuilder(generator),
+  prev_loop_(prev) {}
 
   /**
    * Destructor.
@@ -93,6 +94,8 @@ class LoopBuilder : public BreakableBlockBuilder {
    * Jump to the header of the loop from the current position in the bytecode.
    */
   void JumpToHeader();
+
+  LoopBuilder *GetPrev() { return prev_loop_; }
 
   /**
    * Generate a 'continue' to skip the remainder of the loop and jump to the header.
@@ -114,6 +117,8 @@ class LoopBuilder : public BreakableBlockBuilder {
  private:
   BytecodeLabel header_label_;
   BytecodeLabel continue_label_;
+
+  LoopBuilder *prev_loop_;
 };
 
 /**

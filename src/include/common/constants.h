@@ -40,7 +40,7 @@ struct Constants {
   /**
    * The default vector size to use when performing vectorized iteration
    */
-  static constexpr const uint32_t K_DEFAULT_VECTOR_SIZE = 5;
+  static constexpr const uint32_t K_DEFAULT_VECTOR_SIZE = 2048;
 
   /**
    * The default prefetch distance to use
