@@ -27,7 +27,7 @@ public class UDFBenchmark {
             "CREATE TABLE sample (x integer);";
 
     private static final String SQL_CREATE_FUNCTION =
-            "CREATE FUNCTION compTest02(x integer) RETURNS INT AS\n" +
+            "CREATE FUNCTION inlinecompTest02(x integer) RETURNS INT AS\n" +
 "$$\n" +
 "DECLARE\n" +
 "  y integer := 0;\n" +
@@ -38,9 +38,9 @@ public class UDFBenchmark {
 "END;\n" +
 "$$ LANGUAGE plpgsql;";
 
-    //private static final String SQL_QUERY_1 = "SELECT x FROM sample LIMIT %d;";
-    //private static final String SQL_QUERY_2 = "SELECT x+1 FROM sample LIMIT %d;";
-    //private static final String SQL_QUERY_3 = "SELECT compTest02(x) FROM sample LIMIT %d;";
+    private static final String SQL_QUERY_1 = "SELECT x FROM sample LIMIT %d;";
+    private static final String SQL_QUERY_2 = "SELECT x+1 FROM sample LIMIT %d;";
+    private static final String SQL_QUERY_3 = "SELECT inlinecompTest02(x) FROM sample LIMIT %d;";
 
     private static final String SQL_QUERY_4 = "SELECT margin(part) FROM partkeys;";
     private static final String SQL_QUERY_5 = "SELECT loop(%d);";
