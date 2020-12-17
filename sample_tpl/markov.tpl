@@ -81,8 +81,8 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   var partkeys_tviBase_2: TableVectorIterator
   var partkeys_tvi_2 = &partkeys_tviBase_2
   var partkeys_col_oids_2: [1]uint32
-  var part_col_oid = @testCatalogLookup(exec_ctx, "partkeys", "part")
-  var partkey_table_oid = @testCatalogLookup(exec_ctx, "partkeys", "")
+  var part_col_oid = @testCatalogLookup(exec_ctx, "part", "p_partkey")
+  var partkey_table_oid = @testCatalogLookup(exec_ctx, "part", "")
   partkeys_col_oids_2[0] = part_col_oid
 
   var lineitem_oid = @testCatalogLookup(exec_ctx, "lineitem", "")
@@ -95,6 +95,9 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   var orders_oid = @testCatalogLookup(exec_ctx, "orders", "")
   var o_orderkey_oid = @testCatalogLookup(exec_ctx, "orders", "o_orderkey")
   var o_orderdate_oid = @testCatalogLookup(exec_ctx, "orders", "o_orderdate")
+
+  var lineitem_l_partkey_l_orderkey_oid = @testCatalogIndexLookup(exec_ctx, "lineitem_l_partkey_l_orderkey")
+  var orders_o_orderdate_o_orderkey_oid = @testCatalogIndexLookup(exec_ctx, "orders_o_orderdate_o_orderkey")
 
   @tableIterInit(partkeys_tvi_2, exec_ctx, partkey_table_oid, partkeys_col_oids_2)
   for(@tableIterAdvance(partkeys_tvi_2)){
@@ -163,32 +166,41 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
       for (@tableIterAdvance(tvi1)) {
           var vpi1 = @tableIterGetVPI(tvi1)
           for (; @vpiHasNext(vpi1); @vpiAdvance(vpi1)) {
-              var tviBase1: TableVectorIterator
-              var tvi = &tviBase1
+              var slot: TupleSlot
               var col_oids: [2]uint32
               col_oids[0] = l_orderkey_oid
               col_oids[1] = l_partkey_oid
-              @tableIterInit(tvi, exec_ctx, lineitem_oid, col_oids)
-              var slot: TupleSlot
-              for (@tableIterAdvance(tvi)) {
-                  var vpi = @tableIterGetVPI(tvi)
-                  for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
+              var index_iter_176: IndexIterator
+              @indexIteratorInit(&index_iter_176, exec_ctx, 2, lineitem_oid,
+                lineitem_l_partkey_l_orderkey_oid, col_oids)
+              var lo_index_pr = @indexIteratorGetLoPR(&index_iter_176)
+              var hi_index_pr = @indexIteratorGetHiPR(&index_iter_176)
+              var setval = @vpiGetInt(vpi1, 0)
+              @prSetInt(lo_index_pr, 1, &setval)
+              var setval1 = init_partkey
+              @prSetInt(lo_index_pr, 0, &setval1)
+              var setval2 = @vpiGetInt(vpi1, 0)
+              @prSetInt(hi_index_pr, 1, &setval2)
+              var setval3 = init_partkey
+              @prSetInt(hi_index_pr, 0, &setval3)
+              for (@indexIteratorScanKey(&index_iter_176); @indexIteratorAdvance(&index_iter_176); ) {
                       //partkey PARAMETER
                       //vpi1,0 is orderkey from orders
                       //vpi,0 is orderkey from lineitems
                       //vpi,1 is partkey from lineitems???
-                      if (@sqlToBool(@vpiGetInt(vpi, 0) == @vpiGetInt(vpi1, 0))){
-                        if(@sqlToBool(@vpiGetInt(vpi, 1) == init_partkey)) {
+                      var table_pr = @indexIteratorGetTablePR(&index_iter_176)
+                      if (@sqlToBool(@prGetInt(table_pr, 1) == init_partkey) and
+                        @sqlToBool(@prGetInt(table_pr, 0) == @vpiGetInt(vpi1, 0))) {
                               var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
                               sortRow.attr0 = @vpiGetIntNull(vpi1, 0)
                               sortRow.attr1 = @vpiGetDate(vpi1, 1)
                               @sorterInsertTopKFinish(&sorter, 1)
-                          }
-                      }
-                  }
-                  @vpiReset(vpi)
+                              //var sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                              //sample_out.col1 = @vpiGetIntNull(vpi1, 0)
+                        }
+
               }
-              @tableIterClose(tvi)
+              @indexIteratorFree(&index_iter_176)
           }
           @vpiReset(vpi1)
       }
@@ -269,6 +281,8 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
         //sample_out.col1 = @vpiGetIntNull(ind_vpi, 8)
         //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
         //sample_out.col1 = @vpiGetIntNull(ind_vpi, 10)
+        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+        //sample_out.col1 = @intToSql(7896)
 
         if(@sqlToBool(rec)){
         //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
@@ -310,21 +324,27 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
             var ir11_tviBase_2: TableVectorIterator
             var ir11_tvi_2 = &ir11_tviBase_2
             var if_result_11_col_oids_2: [5]uint32
-            if_result_11_col_oids_2[0] = l_orderkey_oid
-            if_result_11_col_oids_2[1] = l_extendedprice_oid
-            if_result_11_col_oids_2[2] = l_partkey_oid
-            if_result_11_col_oids_2[3] = l_discount_oid
-            if_result_11_col_oids_2[4] = l_tax_oid
-            @tableIterInit(ir11_tvi_2, exec_ctx, lineitem_oid, if_result_11_col_oids_2)
+            if_result_11_col_oids_2[0] = 1
+            if_result_11_col_oids_2[1] = 6
+            if_result_11_col_oids_2[2] = 2
+            if_result_11_col_oids_2[3] = 7
+            if_result_11_col_oids_2[4] = 8
+            var agg_index_iter: IndexIterator
+            @indexIteratorInit(&agg_index_iter, exec_ctx, 2, lineitem_oid, lineitem_l_partkey_l_orderkey_oid,
+            if_result_11_col_oids_2)
+            var index_pr = @indexIteratorGetPR(&agg_index_iter)
+            var setval: Integer = partkey
+            @prSetInt(index_pr, 0, &setval)
+            var setval1: Integer = this_order_k
+            @prSetInt(index_pr, 1, &setval1)
             var slot_2 : TupleSlot
             var aggs : AggPayload
             //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
             //sample_out.col1 = @intToSql(268)
-            for(@tableIterAdvance(ir11_tvi_2)){
+            for (@indexIteratorScanKey(&agg_index_iter); @indexIteratorAdvance(&agg_index_iter); ) {
+                var table_pr = @indexIteratorGetTablePR(&agg_index_iter)
                 //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
                 //            sample_out.col1 = @intToSql(271)
-                var vpi_2 = @tableIterGetVPI(ir11_tvi_2)
-                for (; @vpiHasNext(vpi_2); @vpiAdvance(vpi_2)) {
                  //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
                  //sample_out.col1 = @vpiGetInt(vpi_2, 0)
                  //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
@@ -346,16 +366,15 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                  //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
                  //sample_out.col1 = partkey
 
-                 if(@sqlToBool(@vpiGetInt(vpi_2, 0) == this_order_k)){
-                      if (@sqlToBool(@vpiGetInt(vpi_2, 2) == partkey)){
+                 if(@sqlToBool(@prGetInt(table_pr, 4) == this_order_k)
+                      and (@sqlToBool(@prGetInt(table_pr, 3) == partkey))){
                       var aggValues: AggValues
-                      aggValues.agg_term_attr0 = @vpiGetReal(vpi_2, 1) * (@floatToSql(1.0) - @vpiGetReal(vpi_2, 3)) * (@floatToSql(1.0) + @vpiGetReal(vpi_2, 4))
+                      aggValues.agg_term_attr0 = @prGetDouble(table_pr, 0) * @intToSql(1)
+                        - @prGetDouble(table_pr, 1) * @intToSql(1) + @prGetDouble(table_pr, 2)
                       @aggAdvance(&aggs.agg_term_attr0, &aggValues.agg_term_attr0)
                   }
-                }
-                }
             }
-            @tableIterClose(ir11_tvi_2)
+            @indexIteratorFree(&agg_index_iter)
             price_3 = @aggResult(&aggs.agg_term_attr0)
             //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
             //sample_out.col1 = @intToSql(325)
@@ -417,47 +436,49 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
 
                    @sorterInit(&sorter, exec_ctx, Compare, @sizeOf(SortRow))
 
-                   var ir17_tviBase1: TableVectorIterator
-                   var ir17_tvi1 = &ir17_tviBase1
-                   var ir17_col_oids1: [2]uint32
-                   ir17_col_oids1[0] = o_orderkey_oid
-                   ir17_col_oids1[1] = o_orderdate_oid
-                   @tableIterInit(ir17_tvi1, exec_ctx, orders_oid, col_oids1)
-                   var slot1: TupleSlot
-                   for (@tableIterAdvance(ir17_tvi1)) {
-                       var vpi15 = @tableIterGetVPI(ir17_tvi1)
-                       for (; @vpiHasNext(vpi15); @vpiAdvance(vpi15)) {
-                           var tviBase2: TableVectorIterator
-                           var tvi2 = &tviBase2
-                           var col_oids: [2]uint32
-                           col_oids[0] = l_partkey_oid
-                           col_oids[1] = l_orderkey_oid
-                           @tableIterInit(tvi2, exec_ctx, lineitem_oid, col_oids)
-                           var slot2: TupleSlot
-                           for (@tableIterAdvance(tvi2)) {
-                               var vpi2 = @tableIterGetVPI(tvi2)
-                               for (; @vpiHasNext(vpi2); @vpiAdvance(vpi2)) {
-                                   //vpi1,0 is orderkey from orders
-                                   //vpi,0 is orderkey from lineitems
-                                   //vpi,1 is partkey from lineitems???
-                                   if (@sqlToBool(@vpiGetInt(vpi2, 0) == @vpiGetInt(vpi15, 0))){
-                                       if(@sqlToBool(@vpiGetInt(vpi2, 1) == partkey)) {
-                                       if(@sqlToBool(@vpiGetDate(vpi15, 1) > this_order_d)){
-                                           var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
-                                           sortRow.attr0 = @vpiGetInt(vpi15, 0)
-                                           sortRow.attr1 = @vpiGetDate(vpi15, 1)
-                                           @sorterInsertTopKFinish(&sorter, 1)
-                                       }
-                                       }
-                                   }
-                               }
-                               @vpiReset(vpi2)
-                           }
-                           @tableIterClose(tvi2)
-                       }
-                        @vpiReset(vpi15)
-                       }
-                   @tableIterClose(ir17_tvi1)
+                  var col_oids1: [2]uint32
+                      col_oids1[0] = 2
+                      col_oids1[1] = 1
+                      var index_iter1: IndexIterator
+                      @indexIteratorInit(&index_iter1, exec_ctx, 1, lineitem_oid,
+                        lineitem_l_partkey_l_orderkey_oid, col_oids1)
+                      var lo_index_pr1 = @indexIteratorGetLoPR(&index_iter1)
+                      var hi_index_pr1 = @indexIteratorGetHiPR(&index_iter1)
+                      var setval: Integer = partkey
+                      @prSetInt(lo_index_pr1, 0, &setval)
+                      var setval1: Integer = partkey
+                      @prSetInt(hi_index_pr1, 0, &setval1)
+                      for (@indexIteratorScanAscending(&index_iter1, 0, 0); @indexIteratorAdvance(&index_iter1); ) {
+                          var table_pr1 = @indexIteratorGetTablePR(&index_iter1)
+                          var slot1 = @indexIteratorGetSlot(&index_iter1)
+                          if (@sqlToBool(@prGetInt(table_pr1, 1) == partkey)) {
+                              var col_oids: [2]uint32
+                              col_oids[0] = 1
+                              col_oids[1] = 5
+                              var index_iter: IndexIterator
+                              @indexIteratorInit(&index_iter, exec_ctx, 2, orders_oid,
+                                orders_o_orderdate_o_orderkey_oid, col_oids)
+                              var lo_index_pr = @indexIteratorGetLoPR(&index_iter)
+                              var hi_index_pr = @indexIteratorGetHiPR(&index_iter)
+                              var setval2 = @prGetInt(table_pr1, 0)
+                              @prSetInt(lo_index_pr, 1, &setval2)
+                              var setval3 = this_order_d
+                              @prSetDate(lo_index_pr, 0, &setval3)
+                              for (@indexIteratorScanAscending(&index_iter, 2, 0); @indexIteratorAdvance(&index_iter); ) {
+                                  var table_pr = @indexIteratorGetTablePR(&index_iter)
+                                  var slot = @indexIteratorGetSlot(&index_iter)
+                                  if (@sqlToBool(@prGetDate(table_pr, 1) > this_order_d)
+                                  and @sqlToBool(@prGetInt(table_pr1, 0) == @prGetInt(table_pr, 0))) {
+                                      var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
+                                      sortRow.attr0 = @prGetInt(table_pr, 0)
+                                      sortRow.attr1 = @prGetDate(table_pr, 1)
+                                      @sorterInsertTopKFinish(&sorter, 1)
+                                  }
+                              }
+                              @indexIteratorFree(&index_iter)
+                          }
+                      }
+                      @indexIteratorFree(&index_iter1)
 
                    var iterBase17: SorterIterator
                    var iter17 = &iterBase17
@@ -482,44 +503,49 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                      if_result17_sell = sell
                      if_result17_rec = @boolToSql(true)
                      @sorterInit(&sorter, exec_ctx, Compare, @sizeOf(SortRow))
-                     var tviBase: TableVectorIterator
-                     var tvi1 = &tviBase
                      var col_oids1: [2]uint32
-                     col_oids1[0] = o_orderkey_oid
-                     col_oids1[1] = o_orderdate_oid
-                     @tableIterInit(tvi1, exec_ctx, orders_oid, col_oids1)
-                     var slot1: TupleSlot
-                     for (@tableIterAdvance(tvi1)) {
-                         var vpi1 = @tableIterGetVPI(tvi1)
-                         for (; @vpiHasNext(vpi1); @vpiAdvance(vpi1)) {
-                             var tviBase1: TableVectorIterator
-                             var tvi = &tviBase1
-                             var col_oids: [2]uint32
-                             col_oids[0] = l_partkey_oid
-                             col_oids[1] = l_orderkey_oid
-                             @tableIterInit(tvi, exec_ctx, lineitem_oid, col_oids)
-                             var slot: TupleSlot
-                             for (@tableIterAdvance(tvi)) {
-                                 var vpi = @tableIterGetVPI(tvi)
-                                 for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
-                                     //vpi1,0 is orderkey from orders
-                                                           //vpi,0 is orderkey from lineitems
-                                                           //vpi,1 is partkey from lineitems???
-                                     if (@sqlToBool(@vpiGetInt(vpi, 0) == @vpiGetInt(vpi1, 0))){
-                                          if(@sqlToBool(@vpiGetInt(vpi, 1) == partkey)) {
-                                         if(@sqlToBool(@vpiGetDate(vpi1, 1) > this_order_d)){
-                                             var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
-                                             sortRow.attr0 = @vpiGetInt(vpi1, 0)
-                                             sortRow.attr1 = @vpiGetDate(vpi1, 1)
-                                             @sorterInsertTopKFinish(&sorter, 1)
-                                         }
-                                     }
-                                     }
-                                 }
-                             }
-                             @tableIterClose(tvi)
-                         }
-                     }
+                       col_oids1[0] = 2
+                       col_oids1[1] = 1
+                       var index_iter1: IndexIterator
+                       @indexIteratorInit(&index_iter1, exec_ctx, 1, lineitem_oid,
+                         lineitem_l_partkey_l_orderkey_oid, col_oids1)
+                       var lo_index_pr1 = @indexIteratorGetLoPR(&index_iter1)
+                       var hi_index_pr1 = @indexIteratorGetHiPR(&index_iter1)
+                       var setval: Integer = partkey
+                       @prSetInt(lo_index_pr1, 0, &setval)
+                       var setval1: Integer = partkey
+                       @prSetInt(hi_index_pr1, 0, &setval1)
+                       for (@indexIteratorScanAscending(&index_iter1, 0, 0); @indexIteratorAdvance(&index_iter1); ) {
+                           var table_pr1 = @indexIteratorGetTablePR(&index_iter1)
+                           var slot1 = @indexIteratorGetSlot(&index_iter1)
+                           if (@sqlToBool(@prGetInt(table_pr1, 1) == partkey)) {
+                               var col_oids: [2]uint32
+                               col_oids[0] = 1
+                               col_oids[1] = 5
+                               var index_iter: IndexIterator
+                               @indexIteratorInit(&index_iter, exec_ctx, 2, orders_oid,
+                                 orders_o_orderdate_o_orderkey_oid, col_oids)
+                               var lo_index_pr = @indexIteratorGetLoPR(&index_iter)
+                               var hi_index_pr = @indexIteratorGetHiPR(&index_iter)
+                               var setval2 = @prGetInt(table_pr1, 0)
+                               @prSetInt(lo_index_pr, 1, &setval2)
+                               var setval3 = this_order_d
+                               @prSetDate(lo_index_pr, 0, &setval3)
+                               for (@indexIteratorScanAscending(&index_iter, 2, 0); @indexIteratorAdvance(&index_iter); ) {
+                                   var table_pr = @indexIteratorGetTablePR(&index_iter)
+                                   var slot = @indexIteratorGetSlot(&index_iter)
+                                   if (@sqlToBool(@prGetDate(table_pr, 1) > this_order_d)
+                                   and @sqlToBool(@prGetInt(table_pr1, 0) == @prGetInt(table_pr, 0))) {
+                                       var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
+                                       sortRow.attr0 = @prGetInt(table_pr, 0)
+                                       sortRow.attr1 = @prGetDate(table_pr, 1)
+                                       @sorterInsertTopKFinish(&sorter, 1)
+                                   }
+                               }
+                               @indexIteratorFree(&index_iter)
+                           }
+                       }
+                       @indexIteratorFree(&index_iter1)
 
                      var iterBase2: SorterIterator
                      var iter2 = &iterBase2
@@ -595,50 +621,49 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                         var sell_6 = this_order_k
 
                         @sorterInit(&sorter, exec_ctx, Compare, @sizeOf(SortRow))
-                          var ir17_tviBase: TableVectorIterator
-                          var ir17_tvi = &tviBase
-                          var ir17_col_oids: [2]uint32
-                          ir17_col_oids[0] = o_orderkey_oid
-                          ir17_col_oids[1] = o_orderdate_oid
-                          @tableIterInit(ir17_tvi, exec_ctx, orders_oid, ir17_col_oids)
-                          var slot: TupleSlot
-
-                          for (@tableIterAdvance(ir17_tvi)) {
-                              var vpi1 = @tableIterGetVPI(ir17_tvi)
-                              for (; @vpiHasNext(vpi1); @vpiAdvance(vpi1)) {
-                                  var tviBase1: TableVectorIterator
-                                  var tvi = &tviBase1
-                                  var col_oids: [2]uint32
-                                  col_oids[0] = l_partkey_oid
-                                  col_oids[1] = o_orderdate_oid
-                                  @tableIterInit(tvi1, exec_ctx, lineitem_oid, col_oids)
-                                  var slot: TupleSlot
-                                  for (@tableIterAdvance(tvi)) {
-                                      var vpi = @tableIterGetVPI(tvi)
-                                      for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
-                                          //vpi1,0 is orderkey from orders
-                                                                //vpi,0 is orderkey from lineitems
-                                                                //vpi,1 is partkey from lineitems???
-                                          //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                          //sample_out.col1 = @vpiGetInt(vpi, 0)
-                                          //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                          //sample_out.col1 = @vpiGetInt(vpi1, 1)
-                                          if (@sqlToBool(@vpiGetInt(vpi, 0) == @vpiGetInt(vpi1, 0))){
-                                              if(@sqlToBool(@vpiGetInt(vpi, 1) == partkey)) {
-                                              if(@sqlToBool(@vpiGetDate(vpi1, 1) > this_order_d)){
-                                                  var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
-                                                  sortRow.attr0 = @vpiGetInt(vpi1, 0)
-                                                  sortRow.attr1 = @vpiGetDate(vpi1, 1)
-                                                  @sorterInsertTopKFinish(&sorter, 1)
-                                              }
-                                              }
-                                          }
-                                      }
-                                  }
-                                  @tableIterClose(tvi1)
-                              }
-                          }
-                          @tableIterClose(ir17_tvi)
+                          var col_oids1: [2]uint32
+                        col_oids1[0] = 2
+                        col_oids1[1] = 1
+                        var index_iter1: IndexIterator
+                        @indexIteratorInit(&index_iter1, exec_ctx, 1, lineitem_oid,
+                          lineitem_l_partkey_l_orderkey_oid, col_oids1)
+                        var lo_index_pr1 = @indexIteratorGetLoPR(&index_iter1)
+                        var hi_index_pr1 = @indexIteratorGetHiPR(&index_iter1)
+                        var setval: Integer = partkey
+                        @prSetInt(lo_index_pr1, 0, &setval)
+                        var setval1: Integer = partkey
+                        @prSetInt(hi_index_pr1, 0, &setval1)
+                        for (@indexIteratorScanAscending(&index_iter1, 0, 0); @indexIteratorAdvance(&index_iter1); ) {
+                            var table_pr1 = @indexIteratorGetTablePR(&index_iter1)
+                            var slot1 = @indexIteratorGetSlot(&index_iter1)
+                            if (@sqlToBool(@prGetInt(table_pr1, 1) == partkey)) {
+                                var col_oids: [2]uint32
+                                col_oids[0] = 1
+                                col_oids[1] = 5
+                                var index_iter: IndexIterator
+                                @indexIteratorInit(&index_iter, exec_ctx, 2, orders_oid,
+                                  orders_o_orderdate_o_orderkey_oid, col_oids)
+                                var lo_index_pr = @indexIteratorGetLoPR(&index_iter)
+                                var hi_index_pr = @indexIteratorGetHiPR(&index_iter)
+                                var setval2 = @prGetInt(table_pr1, 0)
+                                @prSetInt(lo_index_pr, 1, &setval2)
+                                var setval3 = this_order_d
+                                @prSetDate(lo_index_pr, 0, &setval3)
+                                for (@indexIteratorScanAscending(&index_iter, 2, 0); @indexIteratorAdvance(&index_iter); ) {
+                                    var table_pr = @indexIteratorGetTablePR(&index_iter)
+                                    var slot = @indexIteratorGetSlot(&index_iter)
+                                    if (@sqlToBool(@prGetDate(table_pr, 1) > this_order_d)
+                                    and @sqlToBool(@prGetInt(table_pr1, 0) == @prGetInt(table_pr, 0))) {
+                                        var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
+                                        sortRow.attr0 = @prGetInt(table_pr, 0)
+                                        sortRow.attr1 = @prGetDate(table_pr, 1)
+                                        @sorterInsertTopKFinish(&sorter, 1)
+                                    }
+                                }
+                                @indexIteratorFree(&index_iter)
+                            }
+                        }
+                        @indexIteratorFree(&index_iter1)
 
                           var iterBase: SorterIterator
                           var iter = &iterBase
@@ -663,42 +688,49 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                         if_result17_sell = sell
                         if_result17_rec = @boolToSql(true)
                         @sorterInit(&sorter, exec_ctx, Compare, @sizeOf(SortRow))
-                        var  if_result17_tviBase: TableVectorIterator
-                        var  if_result17_tvi1 = &tviBase
-                        var  if_result17_col_oids1: [2]uint32
-                        if_result17_col_oids1[0] = o_orderkey_oid
-                        if_result17_col_oids1[1] = o_orderdate_oid
-                        @tableIterInit(if_result17_tvi1, exec_ctx, orders_oid, if_result17_col_oids1)
-                        var ir17_slot1: TupleSlot
-                        for (@tableIterAdvance(if_result17_tvi1)) {
-                            var vpi1 = @tableIterGetVPI(if_result17_tvi1)
-                            for (; @vpiHasNext(vpi1); @vpiAdvance(vpi1)) {
-                                var tviBase1: TableVectorIterator
-                                var tvi = &tviBase1
-                                var col_oids: [2]uint32
-                                col_oids[0] = l_orderkey_oid
-                                col_oids[1] = l_partkey_oid
-                                @tableIterInit(tvi, exec_ctx, lineitem_oid, col_oids)
-                                var slot: TupleSlot
-                                for (@tableIterAdvance(tvi)) {
-                                    var vpi = @tableIterGetVPI(tvi)
-                                    for (; @vpiHasNext(vpi); @vpiAdvance(vpi)) {
-                                        if (@sqlToBool(@vpiGetInt(vpi, 0) == @vpiGetInt(vpi1, 0))){
-                                            if(@sqlToBool(@vpiGetInt(vpi, 1) == partkey)) {
-                                            if(@sqlToBool(@vpiGetDate(vpi1, 1) > this_order_d)){
-                                                var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
-                                                sortRow.attr0 = @vpiGetInt(vpi1, 0)
-                                                sortRow.attr1 = @vpiGetDate(vpi1, 1)
-                                                @sorterInsertTopKFinish(&sorter, 1)
-                                            }
-                                        }
-                                        }
-                                    }
-                                }
-                                @tableIterClose(tvi)
-                            }
-                        }
-                        @tableIterClose(if_result17_tvi1)
+                        var col_oids1: [2]uint32
+                      col_oids1[0] = 2
+                      col_oids1[1] = 1
+                      var index_iter1: IndexIterator
+                      @indexIteratorInit(&index_iter1, exec_ctx, 1, lineitem_oid,
+                        lineitem_l_partkey_l_orderkey_oid, col_oids1)
+                      var lo_index_pr1 = @indexIteratorGetLoPR(&index_iter1)
+                      var hi_index_pr1 = @indexIteratorGetHiPR(&index_iter1)
+                      var setval: Integer = partkey
+                      @prSetInt(lo_index_pr1, 0, &setval)
+                      var setval1: Integer = partkey
+                      @prSetInt(hi_index_pr1, 0, &setval1)
+                      for (@indexIteratorScanAscending(&index_iter1, 0, 0); @indexIteratorAdvance(&index_iter1); ) {
+                          var table_pr1 = @indexIteratorGetTablePR(&index_iter1)
+                          var slot1 = @indexIteratorGetSlot(&index_iter1)
+                          if (@sqlToBool(@prGetInt(table_pr1, 1) == partkey)) {
+                              var col_oids: [2]uint32
+                              col_oids[0] = 1
+                              col_oids[1] = 5
+                              var index_iter: IndexIterator
+                              @indexIteratorInit(&index_iter, exec_ctx, 2, orders_oid,
+                                orders_o_orderdate_o_orderkey_oid, col_oids)
+                              var lo_index_pr = @indexIteratorGetLoPR(&index_iter)
+                              var hi_index_pr = @indexIteratorGetHiPR(&index_iter)
+                              var setval2 = @prGetInt(table_pr1, 0)
+                              @prSetInt(lo_index_pr, 1, &setval2)
+                              var setval3 = this_order_d
+                              @prSetDate(lo_index_pr, 0, &setval3)
+                              for (@indexIteratorScanAscending(&index_iter, 2, 0); @indexIteratorAdvance(&index_iter); ) {
+                                  var table_pr = @indexIteratorGetTablePR(&index_iter)
+                                  var slot = @indexIteratorGetSlot(&index_iter)
+                                  if (@sqlToBool(@prGetDate(table_pr, 1) > this_order_d)
+                                  and @sqlToBool(@prGetInt(table_pr1, 0) == @prGetInt(table_pr, 0))) {
+                                      var sortRow = @ptrCast(*SortRow, @sorterInsertTopK(&sorter, 1))
+                                      sortRow.attr0 = @prGetInt(table_pr, 0)
+                                      sortRow.attr1 = @prGetDate(table_pr, 1)
+                                      @sorterInsertTopKFinish(&sorter, 1)
+                                  }
+                              }
+                              @indexIteratorFree(&index_iter)
+                          }
+                      }
+                      @indexIteratorFree(&index_iter1)
 
                         var iterBase: SorterIterator
                         var iter = &iterBase

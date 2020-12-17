@@ -58,9 +58,9 @@ struct BaseFunctionParameter {
       case DataType::CHAR:
         return type::TypeId::INVALID;
       case DataType::DOUBLE:
-        return type::TypeId::INVALID;
+        return type::TypeId::DECIMAL;
       case DataType::FLOAT:
-        return type::TypeId::INVALID;
+        return type::TypeId::DECIMAL;
       case DataType::DECIMAL:
         return type::TypeId::DECIMAL;
       case DataType::VARCHAR:

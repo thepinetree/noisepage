@@ -123,7 +123,10 @@ void Sorter::Sort() {
   timer.Start();
 
   // Sort the sucker
-  const auto compare = [this](const byte *left, const byte *right) { return cmp_fn_(left, right) < 0; };
+  const auto compare = [this](const byte *left, const byte *right) {
+    auto a = cmp_fn_(left, right);
+    return a < 0;
+  };
   ips4o::sort(tuples_.begin(), tuples_.end(), compare);
 
   timer.Stop();

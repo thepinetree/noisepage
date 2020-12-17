@@ -229,7 +229,7 @@ std::unique_ptr<planner::AbstractPlanNode> Optimizer::ChooseBestPlan(
   std::vector<std::unique_ptr<planner::AbstractPlanNode>> children_plans;
   std::vector<ExprMap> children_expr_map;
 
-  PopulateLateralMappings(gexpr, input_cols[0]);
+//  PopulateLateralMappings(gexpr, input_cols[0]);
 
   for (size_t i = 0; i < child_groups.size(); ++i) {
     ExprMap child_expr_map;
