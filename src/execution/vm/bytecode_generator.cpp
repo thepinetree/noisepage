@@ -135,7 +135,7 @@ class BytecodeGenerator::BytecodePositionScope {
 // Bytecode Generator begins
 // ---------------------------------------------------------
 
-BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_) {functions_.reserve(40);}
+BytecodeGenerator::BytecodeGenerator() noexcept : emitter_(&code_) {functions_.reserve(200);}
 
 void BytecodeGenerator::VisitIfStmt(ast::IfStmt *node) {
   IfThenElseBuilder if_builder(this);
