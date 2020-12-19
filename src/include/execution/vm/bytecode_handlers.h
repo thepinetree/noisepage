@@ -2156,6 +2156,7 @@ VM_OP_WARM void OpTestCatalogIndexLookup(uint32_t *oid_var, noisepage::execution
   noisepage::execution::sql::StringVal table_name{reinterpret_cast<const char *>(index_name_str), index_name_length};
   noisepage::catalog::index_oid_t index_oid =
       exec_ctx->GetAccessor()->GetIndexOid(std::string(table_name.StringView()));
+  NOISEPAGE_ASSERT(index_oid != noisepage::catalog::INVALID_INDEX_OID, "Didn't find this index");
   *oid_var = index_oid.UnderlyingValue();
 }
 

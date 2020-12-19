@@ -425,7 +425,7 @@ void UDFCodegen::Visit(ForStmtAST *ast) {
       default:
         UNREACHABLE("Unsupported parameter type");
     }
-    fb_->Append(codegen_->CallBuiltin(builtin, {exec_ctx, codegen_->AddressOf(codegen_->MakeExpr(str_to_ident_[entry->first]))}));
+    fb_->Append(codegen_->CallBuiltin(builtin, {exec_ctx, codegen_->MakeExpr(str_to_ident_[entry->first])}));
   }
   // set param 1
   // set param 2
@@ -563,7 +563,7 @@ void UDFCodegen::Visit(SQLStmtAST *ast) {
       default:
         UNREACHABLE("Unsupported parameter type");
     }
-    fb_->Append(codegen_->CallBuiltin(builtin, {exec_ctx, codegen_->AddressOf(codegen_->MakeExpr(str_to_ident_[entry->first]))}));
+    fb_->Append(codegen_->CallBuiltin(builtin, {exec_ctx, codegen_->MakeExpr(str_to_ident_[entry->first])}));
   }
   // set param 1
   // set param 2

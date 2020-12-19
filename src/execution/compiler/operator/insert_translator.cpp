@@ -149,22 +149,16 @@ void InsertTranslator::GetInsertPR(noisepage::execution::compiler::FunctionBuild
 
 void InsertTranslator::GenSetTablePR(FunctionBuilder *builder, WorkContext *context, uint32_t idx) const {
   const auto &node_vals = GetPlanAs<planner::InsertPlanNode>().GetValues(idx);
-  auto codegen = GetCodeGen();
   for (size_t i = 0; i < node_vals.size(); i++) {
-
     // @prSet(insert_pr, ...)
     const auto &val = node_vals[i];
     auto *src = context->DeriveValue(*val.Get(), this);
-    auto insertion_val = codegen->MakeFreshIdentifier("set-val");
-    builder->Append(
-        codegen->DeclareVar(insertion_val,
-                            codegen->TplType(execution::sql::GetTypeId(val->GetReturnValueType())), src));
 
     const auto &table_col_oid = all_oids_[i];
     const auto &table_col = table_schema_.GetColumn(table_col_oid);
     const auto &pr_set_call =
-        GetCodeGen()->PRSet(codegen->MakeExpr(insert_pr_), table_col.Type(), table_col.Nullable(),
-                            table_pm_.find(table_col_oid)->second, codegen->AddressOf(insertion_val), true);
+        GetCodeGen()->PRSet(GetCodeGen()->MakeExpr(insert_pr_), table_col.Type(), table_col.Nullable(),
+                            table_pm_.find(table_col_oid)->second, src, true);
     builder->Append(GetCodeGen()->MakeStmt(pr_set_call));
   }
 }
@@ -198,13 +192,7 @@ void InsertTranslator::GenIndexInsert(WorkContext *context, FunctionBuilder *bui
     uint16_t attr_offset = index_pm.at(index_col.Oid());
     type::TypeId attr_type = index_col.Type();
     bool nullable = index_col.Nullable();
-    auto insertion_val = codegen->MakeFreshIdentifier("set-val");
-    builder->Append(
-        codegen->DeclareVar(insertion_val,
-                            codegen->TplType(execution::sql::GetTypeId(index_col.StoredExpression()
-                                                                           ->GetReturnValueType())), col_expr));
-    auto *set_key_call = GetCodeGen()->PRSet(index_pr_expr, attr_type,
-                                             nullable, attr_offset, codegen->AddressOf(insertion_val), false);
+    auto *set_key_call = GetCodeGen()->PRSet(index_pr_expr, attr_type, nullable, attr_offset, col_expr, false);
     builder->Append(GetCodeGen()->MakeStmt(set_key_call));
   }
 

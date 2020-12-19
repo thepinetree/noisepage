@@ -201,12 +201,8 @@ void IndexScanTranslator::FillKey(
     uint16_t attr_offset = index_pm_.at(key.first);
     type::TypeId attr_type = index_schema_.GetColumn(key.first.UnderlyingValue() - 1).Type();
     bool nullable = index_schema_.GetColumn(key.first.UnderlyingValue() - 1).Nullable();
-    auto set_var = GetCodeGen()->MakeFreshIdentifier("set-val");
-    builder->Append(GetCodeGen()->DeclareVar(set_var, GetCodeGen()->TplType(execution::sql::GetTypeId(
-                                                                           key.second->GetReturnValueType())),
-                         context->DeriveValue(*key.second.Get(), this)));
     auto *set_key_call = GetCodeGen()->PRSet(GetCodeGen()->MakeExpr(pr), attr_type, nullable, attr_offset,
-                                             GetCodeGen()->AddressOf(set_var), false);
+                                             context->DeriveValue(*key.second.Get(), this), false);
     builder->Append(GetCodeGen()->MakeStmt(set_key_call));
   }
 }

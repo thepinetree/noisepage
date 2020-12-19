@@ -435,8 +435,10 @@ ast::Expr *Parser::ParseLambdaExpr() {
   Expect(Token::Type::LEFT_BRACKET);
 
   while(Peek() != Token::Type::RIGHT_BRACKET) {
-    auto var = GetSymbol();
-    captures.push_back(new (Region()) ast::IdentifierExpr(position, var));
+    if (Matches(Token::Type::IDENTIFIER)) {
+      auto var = GetSymbol();
+      captures.push_back(new (Region()) ast::IdentifierExpr(position, var));
+    }
 
     if (!Matches(Token::Type::COMMA)) {
       break;

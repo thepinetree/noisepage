@@ -33,21 +33,21 @@ CteScanIterator::CteScanIterator(noisepage::execution::exec::ExecutionContext *e
   // TODO(Rohan): explore API change to deferred actions for unconditional actions to avoid commit and abort actions
   exec_ctx_->GetTxn()->RegisterCommitAction([=](transaction::DeferredActionManager *deferred_action_manager) {
     deferred_action_manager->RegisterDeferredAction([=]() {
-      deferred_action_manager->RegisterDeferredAction([=]() {
+//      deferred_action_manager->RegisterDeferredAction([=]() {
         // Defer an action upon commit to delete the table. Delete table will need a double deferral because there could
         // be transactions not yet unlinked by the GC that depend on the table
         delete cte_table_local;
-      });
+//      });
     });
   });
 
   exec_ctx_->GetTxn()->RegisterAbortAction([=](transaction::DeferredActionManager *deferred_action_manager) {
     deferred_action_manager->RegisterDeferredAction([=]() {
-      deferred_action_manager->RegisterDeferredAction([=]() {
+//      deferred_action_manager->RegisterDeferredAction([=]() {
         // Defer an action upon abort to delete the table. Delete table will need a double deferral because there could
         // be transactions not yet unlinked by the GC that depend on the table
         delete cte_table_local;
-      });
+//      });
     });
   });
 }

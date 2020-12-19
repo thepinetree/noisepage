@@ -15,6 +15,7 @@ fun main(exec : *ExecutionContext) -> int32 {
     //*h = d
     k = f(d)
     if(@datePart(k, @intToSql(21)) == @intToSql(1998)){
+        // good
         return 1
     }
     return 0

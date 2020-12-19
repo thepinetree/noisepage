@@ -207,12 +207,8 @@ void IndexJoinTranslator::FillKey(
     uint16_t attr_offset = index_pm_.at(key.first);
     type::TypeId attr_type = index_schema_.GetColumn(key.first.UnderlyingValue() - 1).Type();
     bool nullable = index_schema_.GetColumn(key.first.UnderlyingValue() - 1).Nullable();
-    auto insertion_val = GetCodeGen()->MakeFreshIdentifier("set-val");
-    builder->Append(
-        GetCodeGen()->DeclareVar(insertion_val,
-                             nullptr, context->DeriveValue(*key.second.Get(), this)));
     auto *set_key_call = GetCodeGen()->PRSet(GetCodeGen()->MakeExpr(pr), attr_type, nullable, attr_offset,
-                                             GetCodeGen()->AddressOf(insertion_val), true);
+                                             context->DeriveValue(*key.second.Get(), this), true);
     builder->Append(GetCodeGen()->MakeStmt(set_key_call));
   }
 }

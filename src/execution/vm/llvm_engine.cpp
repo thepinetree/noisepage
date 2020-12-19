@@ -290,8 +290,13 @@ llvm::FunctionType *LLVMEngine::TypeMap::GetLLVMFunctionType(const ast::Function
   //
 
   for (const auto &param_info : func_type->GetParams()) {
-    llvm::Type *param_type = GetLLVMType(param_info.type_);
-    param_types.push_back(param_type);
+    // TODO make this read from bytecode stuff instead to avoid this
+    if(param_info.type_->IsSqlValueType()){
+      param_types.push_back( GetLLVMType(param_info.type_->PointerTo()));
+    }else {
+      llvm::Type *param_type = GetLLVMType(param_info.type_);
+      param_types.push_back(param_type);
+    }
   }
 
   return llvm::FunctionType::get(return_type, param_types, false);
@@ -578,6 +583,7 @@ void LLVMEngine::CompiledModuleBuilder::DeclareStaticLocals() {
 
 void LLVMEngine::CompiledModuleBuilder::DeclareFunctions() {
   for (const auto &func_info : tpl_module_.GetFunctionsInfo()) {
+//    std::cout << "declaring " << func_info.GetName() << "\n";
     auto *func_type = llvm::cast<llvm::FunctionType>(type_map_->GetLLVMType(func_info.GetFuncType()));
     llvm_module_->getOrInsertFunction(func_info.GetName(), func_type);
   }
@@ -1184,7 +1190,7 @@ void LLVMEngine::CompiledModule::Load(const BytecodeModule &module) {
       symbol = loader.getSymbol("_" + func.GetName());
     }
     functions_[func.GetName()] = reinterpret_cast<void *>(symbol.getAddress());
-    NOISEPAGE_ASSERT(symbol.getAddress() != 0, "symbol came out to be badly defined or missing");
+//    NOISEPAGE_ASSERT(symbol.getAddress() != 0, "symbol came out to be badly defined or missing");
   }
 
   // Done

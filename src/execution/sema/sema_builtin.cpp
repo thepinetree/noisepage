@@ -1692,8 +1692,7 @@ void Sema::CheckBuiltinVectorFilterCall(ast::CallExpr *call) {
   }
 
   // The fourth argument is either an integer or a pointer to a generic value.
-  if (!call_args[3]->GetType()->IsSpecificBuiltin(int32_kind) && !call_args[3]->GetType()->IsSpecificBuiltin(ast::BuiltinType::Integer)
-      && (!call_args[3]->GetType()->IsPointerType() || !call_args[3]->GetType()->GetPointeeType()->IsSqlValueType())) {
+  if (!call_args[3]->GetType()->IsSpecificBuiltin(int32_kind) && !call_args[3]->GetType()->IsSqlValueType()) {
     ReportIncorrectCallArg(call, 3, GetBuiltinType(int32_kind));
     return;
   }
@@ -2790,9 +2789,8 @@ void Sema::CheckBuiltinPRCall(ast::CallExpr *call, ast::Builtin builtin) {
       return;
     }
     // Third argument depends of call
-    auto type = call->Arguments()[2]->GetType();
-    if (!type->IsPointerType() || GetBuiltinType(sql_type) != type->GetPointeeType()) {
-      ReportIncorrectCallArg(call, 2, GetBuiltinType(sql_type)->PointerTo());
+    if (GetBuiltinType(sql_type) != call->Arguments()[2]->GetType()) {
+      ReportIncorrectCallArg(call, 2, GetBuiltinType(sql_type));
       return;
     }
     // For varlens, there is a fourth boolean argument.
@@ -3103,8 +3101,8 @@ void Sema::CheckBuiltinParamCall(ast::CallExpr *call, ast::Builtin builtin) {
         default:
           UNREACHABLE("Undefined parameter call!!");
       }
-      if (!IsPointerToSpecificBuiltin(call->Arguments()[1]->GetType(), add_sql_type)) {
-        ReportIncorrectCallArg(call, 1, GetBuiltinType(add_sql_type)->PointerTo());
+      if (call->Arguments()[1]->GetType() != GetBuiltinType(add_sql_type)) {
+        ReportIncorrectCallArg(call, 1, GetBuiltinType(add_sql_type));
         return;
       }
     }
