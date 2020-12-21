@@ -26,7 +26,8 @@ public class TupleInserter {
             "DROP TABLE IF EXISTS matrix_1;DROP TABLE IF EXISTS matrix_2;";
 
     private static final String SQL_CREATE_TABLE =
-            "CREATE TABLE matrix_1 (r integer, c integer, v integer);CREATE TABLE matrix_2 (r integer, c integer, v integer);";
+            "CREATE TABLE matrix_1 (r integer, c integer, v integer);CREATE TABLE matrix_2 (r integer, c integer, v integer);" +
+             "CREATE INDEX keys_1 ON matrix_1 USING btree(r, c);CREATE INDEX keys_2 ON matrix_2 USING btree(r, c);";
 
     private static final String SQL_CREATE_FUNCTION =
             "CREATE FUNCTION compTest02(x integer) RETURNS INT AS\n" +
@@ -60,7 +61,7 @@ public class TupleInserter {
         PreparedStatement insertstmt = conn.prepareStatement(sb.toString());
 //        assert(false);
         int rows_inserted = 0;
-        int n = 100;
+        int n = 1000;
 
         for(int i = 0;i < n*n;i++){
             int r = i / n;

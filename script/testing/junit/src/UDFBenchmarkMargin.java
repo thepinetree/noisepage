@@ -112,7 +112,7 @@ public class UDFBenchmarkMargin {
 "$$\n" +
 "LANGUAGE PLPGSQL;";
 
-private static final String SQL_CREATE_FUNCTION = "CREATE FUNCTION cursormargin2(partkey int) RETURNS integer AS\n" +
+private static final String SQL_CREATE_FUNCTION_2 = "CREATE FUNCTION cursormargin2(partkey int) RETURNS integer AS\n" +
 "$$\n" +
 "  DECLARE\n" +
 "    this_order_k integer := NULL;\n" +
@@ -161,8 +161,8 @@ private static final String SQL_CREATE_FUNCTION = "CREATE FUNCTION cursormargin2
 "LANGUAGE PLPGSQL;";
 
 
-    private static final String SQL_QUERY_4 = "SELECT margin(part) FROM partkeys;";
-    private static final String SQL_QUERY_5 = "SELECT cursormargin(part) FROM partkeys;";
+    private static final String SQL_QUERY_4 = "SELECT margin(p_partkey) FROM part;";
+    private static final String SQL_QUERY_5 = "SELECT cursormargin2(p_partkey) FROM part;";
 //    private static final String SQL_QUERY_5 = "SELECT L2Norm(%d);";
 //    private static final String SQL_QUERY_6 = "SELECT L2Norm2(%d);";
 

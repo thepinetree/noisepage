@@ -14,20 +14,6 @@ struct QueryState {
     aggs   : AggPayload
 }
 struct PQuery22_State {
-    filterManager : FilterManager
-    filterManager1: FilterManager
-}
-
-fun Query2_Pipeline2_FilterClause(execCtx: *ExecutionContext, vp: *VectorProjection, tids: *TupleIdList, context: *uint8) -> nil {
-    var filter_val: Integer = @intToSql(1)
-    @filterEq(execCtx, vp, 0, &filter_val, tids)
-    return
-}
-
-fun Query2_Pipeline2_FilterClause1(execCtx: *ExecutionContext, vp: *VectorProjection, tids: *TupleIdList, context: *uint8) -> nil {
-    var filter_val1: Integer = @intToSql(1)
-    @filterEq(execCtx, vp, 0, &filter_val1, tids)
-    return
 }
 
 fun Query2_Init(queryState: *QueryState) -> nil {
@@ -35,16 +21,10 @@ fun Query2_Init(queryState: *QueryState) -> nil {
 }
 
 fun Query2_Pipeline2_InitPipelineState(queryState: *QueryState, pipelineState: *PQuery22_State) -> nil {
-    @filterManagerInit(&pipelineState.filterManager, queryState.execCtx)
-    @filterManagerInsertFilter(&pipelineState.filterManager, Query2_Pipeline2_FilterClause1)
-    @filterManagerInit(&pipelineState.filterManager1, queryState.execCtx)
-    @filterManagerInsertFilter(&pipelineState.filterManager1, Query2_Pipeline2_FilterClause)
     return
 }
 
 fun Query2_Pipeline2_TearDownPipelineState(queryState: *QueryState, pipelineState: *PQuery22_State) -> nil {
-    @filterManagerFree(&pipelineState.filterManager)
-    @filterManagerFree(&pipelineState.filterManager1)
     return
 }
 
@@ -86,24 +66,24 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
 
   var insert_pr = @indCteScanGetInsertTempTablePR(&cte_scan)
   var integer_ins : Integer
-  var init_n = @intToSql(10)
+  var init_n = @intToSql(200)
   integer_ins = @initSqlNull(&integer_ins)
   var null_int = integer_ins
-  @prSetIntNull(insert_pr, 0, &null_int)
-  @prSetIntNull(insert_pr, 1, &null_int)
+  @prSetIntNull(insert_pr, 0, null_int)
+  @prSetIntNull(insert_pr, 1, null_int)
   integer_ins = @intToSql(1)
-  @prSetIntNull(insert_pr, 2, &integer_ins)
-  @prSetIntNull(insert_pr, 3, &null_int)
+  @prSetIntNull(insert_pr, 2, integer_ins)
+  @prSetIntNull(insert_pr, 3, null_int)
   integer_ins = init_n
-  @prSetIntNull(insert_pr, 4, &integer_ins)
-  @prSetIntNull(insert_pr, 5, &null_int)
+  @prSetIntNull(insert_pr, 4, integer_ins)
+  @prSetIntNull(insert_pr, 5, null_int)
   integer_ins = @intToSql(0)
-  @prSetIntNull(insert_pr, 6, &integer_ins)
+  @prSetIntNull(insert_pr, 6, integer_ins)
 
   var bool_ins = @boolToSql(false)
-  @prSetBool(insert_pr, 7, &bool_ins)
+  @prSetBool(insert_pr, 7, bool_ins)
   bool_ins = @boolToSql(true)
-  @prSetBool(insert_pr, 8, &bool_ins)
+  @prSetBool(insert_pr, 8, bool_ins)
   var base_insert_temp_table_slot = @indCteScanTableInsert(&cte_scan)
 
   var table_id_1 = @testCatalogLookup(exec_ctx, "matrix_1", "")
@@ -291,42 +271,53 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                 var tviBase36: TableVectorIterator
                     var tvi155 = &tviBase36
                     var col_oids155: [3]uint32
-                    col_oids155[0] = 2
-                    col_oids155[1] = 1
-                    col_oids155[2] = 3
-                    @tableIterInit(tvi155, queryState.execCtx, table_id_1, col_oids155)
-                    for (@tableIterAdvance(tvi155)) {
-                        var vpi155 = @tableIterGetVPI(tvi155)
-                        @filterManagerRunFilters(&pipelineState.filterManager1, vpi155, queryState.execCtx)
-                        for (; @vpiHasNextFiltered(vpi155); @vpiAdvanceFiltered(vpi155)) {
-                            var tviBase155: TableVectorIterator
-                            var tvi55 = &tviBase155
-                            var col_oids55: [3]uint32
-                            col_oids55[0] = 1
-                            col_oids55[1] = 3
-                            col_oids55[2] = 2
-                            @tableIterInit(tvi55, queryState.execCtx, table_id_2, col_oids55)
-                            for (@tableIterAdvance(tvi55)) {
-                                var vpi55 = @tableIterGetVPI(tvi55)
-                                @filterManagerRunFilters(&pipelineState.filterManager, vpi55, queryState.execCtx)
-                                for (; @vpiHasNextFiltered(vpi55); @vpiAdvanceFiltered(vpi55)) {
-                                    if (@sqlToBool(@vpiGetIntNull(vpi55, 2) == @vpiGetIntNull(vpi155, 1))) {
-                                        var aggValues: AggValues
-                                        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                        //sample_out.col1 = @vpiGetIntNull(vpi55, 1)
-                                        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                        //sample_out.col1 = @vpiGetIntNull(vpi155, 2)
-                                        aggValues.agg_term_attr0 = @vpiGetIntNull(vpi55, 1) * @vpiGetIntNull(vpi155, 2)
-                                        @aggAdvance(&queryState.aggs.agg_term_attr0, &aggValues.agg_term_attr0)
-                                        //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                                        //sample_out.col1 = @aggResult(&queryState.aggs.agg_term_attr0)
-                                    }
-                                }
+                    col_oids155[0] = 1
+                    col_oids155[1] = 3
+                    col_oids155[2] = 2
+                    var index_iter1: IndexIterator
+                    @indexIteratorInit(&index_iter1, exec_ctx, 1, 1002, 1004, col_oids155)
+                    var lo_index_pr1 = @indexIteratorGetLoPR(&index_iter1)
+                    var hi_index_pr1 = @indexIteratorGetHiPR(&index_iter1)
+                    @prSetIntNull(lo_index_pr1, 0, i)
+                    @prSetIntNull(hi_index_pr1, 0, j)
+                    for (@indexIteratorScanAscending(&index_iter1, 0, 0); @indexIteratorAdvance(&index_iter1); ) {
+                        var table_pr1 = @indexIteratorGetTablePR(&index_iter1)
+                        var slot1 = @indexIteratorGetSlot(&index_iter1)
+                        if (@sqlToBool(@prGetIntNull(table_pr1, 0) == i)) {
+
+
+                        var col_oids306: [3]uint32
+                        col_oids306[0] = 3
+                        col_oids306[1] = 1
+                        col_oids306[2] = 2
+
+                        var index_iter: IndexIterator
+                        @indexIteratorInit(&index_iter, queryState.execCtx, 2, 1003, 1005, col_oids306)
+                        var lo_index_pr = @indexIteratorGetLoPR(&index_iter)
+                        var hi_index_pr = @indexIteratorGetHiPR(&index_iter)
+                        @prSetIntNull(lo_index_pr, 1, j)
+                        @prSetIntNull(lo_index_pr, 0, @prGetIntNull(table_pr1, 1))
+                        @prSetIntNull(hi_index_pr, 1, j)
+                        @prSetIntNull(hi_index_pr, 0, @prGetIntNull(table_pr1, 1))
+                        for (@indexIteratorScanKey(&index_iter); @indexIteratorAdvance(&index_iter); ) {
+                            var table_pr = @indexIteratorGetTablePR(&index_iter)
+                            if (@sqlToBool(@prGetIntNull(table_pr, 1) == j)
+                                    and @sqlToBool(@prGetIntNull(table_pr1, 1) == @prGetIntNull(table_pr, 0))) {
+                                    var aggValues: AggValues
+                                    //var sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                                    //sample_out.col1 = @prGetIntNull(table_pr1, 2)
+                                    //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                                    //sample_out.col1 = @prGetIntNull(table_pr, 2)
+                                    aggValues.agg_term_attr0 = @prGetIntNull(table_pr1, 2) * @prGetIntNull(table_pr, 2)
+                                    @aggAdvance(&queryState.aggs.agg_term_attr0, &aggValues.agg_term_attr0)
+                                    //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                                    //sample_out.col1 = @aggResult(&queryState.aggs.agg_term_attr0)
                             }
-                            @tableIterClose(tvi55)
-                        }
+                                }
+                                @indexIteratorFree(&index_iter)
+                            }
                     }
-                    @tableIterClose(tvi155)
+                    @indexIteratorFree(&index_iter1)
 
                    Query2_Pipeline2_TearDownPipelineState(queryState, pipelineState)
 
@@ -388,15 +379,15 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
         }
 
 
-        @prSetIntNull(insert_pr, 0, &out_res)
-        @prSetIntNull(insert_pr, 1, &out_elem)
-        @prSetIntNull(insert_pr, 2, &out_i)
-        @prSetIntNull(insert_pr, 3, &out_j)
-        @prSetIntNull(insert_pr, 4, &out_n)
-        @prSetIntNull(insert_pr, 5, &out_row)
-        @prSetIntNull(insert_pr, 6, &out_sum)
-        @prSetBoolNull(insert_pr, 7, &out_label)
-        @prSetBoolNull(insert_pr, 8, &out_rec)
+        @prSetIntNull(insert_pr, 0, out_res)
+        @prSetIntNull(insert_pr, 1, out_elem)
+        @prSetIntNull(insert_pr, 2, out_i)
+        @prSetIntNull(insert_pr, 3, out_j)
+        @prSetIntNull(insert_pr, 4, out_n)
+        @prSetIntNull(insert_pr, 5, out_row)
+        @prSetIntNull(insert_pr, 6, out_sum)
+        @prSetBoolNull(insert_pr, 7, out_label)
+        @prSetBoolNull(insert_pr, 8, out_rec)
 
         var ind_insert_temp_table_slot = @indCteScanTableInsert(&cte_scan)
         }
