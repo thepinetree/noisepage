@@ -987,14 +987,15 @@ void LLVMEngine::CompiledModuleBuilder::Verify() {
     // TODO(pmenon): Do something more here ...
     EXECUTION_LOG_ERROR("ERROR IN MODULE:\n{}", ostream.str());
   }
-  std::ofstream myfile;
-  myfile.open ("asm.txt");
-  myfile << DumpModuleAsm();
-  myfile.close();
+//  std::ofstream myfile;
+//  myfile.open ("asm.txt");
+//  myfile << DumpModuleAsm();
+//  myfile.close();
 
-  myfile.open ("llvm.txt");
-  myfile << DumpModuleIR();
-  myfile.close();
+//  std::ofstream myfile1;
+//  myfile1.open ("llvm.txt");
+//  myfile1 << DumpModuleIR();
+//  myfile1.close();
 
 }
 

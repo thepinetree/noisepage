@@ -480,7 +480,7 @@ ast::Expr *CodeGen::IndexIteratorScan(ast::Identifier iter, planner::IndexScanTy
   if (asc_scan) args.push_back(Const64(static_cast<int64_t>(asc_type)));
   if (use_limit) {
     if(asc_type == storage::index::ScanType::OpenHigh){
-      limit = 1;
+      limit = 0;
     }
     args.push_back(Const32(limit));
   }

@@ -90,7 +90,7 @@ void IndexJoinTranslator::PerformPipelineWork(WorkContext *context, FunctionBuil
     bool has_predicate = op.GetJoinPredicate() != nullptr;
     if (has_predicate) {
       ast::Expr *cond = context->DeriveValue(*op.GetJoinPredicate(), this);
-      // if (cond) { PARENT_CODE }
+//       if (cond) { PARENT_CODE }
       If predicate(function, cond);
       context->Push(function);
       predicate.EndIf();
