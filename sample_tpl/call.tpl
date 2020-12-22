@@ -8,13 +8,14 @@ fun main(exec : *ExecutionContext) -> int32 {
     var lam = lambda [y] (z : Date ) -> nil {
                     y = z
                 }
-    var d = @dateToSql(1998, 2, 11)
+    var d = @dateToSql(1999, 2, 11)
     //f(lam, d)
     var k : Date
     //var h = &k
     //*h = d
-    k = f(d)
-    if(@datePart(k, @intToSql(21)) == @intToSql(1998)){
+    //k = f(d)
+    lam(d)
+    if(@datePart(y, @intToSql(21)) == @intToSql(1999)){
         // good
         return 1
     }

@@ -102,7 +102,7 @@ private static final String SQL_CREATE_FUNCTION_2 =
 
     private static final int[] LIMITS = {0,1,10,100,1000,10000,100000, 1000000, 10000000, 50000000, 100000000};
 
-    private static final int[] N_VALUES = {1,2,3,4,5,10,100,200};
+    private static final int[] N_VALUES = {1,2,3,4,5,10,20,30,50,100,200};
 
     /**
      * Initialize the database and table for testing

@@ -257,7 +257,7 @@ void BytecodeGenerator::VisitLambdaExpr(ast::LambdaExpr *node) {
 //      GetEmitter()->
 //    }
     LocalVar fieldvar = GetCurrentFunction()->NewLocal(
-        fields[i].type_, "");
+        fields[i].type_->PointerTo(), "");
     GetEmitter()->EmitLea(fieldvar, captures.AddressOf(),
                                        node->GetCaptureStructType()
                                            ->As<ast::StructType>()->GetOffsetOfFieldByName(fields[i].name_));

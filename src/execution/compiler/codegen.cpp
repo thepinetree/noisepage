@@ -478,7 +478,12 @@ ast::Expr *CodeGen::IndexIteratorScan(ast::Identifier iter, planner::IndexScanTy
   std::vector<ast::Expr *> args{iter_ptr};
 
   if (asc_scan) args.push_back(Const64(static_cast<int64_t>(asc_type)));
-  if (use_limit) args.push_back(Const32(limit));
+  if (use_limit) {
+    if(asc_type == storage::index::ScanType::OpenHigh){
+      limit = 1;
+    }
+    args.push_back(Const32(limit));
+  }
 
   return CallBuiltin(builtin, args);
 }

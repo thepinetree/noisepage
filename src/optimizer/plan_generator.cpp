@@ -534,6 +534,7 @@ void PlanGenerator::Visit(const InnerIndexJoin *op) {
       .SetIndexSize(accessor_->GetTable(op->GetTableOID())->GetNumTuple())
       .AddChild(std::move(children_plans_[0]));
 
+  size_t i = 0;
   for (auto bound : op->GetJoinKeys()) {
     if (type == planner::IndexScanType::Exact) {
       // Exact lookup
@@ -556,6 +557,11 @@ void PlanGenerator::Visit(const InnerIndexJoin *op) {
       auto key = parser::ExpressionUtil::EvaluateExpression(children_expr_map_, bound.second[0], laterals_).release();
       RegisterPointerCleanup<parser::AbstractExpression>(key, true, true);
       builder.AddLoIndexColumn(bound.first, common::ManagedPointer(key));
+
+      // hack until we figure out compound index key
+      if(op->GetJoinPredicates()[i].GetExpr()->GetExpressionType() == parser::ExpressionType::COMPARE_EQUAL){
+        builder.AddHiIndexColumn(bound.first, common::ManagedPointer(key));
+      }
     } else if (type == planner::IndexScanType::AscendingOpenLow) {
       // Open low scan, so use only high
       auto key = parser::ExpressionUtil::EvaluateExpression(children_expr_map_, bound.second[1], laterals_).release();
@@ -565,6 +571,7 @@ void PlanGenerator::Visit(const InnerIndexJoin *op) {
       // No bounds need to be set
       NOISEPAGE_ASSERT(0, "Unreachable");
     }
+    i++;
   }
 
   output_plan_ = builder.Build();
