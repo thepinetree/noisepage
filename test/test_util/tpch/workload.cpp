@@ -86,22 +86,22 @@ void Workload::LoadQueries(const std::unique_ptr<catalog::CatalogAccessor> &acce
   // TODO(wuwenw): add q16 after LIKE PR get merged
   switch (type) {
     case tpch::Workload::BenchmarkType::TPCH:
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ1(accessor, exec_settings_));
-      query_names_.emplace_back("Q1");
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ4(accessor, exec_settings_));
-      query_names_.emplace_back("Q4");
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ5(accessor, exec_settings_));
-      query_names_.emplace_back("Q5");
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ6(accessor, exec_settings_));
-      query_names_.emplace_back("Q6");
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ7(accessor, exec_settings_));
-      query_names_.emplace_back("Q7");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ1(accessor, exec_settings_));
+//      query_names_.emplace_back("Q1");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ4(accessor, exec_settings_));
+//      query_names_.emplace_back("Q4");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ5(accessor, exec_settings_));
+//      query_names_.emplace_back("Q5");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ6(accessor, exec_settings_));
+//      query_names_.emplace_back("Q6");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ7(accessor, exec_settings_));
+//      query_names_.emplace_back("Q7");
       query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ11(accessor, exec_settings_));
       query_names_.emplace_back("Q11");
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ18(accessor, exec_settings_));
-      query_names_.emplace_back("Q18");
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ19(accessor, exec_settings_));
-      query_names_.emplace_back("Q19");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ18(accessor, exec_settings_));
+//      query_names_.emplace_back("Q18");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ19(accessor, exec_settings_));
+//      query_names_.emplace_back("Q19");
       break;
     case tpch::Workload::BenchmarkType::SSB:
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part1(accessor, exec_settings_));
