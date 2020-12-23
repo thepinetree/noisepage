@@ -203,6 +203,8 @@ class TransactionContext {
    */
   void SetMustAbort() { must_abort_ = true; }
 
+  void NewEpoch() { redo_buffer_.Reset(); }
+
  private:
   friend class storage::GarbageCollector;
   friend class TransactionManager;

@@ -62,7 +62,23 @@ storage::ProjectedRow *CteScanIterator::GetInsertTempTablePR() {
 
 storage::TupleSlot CteScanIterator::TableInsert() {
   exec_ctx_->RowsAffected()++;  // believe this should only happen in root plan nodes, so should reflect count of query
-  return cte_table_->Insert(exec_ctx_->GetTxn(), table_redo_);
+  auto ret = cte_table_->Insert(exec_ctx_->GetTxn(), table_redo_);
+  saved_redos_.push_back(table_redo_);
+  return ret;
+}
+
+CteScanIterator::~CteScanIterator() {
+//  delete cte_table_;
+}
+
+void CteScanIterator::Reset() {
+  GetTable()->Reset();
+//  auto txn = exec_ctx_->GetTxn();
+  exec_ctx_->GetTxn()->NewEpoch();
+  saved_redos_.clear();
+//  for(auto redo : saved_redos_){
+//    txn->ReclaimRedo(redo);
+//  }
 }
 
 storage::SqlTable *CteScanIterator::GetTable() { return cte_table_; }

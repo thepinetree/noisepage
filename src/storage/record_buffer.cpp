@@ -21,11 +21,14 @@ byte *RedoBuffer::NewEntry(const uint32_t size) {
   } else if (!buffer_seg_->HasBytesLeft(size)) {
     // old log buffer is full
     if (log_manager_ != DISABLED) {
+      UNREACHABLE("BRUH");
       log_manager_->AddBufferToFlushQueue(buffer_seg_);
       has_flushed_ = true;
     } else {
+      // add to epoch pool
       buffer_pool_->Release(buffer_seg_);
     }
+    // check epoch pool
     buffer_seg_ = buffer_pool_->Get();
   }
   NOISEPAGE_ASSERT(buffer_seg_->HasBytesLeft(size),

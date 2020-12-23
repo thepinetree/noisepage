@@ -41,6 +41,8 @@ class EXPORT CteScanIterator {
 
   storage::TupleSlot TableInsert();
 
+  void Reset();
+
   /**
    * Return the iterator that will scan the temp table
    */
@@ -48,7 +50,7 @@ class EXPORT CteScanIterator {
   /**
    * Destructor
    */
-  ~CteScanIterator() = default;
+  ~CteScanIterator();
 
   /**
    * This class cannot be copied or moved
@@ -61,6 +63,7 @@ class EXPORT CteScanIterator {
   catalog::table_oid_t cte_table_oid_;
   std::vector<catalog::col_oid_t> col_oids_;
   storage::RedoRecord *table_redo_;
+  std::vector<storage::RedoRecord*> saved_redos_;
 };
 
 }  // namespace noisepage::execution::sql

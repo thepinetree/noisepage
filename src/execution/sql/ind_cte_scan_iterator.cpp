@@ -72,7 +72,7 @@ bool IndCteScanIterator::Accumulate() {
     cte_scan_read_ = temp_table;
 
     // clear new write table
-    cte_scan_write_->GetTable()->Reset();
+    cte_scan_write_->Reset();
   }
 
   bool old_written = written_;

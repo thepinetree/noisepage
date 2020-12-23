@@ -49,16 +49,18 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   var col_types: [11]uint32
   col_types[0] = 4  // res
   col_types[1] = 4  // buy
-  col_types[2] = 8  // cheapest
+  col_types[2] = 6  // cheapest
   col_types[3] = 4  // cheapest_order
-  col_types[4] = 8  // margin
+  col_types[4] = 6  // margin
   col_types[5] = 4  // partkey
-  col_types[6] = 8  // profit
+  col_types[6] = 6  // profit
   col_types[7] = 4  // sell
   col_types[8] = 4  // this_order_k
-  col_types[9] = 9  // this_order_d
+  col_types[9] = 8  // this_order_d
   col_types[10] = 1  // rec?
 
+//this_order_d, cheapest, margin, profit, , res, buy, cheapest_order, partkey, sell, this_order_k, rec?
+// 0          ,   1   ,    2  ,       3     ,  4 ,  5 ,       6       ,    7   ,   8 ,      9      ,  10
   var out : *output_struct
 
   var m : Integer
@@ -98,21 +100,20 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
 
   var lineitem_l_partkey_l_orderkey_oid = @testCatalogIndexLookup(exec_ctx, "lineitem_l_partkey_l_orderkey")
   var orders_o_orderdate_o_orderkey_oid = @testCatalogIndexLookup(exec_ctx, "orders_o_orderdate_o_orderkey")
-  var l_pk_oid = 1020
+  var l_pk_oid = 1019
 
+  @indCteScanInit(&cte_scan, exec_ctx, TEMP_OID_MASK, temp_col_oids, col_types, false)
   @tableIterInit(partkeys_tvi_2, exec_ctx, partkey_table_oid, partkeys_col_oids_2)
   var count = 0
   for(@tableIterAdvance(partkeys_tvi_2) and (count < 1)){
       var partkey_vpi_2 = @tableIterGetVPI(partkeys_tvi_2)
-      for (; @vpiHasNext(partkey_vpi_2); @vpiAdvance(partkey_vpi_2)) {
+      for (; @vpiHasNext(partkey_vpi_2) and (count < 1); @vpiAdvance(partkey_vpi_2)) {
+      //count = count+1
       var input_partkey = @vpiGetInt(partkey_vpi_2, 0)
       //var sample_out111 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
       //sample_out111.col1 = @intToSql(123456)
       //sample_out111 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
       //sample_out111.col1 = input_partkey
-
-
-  @indCteScanInit(&cte_scan, exec_ctx, TEMP_OID_MASK, temp_col_oids, col_types, false)
 
 
   var out_tvi: TableVectorIterator
@@ -124,25 +125,19 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   var init_partkey = input_partkey
 
   var null_val = @initSqlNull(&integer_ins)
-  @prSetIntNull(insert_pr, 0, null_val)
   integer_ins = @initSqlNull(&integer_ins)
-  @prSetIntNull(insert_pr, 1, null_val)
   var null_real = @initSqlNull(&real_ins)
+  @prSetRealNull(insert_pr, 0, null_real)
+  @prSetRealNull(insert_pr, 1, null_real)
   @prSetRealNull(insert_pr, 2, null_real)
   integer_ins = @initSqlNull(&integer_ins)
+
   @prSetIntNull(insert_pr, 3, null_val)
-  real_ins = @initSqlNull(&real_ins)
-  @prSetRealNull(insert_pr, 4, null_real)
-
-  real_ins = @initSqlNull(&real_ins)
-  @prSetIntNull(insert_pr, 5, init_partkey)
-
-  real_ins = @initSqlNull(&real_ins)
-  @prSetRealNull(insert_pr, 6, null_real)
-  integer_ins = @initSqlNull(&integer_ins)
+  @prSetIntNull(insert_pr, 4, null_val)
+  @prSetIntNull(insert_pr, 5, null_val)
+  @prSetIntNull(insert_pr, 6, init_partkey)
   @prSetIntNull(insert_pr, 7, null_val)
-  integer_ins = @initSqlNull(&integer_ins)
-  @prSetIntNull(insert_pr, 8, null_val)
+
 
 
     //SELECT * FROM (SELECT "RTE1"."o_orderkey" AS "rowk",
@@ -166,8 +161,9 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
       var lo_index_pr1165 = @indexIteratorGetLoPR(&index_iter165)
       var hi_index_pr1165 = @indexIteratorGetHiPR(&index_iter165)
       @prSetInt(lo_index_pr1165, 0, input_partkey)
-      @prSetInt(lo_index_pr1165, 0, input_partkey)
       @prSetInt(hi_index_pr1165, 0, input_partkey)
+      //var sample_out5 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+      //          sample_out5.col1 = @intToSql(102840)
       for (@indexIteratorScanAscending(&index_iter165, 0, 0); @indexIteratorAdvance(&index_iter165); ) {
           var table_pr172 = @indexIteratorGetTablePR(&index_iter165)
           var slot1 = @indexIteratorGetSlot(&index_iter165)
@@ -190,6 +186,10 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                   var table_pr190 = @indexIteratorGetTablePR(&index_iter178)
                   var slot = @indexIteratorGetSlot(&index_iter178)
                   if (@sqlToBool(@prGetInt(table_pr172, 0) == @prGetInt(table_pr190, 0))) {
+                      //var sample_out3 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                      //sample_out3.col1 = @intToSql(3201234)
+                      //sample_out3 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+                      //sample_out3.col1 = @prGetInt(table_pr190, 0)
                       var sortRow190 = @ptrCast(*SortRow, @sorterInsert(&sorter))
                       sortRow190.attr0 = @prGetInt(table_pr190, 0)
                       sortRow190.attr1 = @prGetDate(table_pr190, 1)
@@ -209,10 +209,10 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   date_val179 = @initSqlNull(&date_val179)
   for (; @sorterIterHasNext(base_iter); @sorterIterNext(base_iter)) {
       var sortRow211 = @ptrCast(*SortRow, @sorterIterGetRow(base_iter))
-      var sample_out2 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        sample_out2.col1 = @intToSql(3201234)
-        sample_out2 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-                sample_out2.col1 = sortRow211.attr0
+      //var sample_out2 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+      //  sample_out2.col1 = @intToSql(3201234)
+      //  sample_out2 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+      //          sample_out2.col1 = sortRow211.attr0
       key_val179 = sortRow211.attr0
       date_val179 = sortRow211.attr1
   }
@@ -241,16 +241,16 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
       var ind_vpi = @tableIterGetVPI(&ind_tvi)
       for(; @vpiHasNext(ind_vpi); @vpiAdvance(ind_vpi)){
       // FROM run AS "run"("rec?", "res", "result", "s", "x"),
-        var res = @vpiGetIntNull(ind_vpi, 9)
-        var buy = @vpiGetIntNull(ind_vpi, 0)
-        var cheapest = @vpiGetRealNull(ind_vpi, 1)
-        var cheapest_order = @vpiGetIntNull(ind_vpi, 2)
-        var margin = @vpiGetRealNull(ind_vpi, 3)
-        var partkey = @vpiGetIntNull(ind_vpi, 4)
-        var profit = @vpiGetRealNull(ind_vpi, 5)
-        var sell = @vpiGetIntNull(ind_vpi, 6)
-        var this_order_k = @vpiGetIntNull(ind_vpi, 7)
-        var this_order_d = @vpiGetDateNull(ind_vpi, 8)
+        var res = @vpiGetIntNull(ind_vpi, 0)
+        var buy = @vpiGetIntNull(ind_vpi, 1)
+        var cheapest = @vpiGetRealNull(ind_vpi, 2)
+        var cheapest_order = @vpiGetIntNull(ind_vpi, 3)
+        var margin = @vpiGetRealNull(ind_vpi, 4)
+        var partkey = @vpiGetIntNull(ind_vpi, 5)
+        var profit = @vpiGetRealNull(ind_vpi, 6)
+        var sell = @vpiGetIntNull(ind_vpi, 7)
+        var this_order_k = @vpiGetIntNull(ind_vpi, 8)
+        var this_order_d = @vpiGetDateNull(ind_vpi, 9)
         var rec = @vpiGetBool(ind_vpi, 10)
 
         //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
@@ -757,7 +757,7 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                 if_result7_rec = @boolToSql(false)
             }
             //if_result7_res = @intToSql(67)
-            @prSetIntNull(insert_pr, 0, if_result7_res)
+            //@prSetIntNull(insert_pr, 3, if_result7_res)
            //sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
            //                                                sample_out.col1 = @intToSql(126969)
                                                             //if_result7_buy = @intToSql(68)
@@ -768,17 +768,29 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
                                                             //if_result7_sell = @intToSql(74)
            //                 sample_out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
            //                                 sample_out.col1 = if_result7_buy
-            @prSetIntNull(insert_pr, 1, if_result7_buy)
-            @prSetRealNull(insert_pr, 2, if_result7_cheapest)
-            @prSetIntNull(insert_pr, 3, if_result7_cheapest_order)
-            @prSetRealNull(insert_pr, 4, if_result7_margin)
-            @prSetIntNull(insert_pr, 5, if_result7_partkey)
-            @prSetRealNull(insert_pr, 6, if_result7_profit)
+            @prSetIntNull(insert_pr, 3, if_result7_res)
+            @prSetIntNull(insert_pr, 4, if_result7_buy)
+            @prSetRealNull(insert_pr, 0, if_result7_cheapest)
+            @prSetIntNull(insert_pr, 5, if_result7_cheapest_order)
+            @prSetRealNull(insert_pr, 1, if_result7_margin)
+            @prSetIntNull(insert_pr, 6, if_result7_partkey)
+            @prSetRealNull(insert_pr, 2, if_result7_profit)
             @prSetIntNull(insert_pr, 7, if_result7_sell)
             @prSetIntNull(insert_pr, 8, if_result7_this_order_k)
             @prSetDateNull(insert_pr, 9, if_result7_this_order_d)
             @prSetBool(insert_pr, 10, if_result7_rec)
             var ind_insert_temp_table_slot = @indCteScanTableInsert(&cte_scan)
+            // 0->2
+            // 1->4
+            // 2->6
+            // 3->0
+            // 4->1
+            // 5->3
+            // 6->5
+            // 7->7
+            // 8->8
+            // 9->9
+            // 10->10
         }
         }
         @vpiReset(ind_vpi)
@@ -794,21 +806,23 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
     var endvpi = @tableIterGetVPI(endtvi1)
     for (; @vpiHasNext(endvpi); @vpiAdvance(endvpi)) {
       var resres = @vpiGetIntNull(endvpi, 0)
-      var recrec = @vpiGetBool(endvpi, 4)
-      out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-              out.col1 = @intToSql(783)
-        out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
-        out.col1 = resres
+      var recrec = @vpiGetBool(endvpi, 10)
+      //out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+      //        out.col1 = @intToSql(783)
+       // out = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
+       // out.col1 = resres
     }
     @vpiReset(endvpi)
   }
   @tableIterClose(endtvi1)
-  @indCteScanFree(&cte_scan)
+
+  var f = @indCteScanAccumulate(&cte_scan)
 
     }
     @vpiReset(partkey_vpi_2)
     }
     @tableIterClose(partkeys_tvi_2)
+    @indCteScanFree(&cte_scan)
 
   @resultBufferFinalize(output_buffer)
   @resultBufferFree(output_buffer)
