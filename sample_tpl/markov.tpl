@@ -226,6 +226,8 @@ fun main(exec_ctx: *ExecutionContext) -> int32 {
   @prSetBool(insert_pr, 10, bool_ins)
   var base_insert_temp_table_slot = @indCteScanTableInsert(&cte_scan)
 
+
+
   //var sample_out220 = @ptrCast(*output_struct, @resultBufferAllocRow(output_buffer))
   //sample_out220.col1 = key_val179
 

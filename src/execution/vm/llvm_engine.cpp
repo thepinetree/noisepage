@@ -1047,6 +1047,16 @@ std::unique_ptr<LLVMEngine::CompiledModule> LLVMEngine::CompiledModuleBuilder::F
     PersistObjectToFile(*obj);
   }
 
+//  std::ofstream myfile;
+//  myfile.open ("asm.txt");
+//  myfile << DumpModuleAsm();
+//  myfile.close();
+//
+//  std::ofstream myfile1;
+//  myfile1.open ("llvm.txt");
+//  myfile1 << DumpModuleIR();
+//  myfile1.close();
+
   return std::make_unique<CompiledModule>(std::move(obj));
 }
 
