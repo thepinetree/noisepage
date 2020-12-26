@@ -235,29 +235,29 @@ void PostgresPacketWriter::WriteBindComplete() { BeginPacket(NetworkMessageType:
 void PostgresPacketWriter::WriteDataRow(const byte *const tuple,
                                         const std::vector<planner::OutputSchema::Column> &columns,
                                         const std::vector<FieldFormat> &field_formats) {
-//  BeginPacket(NetworkMessageType::PG_DATA_ROW).AppendValue<int16_t>(static_cast<int16_t>(columns.size()));
-//  uint32_t curr_offset = 0;
-//  for (uint32_t i = 0; i < columns.size(); i++) {
-//    // Reinterpret to a base value type first and check if it's NULL
-//    auto alignment = execution::sql::ValUtil::GetSqlAlignment(columns[i].GetType());
-//    if (!common::MathUtil::IsAligned(curr_offset, alignment)) {
-//      curr_offset = static_cast<uint32_t>(common::MathUtil::AlignTo(curr_offset, alignment));
-//    }
-//    const auto *const val = reinterpret_cast<const execution::sql::Val *const>(tuple + curr_offset);
-//
-//    // Field formats can either be the size of the number of columns, or size 1 where they all use the same format
-//    const auto field_format = field_formats[i < field_formats.size() ? i : 0];
-//
-//    const auto type_size = field_format == FieldFormat::text ? WriteTextAttribute(val, columns[i].GetType())
-//                                                             : WriteBinaryAttribute(val, columns[i].GetType());
-//
-//    // Advance in the buffer based on the execution engine's type size
-//    curr_offset += type_size;
-//  }
-//  EndPacket();
-//  (void)tuple;
-//  (void)columns;
-//  (void)field_formats;
+  BeginPacket(NetworkMessageType::PG_DATA_ROW).AppendValue<int16_t>(static_cast<int16_t>(columns.size()));
+  uint32_t curr_offset = 0;
+  for (uint32_t i = 0; i < columns.size(); i++) {
+    // Reinterpret to a base value type first and check if it's NULL
+    auto alignment = execution::sql::ValUtil::GetSqlAlignment(columns[i].GetType());
+    if (!common::MathUtil::IsAligned(curr_offset, alignment)) {
+      curr_offset = static_cast<uint32_t>(common::MathUtil::AlignTo(curr_offset, alignment));
+    }
+    const auto *const val = reinterpret_cast<const execution::sql::Val *const>(tuple + curr_offset);
+
+    // Field formats can either be the size of the number of columns, or size 1 where they all use the same format
+    const auto field_format = field_formats[i < field_formats.size() ? i : 0];
+
+    const auto type_size = field_format == FieldFormat::text ? WriteTextAttribute(val, columns[i].GetType())
+                                                             : WriteBinaryAttribute(val, columns[i].GetType());
+
+    // Advance in the buffer based on the execution engine's type size
+    curr_offset += type_size;
+  }
+  EndPacket();
+  (void)tuple;
+  (void)columns;
+  (void)field_formats;
 }
 
 template <class native_type, class val_type>

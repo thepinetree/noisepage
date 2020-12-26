@@ -75,6 +75,7 @@ ast::FunctionDecl *FunctionBuilder::Finish(ast::Expr *ret) {
 
 ast::LambdaExpr *FunctionBuilder::FinishLambda(util::RegionVector<ast::Expr*> &&captures, ast::Expr *ret) {
   NOISEPAGE_ASSERT(is_lambda_, "Asking to finish a lambda function that's not actually a lambda function");
+  (void)is_lambda_;
   if (decl_.lambda_expr_ != nullptr) {
     return decl_.lambda_expr_;
   }

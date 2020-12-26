@@ -238,19 +238,27 @@ void PlanGenerator::Visit(const IndexScan *op) {
     if (type == planner::IndexScanType::Exact) {
       // Exact lookup
       builder.AddIndexColumn(bound.first, bound.second[0]);
-    } else if (type == planner::IndexScanType::AscendingClosed) {
+    } else if (type == planner::IndexScanType::AscendingClosed || type == planner::IndexScanType::AscendingClosedLimit) {
       // Range lookup, so use lo and hi
       builder.AddLoIndexColumn(bound.first, bound.second[0]);
       builder.AddHiIndexColumn(bound.first, bound.second[1]);
-    } else if (type == planner::IndexScanType::AscendingOpenHigh) {
+    } else if (type == planner::IndexScanType::AscendingOpenHigh || type == planner::IndexScanType::AscendingOpenHighLimit) {
       // Open high scan, so use only lo
       builder.AddLoIndexColumn(bound.first, bound.second[0]);
     } else if (type == planner::IndexScanType::AscendingOpenLow) {
       // Open low scan, so use only high
       builder.AddHiIndexColumn(bound.first, bound.second[1]);
     } else if (type == planner::IndexScanType::AscendingOpenBoth) {
-      // No bounds need to be set
+      // No bounds need to be set;
+    } else {
+      // No other scan type are supported
+      NOISEPAGE_ASSERT(0, "Unreachable");
     }
+  }
+
+  // Check that the limit is set in the operator
+  if (op->GetLimitExists()) {
+    builder.SetScanLimit(op->GetLimit());
   }
 
   output_plan_ = builder.Build();
@@ -543,7 +551,7 @@ void PlanGenerator::Visit(const InnerIndexJoin *op) {
 
       builder.AddLoIndexColumn(bound.first, common::ManagedPointer(key));
       builder.AddHiIndexColumn(bound.first, common::ManagedPointer(key));
-    } else if (type == planner::IndexScanType::AscendingClosed) {
+    } else if (type == planner::IndexScanType::AscendingClosed || type == planner::IndexScanType::AscendingClosedLimit) {
       // Range lookup, so use lo and hi
       auto lkey = parser::ExpressionUtil::EvaluateExpression(children_expr_map_, bound.second[0], laterals_).release();
       auto hkey = parser::ExpressionUtil::EvaluateExpression(children_expr_map_, bound.second[1], laterals_).release();
@@ -552,7 +560,7 @@ void PlanGenerator::Visit(const InnerIndexJoin *op) {
 
       builder.AddLoIndexColumn(bound.first, common::ManagedPointer(lkey));
       builder.AddHiIndexColumn(bound.first, common::ManagedPointer(hkey));
-    } else if (type == planner::IndexScanType::AscendingOpenHigh) {
+    } else if (type == planner::IndexScanType::AscendingOpenHigh || type == planner::IndexScanType::AscendingOpenHighLimit) {
       // Open high scan, so use only lo
       auto key = parser::ExpressionUtil::EvaluateExpression(children_expr_map_, bound.second[0], laterals_).release();
       RegisterPointerCleanup<parser::AbstractExpression>(key, true, true);
@@ -570,8 +578,16 @@ void PlanGenerator::Visit(const InnerIndexJoin *op) {
     } else if (type == planner::IndexScanType::AscendingOpenBoth) {
       // No bounds need to be set
       NOISEPAGE_ASSERT(0, "Unreachable");
+    } else {
+      // No other scan type are supported
+      NOISEPAGE_ASSERT(0, "Unreachable");
     }
     i++;
+  }
+
+  // Check that the limit is set in the operator
+  if (op->GetLimitExists()) {
+    builder.SetScanLimit(op->GetLimit());
   }
 
   output_plan_ = builder.Build();

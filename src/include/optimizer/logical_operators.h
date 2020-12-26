@@ -119,6 +119,24 @@ class LogicalGet : public OperatorNodeContents<LogicalGet> {
    */
   bool GetIsForUpdate() const { return is_for_update_; }
 
+  /**
+   * Sets the limit
+   */
+  void SetLimit(uint32_t limit) {
+    limit_exists_ = true;
+    limit_ = limit;
+  }
+
+  /**
+   * @returns whether the limit exists
+   */
+  bool GetLimitExists() { return limit_exists_; }
+
+  /**
+   * @returns value of the limit
+   */
+  uint32_t GetLimit() { return limit_; }
+
  private:
   /**
    * OID of the database
@@ -144,6 +162,16 @@ class LogicalGet : public OperatorNodeContents<LogicalGet> {
    * Whether the scan is used for update
    */
   bool is_for_update_;
+
+  /**
+   * Whether limit exists
+   */
+  bool limit_exists_;
+
+  /**
+   * Limit value for get
+   */
+  uint32_t limit_;
 };
 
 /**
@@ -496,12 +524,40 @@ class LogicalInnerJoin : public OperatorNodeContents<LogicalInnerJoin> {
 
   const std::vector<catalog::table_oid_t> &GetLateralOids() const { return lateral_oids_; }
 
+  /**
+ * Sets the limit
+ */
+  void SetLimit(uint32_t limit) {
+    limit_exists_ = true;
+    limit_ = limit;
+  }
+
+  /**
+   * @returns whether the limit exists
+   */
+  bool GetLimitExists() { return limit_exists_; }
+
+  /**
+   * @returns value of the limit
+   */
+  uint32_t GetLimit() { return limit_; }
+
  private:
   /**
    * Join predicates
    */
   std::vector<AnnotatedExpression> join_predicates_;
   std::vector<catalog::table_oid_t> lateral_oids_;
+
+  /**
+   * Whether limit exists
+   */
+  bool limit_exists_;
+
+  /**
+   * Limit value for get
+   */
+  uint32_t limit_;
 };
 
 /**
