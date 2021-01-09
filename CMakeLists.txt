@@ -304,8 +304,8 @@ if (APPLE)
     list(APPEND NOISEPAGE_LINK_OPTIONS "-fvisibility=hidden")
 else ()
     # lld is the fastest linker.
-    list(APPEND NOISEPAGE_LINK_OPTIONS "-fuse-ld=lld")
-    message(STATUS "Linker: Will pass \"-fuse-ld=lld\" to linker.")
+#    list(APPEND NOISEPAGE_LINK_OPTIONS "-fuse-ld=lld")
+#    message(STATUS "Linker: Will pass \"-fuse-ld=lld\" to linker.")
 endif ()
 
 # Compiler specific configuration.
