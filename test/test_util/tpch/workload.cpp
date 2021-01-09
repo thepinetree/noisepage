@@ -4,6 +4,7 @@
 #include <string>
 
 #include "common/managed_pointer.h"
+#include "common/scoped_timer.h"
 #include "execution/compiler/output_schema_util.h"
 #include "execution/exec/execution_context.h"
 #include "execution/sql/value_util.h"
@@ -16,7 +17,6 @@
 #include "planner/plannodes/seq_scan_plan_node.h"
 #include "test_util/ssb/star_schema_query.h"
 #include "test_util/tpch/tpch_query.h"
-#include "common/scoped_timer.h"
 
 namespace noisepage::tpch {
 
@@ -71,7 +71,7 @@ void Workload::GenerateTables(execution::exec::ExecutionContext *exec_ctx, const
       break;
     case tpch::Workload::BenchmarkType::SSB:
       tables = &ssb_tables;
-      kind = ".csv";
+      kind = ".data";
       break;
     default:
       UNREACHABLE("unimplemented benchmark type");
@@ -90,29 +90,49 @@ void Workload::LoadQueries(const std::unique_ptr<catalog::CatalogAccessor> &acce
   switch (type) {
     case tpch::Workload::BenchmarkType::TPCH:
       query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ1(accessor, exec_settings_));
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ4(accessor, exec_settings_));
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ5(accessor, exec_settings_));
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ6(accessor, exec_settings_));
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ7(accessor, exec_settings_));
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ11(accessor, exec_settings_));
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ16(accessor, exec_settings_));
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ18(accessor, exec_settings_));
-      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ19(accessor, exec_settings_));
+      query_names_.emplace_back("Q1");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ4(accessor, exec_settings_));
+//      query_names_.emplace_back("Q4");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ5(accessor, exec_settings_));
+//      query_names_.emplace_back("Q5");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ6(accessor, exec_settings_));
+//      query_names_.emplace_back("Q6");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ7(accessor, exec_settings_));
+//      query_names_.emplace_back("Q7");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ11(accessor, exec_settings_));
+//      query_names_.emplace_back("Q11");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ18(accessor, exec_settings_));
+//      query_names_.emplace_back("Q18");
+//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ19(accessor, exec_settings_));
+//      query_names_.emplace_back("Q19");
       break;
     case tpch::Workload::BenchmarkType::SSB:
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part1(accessor, exec_settings_));
+      query_names_.emplace_back("Q1.1");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part2(accessor, exec_settings_));
+      query_names_.emplace_back("Q1.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part3(accessor, exec_settings_));
+      query_names_.emplace_back("Q1.3");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part1(accessor, exec_settings_));
+      query_names_.emplace_back("Q2.1");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part2(accessor, exec_settings_));
+      query_names_.emplace_back("2.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part3(accessor, exec_settings_));
+      query_names_.emplace_back("2.3");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part1(accessor, exec_settings_));
+      query_names_.emplace_back("3.1");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part2(accessor, exec_settings_));
+      query_names_.emplace_back("3.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part3(accessor, exec_settings_));
+      query_names_.emplace_back("3.3");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part4(accessor, exec_settings_));
+      query_names_.emplace_back("3.4");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ4Part1(accessor, exec_settings_));
+      query_names_.emplace_back("4.1");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ4Part2(accessor, exec_settings_));
+      query_names_.emplace_back("4.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ4Part3(accessor, exec_settings_));
+      query_names_.emplace_back("4.3");
       break;
     default:
       UNREACHABLE("Unimplemented Benchmark Type");
@@ -168,7 +188,8 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
 }
 
 uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, bool print_output) {
-  NOISEPAGE_ASSERT(static_cast<uint32_t>(query_ind) < this->GetQueryNum() && 0 <= query_ind, "query plans index out of range");
+  NOISEPAGE_ASSERT(static_cast<uint32_t>(query_ind) < this->GetQueryNum() && 0 <= query_ind,
+                   "query plans index out of range");
   // Register to the metrics manager
   db_main_->GetMetricsManager()->RegisterThread();
   auto txn = txn_manager_->BeginTransaction();
@@ -198,12 +219,10 @@ uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mod
   // Add sleep time pause
   std::this_thread::sleep_for(std::chrono::microseconds(100));
 
-
   // Unregister from the metrics manager
   db_main_->GetMetricsManager()->UnregisterThread();
 
   return elapsed_ms;
 }
-
 
 }  // namespace noisepage::tpch

@@ -68,7 +68,6 @@ class Workload {
    */
   uint32_t GetQueryNum() const { return query_and_plan_.size(); }
 
-
   /**
    * Function to get number of queries in plan
    * @return size of query plan vector

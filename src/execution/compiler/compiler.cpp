@@ -1,5 +1,7 @@
 #include "execution/compiler/compiler.h"
 
+#include <iostream>
+
 #include "execution/ast/ast_pretty_print.h"
 #include "execution/ast/context.h"
 #include "execution/parsing/parser.h"
@@ -8,8 +10,6 @@
 #include "execution/sema/sema.h"
 #include "execution/vm/bytecode_generator.h"
 #include "execution/vm/module.h"
-
-#include <iostream>
 
 namespace noisepage::execution::compiler {
 
@@ -99,7 +99,7 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
   }
 
   callbacks->EndPhase(Phase::BytecodeGeneration, this);
-  ast::AstPrettyPrint::Dump(std::cerr, root_);
+  //  ast::AstPrettyPrint::Dump(std::cerr, root_);
 
   // -------------------------------------------------------
   // Phase 4 : Module Generation

@@ -234,7 +234,7 @@ void Sorter::SortParallel(ThreadStateContainer *thread_state_container, std::siz
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Parallel Sort Thread-Local Instances");
 
-  //tbb::task_scheduler_init sched;
+  // tbb::task_scheduler_init sched;
   //{
   //  size_t num_threads = tbb::task_scheduler_init::default_num_threads();
   //  size_t num_tasks = tl_sorters.size();
