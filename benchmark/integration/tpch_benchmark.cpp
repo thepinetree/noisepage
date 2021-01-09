@@ -21,7 +21,7 @@ class TPCHBenchmark : public benchmark::Fixture {
   std::unique_ptr<DBMain> db_main_;
   std::unique_ptr<tpch::Workload> tpch_workload_;
 
-  const std::string tpch_table_root_ = "/home/pmenon/tools/TPC-H/data/sf-10";
+  const std::string tpch_table_root_ = "/home/pmenon/tools/TPC-H/data/sf-10/";
   const std::string tpch_database_name_ = "tpch_db";
 
   void SetUp(const benchmark::State &state) final {
