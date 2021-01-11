@@ -67,7 +67,7 @@ void Workload::GenerateTables(execution::exec::ExecutionContext *exec_ctx, const
       break;
     case tpch::Workload::BenchmarkType::SSB:
       tables = &ssb_tables;
-      kind = ".csv";
+      kind = ".data";
       break;
     default:
       UNREACHABLE("unimplemented benchmark type");
