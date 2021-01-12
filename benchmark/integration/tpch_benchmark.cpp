@@ -46,6 +46,7 @@ class TPCHBenchmark : public benchmark::Fixture {
     // Set up metrics manager
     auto metrics_manager = db_main_->GetMetricsManager();
     metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE);
+    metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION);
     metrics_manager->EnableMetric(metrics::MetricsComponent::GARBAGECOLLECTION);
     metrics_manager->EnableMetric(metrics::MetricsComponent::LOGGING);
 
