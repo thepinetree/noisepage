@@ -220,6 +220,7 @@ uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mod
   std::this_thread::sleep_for(std::chrono::microseconds(100));
 
   // Unregister from the metrics manager
+  db_main_->GetMetricsManager()->Aggregate();
   db_main_->GetMetricsManager()->UnregisterThread();
 
   return elapsed_ms;

@@ -160,9 +160,16 @@ void ExecutableQuery::Run(common::ManagedPointer<exec::ExecutionContext> exec_ct
   exec_ctx->SetPipelineOperatingUnits(GetPipelineOperatingUnits());
   exec_ctx->SetQueryId(query_id_);
 
-  // Now run through fragments.
-  for (const auto &fragment : fragments_) {
-    fragment->Run(query_state.get(), mode);
+  double elapsed_ms;
+  {
+    util::ScopedTimer timer(&elapsed_ms);
+    // Now run through fragments.
+    for (const auto &fragment : fragments_) {
+      fragment->Run(query_state.get(), mode);
+    }
+  }
+  if (this->GetPlan().GetPlanNodeType() != planner::PlanNodeType::INSERT) {
+    std::cout << "Query took " << elapsed_ms << " ms to run\n";
   }
 
   // We do not currently re-use ExecutionContexts. However, this is unset to help ensure
