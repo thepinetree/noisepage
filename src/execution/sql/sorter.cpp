@@ -360,7 +360,7 @@ void Sorter::SortParallel(ThreadStateContainer *thread_state_container, std::siz
   };
 
   {
-    size_t num_threads = tbb::task_scheduler_init::default_num_threads();
+    size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
     size_t num_tasks = merge_work.size();
     size_t concurrent = std::min(num_threads, num_tasks);
     exec_ctx_->SetNumConcurrentEstimate(concurrent);
