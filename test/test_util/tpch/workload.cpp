@@ -21,7 +21,7 @@
 namespace noisepage::tpch {
 
 Workload::Workload(common::ManagedPointer<DBMain> db_main, const std::string &db_name, const std::string &table_root,
-                   enum BenchmarkType type) {
+                   enum BenchmarkType type, common::ManagedPointer<execution::exec::ExecutionSettings> settings) {
   // cache db main and members
   db_main_ = db_main;
   txn_manager_ = db_main_->GetTransactionLayer()->GetTransactionManager();
@@ -38,13 +38,13 @@ Workload::Workload(common::ManagedPointer<DBMain> db_main, const std::string &db
   ns_oid_ = accessor->GetDefaultNamespace();
 
   // Enable counters and disable the parallel execution for this workload
-  exec_settings_.is_parallel_execution_enabled_ = false;
-  exec_settings_.is_counters_enabled_ = true;
+  settings->is_parallel_execution_enabled_ = true;
+  settings->is_counters_enabled_ = true;
 
   // Make the execution context
   auto exec_ctx = execution::exec::ExecutionContext(
       db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), nullptr, nullptr,
-      common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_, db_main->GetMetricsManager());
+      common::ManagedPointer<catalog::CatalogAccessor>(accessor), *settings.Get(), db_main->GetMetricsManager());
 
   // create the TPCH database and compile the queries
   GenerateTables(&exec_ctx, table_root, type);

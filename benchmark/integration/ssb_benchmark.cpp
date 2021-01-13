@@ -4,20 +4,18 @@
 #include "execution/execution_util.h"
 #include "execution/vm/module.h"
 #include "main/db_main.h"
+#include "settings/settings_manager.h"
 #include "test_util/tpch/workload.h"
-#include <tbb/task_scheduler_init.h>
 
-tbb::task_scheduler_init s(std::thread::hardware_concurrency());
-
-namespace terrier::tpch {
+namespace noisepage::tpch {
 class SSBBenchmark : public benchmark::Fixture {
  public:
   const bool print_exec_info_ = true;
   const double threshold_ = 0.1;
   const uint64_t min_iterations_per_query_ = 10;
   const uint64_t max_iterations_per_query_ = 10;
-  const noisepage::execution::vm::ExecutionMode mode_ = noisepage::execution::vm::ExecutionMode::Interpret;
-
+  const int32_t threads = 40;
+  const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
   std::unique_ptr<noisepage::DBMain> db_main_;
   std::unique_ptr<noisepage::tpch::Workload> ssb_workload_;
 
@@ -42,13 +40,20 @@ class SSBBenchmark : public benchmark::Fixture {
 
     // Set up metrics manager
     auto metrics_manager = db_main_->GetMetricsManager();
+    metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE);
     metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
-    metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::GARBAGECOLLECTION, 0);
-    metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::LOGGING, 0);
+
+
+    auto settings_manager = settings::SettingsManager(common::ManagedPointer<DBMain>(db_main_), {});
+    auto cve = parser::ConstantValueExpression(type::TypeId::INTEGER, threads);
+    settings_manager.SetParameter("num_parallel_execution_threads", {common::ManagedPointer<parser::AbstractExpression>(&cve)});
+    execution::exec::ExecutionSettings exec_settings{};
+    exec_settings.UpdateFromSettingsManager(common::ManagedPointer<settings::SettingsManager>(&settings_manager));
 
     // Load the TPCH tables and compile the queries
     ssb_workload_ =
-        std::make_unique<noisepage::tpch::Workload>(noisepage::common::ManagedPointer<noisepage::DBMain>(db_main_), ssb_database_name_, ssb_table_root_, noisepage::tpch::Workload::BenchmarkType::SSB);
+        std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), ssb_database_name_, ssb_table_root_, Workload::BenchmarkType::SSB,
+        common::ManagedPointer<execution::exec::ExecutionSettings>(&exec_settings));
   }
 
   void TearDown(const benchmark::State &state) final {

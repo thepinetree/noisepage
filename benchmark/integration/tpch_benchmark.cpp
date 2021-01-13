@@ -1,5 +1,3 @@
-#include <tbb/task_scheduler_init.h>
-
 #include <thread>
 
 #include "benchmark/benchmark.h"
@@ -8,9 +6,9 @@
 #include "execution/execution_util.h"
 #include "execution/vm/module.h"
 #include "main/db_main.h"
+#include "settings/settings_manager.h"
 #include "test_util/tpch/workload.h"
 
-tbb::task_scheduler_init s(std::thread::hardware_concurrency());
 
 namespace noisepage::tpch {
 class TPCHBenchmark : public benchmark::Fixture {
@@ -19,6 +17,7 @@ class TPCHBenchmark : public benchmark::Fixture {
   const double threshold_ = 0.1;
   const uint64_t min_iterations_per_query_ = 1;
   const uint64_t max_iterations_per_query_ = 1;
+  const int32_t threads = 40;
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
 
   std::unique_ptr<DBMain> db_main_;
@@ -45,12 +44,19 @@ class TPCHBenchmark : public benchmark::Fixture {
 
     // Set up metrics manager
     auto metrics_manager = db_main_->GetMetricsManager();
-    metrics_manager->SetMetricSampleInterval(metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
     metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE);
+    metrics_manager->SetMetricSampleInterval(metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
+
+    auto settings_manager = settings::SettingsManager(common::ManagedPointer<DBMain>(db_main_), {});
+    auto cve = parser::ConstantValueExpression(type::TypeId::INTEGER, threads);
+    settings_manager.SetParameter("num_parallel_execution_threads", {common::ManagedPointer<parser::AbstractExpression>(&cve)});
+    execution::exec::ExecutionSettings exec_settings{};
+    exec_settings.UpdateFromSettingsManager(common::ManagedPointer<settings::SettingsManager>(&settings_manager));
 
     // Load the TPCH tables and compile the queries
     tpch_workload_ = std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_,
-                                                      tpch_table_root_, tpch::Workload::BenchmarkType::TPCH);
+                                                      tpch_table_root_, tpch::Workload::BenchmarkType::TPCH,
+                                                      common::ManagedPointer<execution::exec::ExecutionSettings>(&exec_settings));
   }
 
   void TearDown(const benchmark::State &state) final {
