@@ -46,7 +46,7 @@ class SSBBenchmark : public benchmark::Fixture {
     auto metrics_manager = db_main_->GetMetricsManager();
     metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE);
     metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
-    
+
     auto cve = parser::ConstantValueExpression(type::TypeId::INTEGER, execution::sql::Integer(threads));
     db_main_->GetSettingsManager()->SetParameter("num_parallel_execution_threads", {common::ManagedPointer<parser::AbstractExpression>(&cve)});
     execution::exec::ExecutionSettings exec_settings{};
