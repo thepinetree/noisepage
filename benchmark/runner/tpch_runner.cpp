@@ -13,13 +13,13 @@ class TPCHRunner : public benchmark::Fixture {
   const uint64_t execution_us_per_worker_ = 20000000;  // Time (us) to run per terminal (worker thread)
   std::vector<uint64_t> avg_interval_us_ = {10, 20, 50, 100, 200, 500, 1000};
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
-  const bool single_test_run_ = false;
+  const bool single_test_run_ = true;
 
   std::unique_ptr<DBMain> db_main_;
   std::unique_ptr<tpch::Workload> workload_;
 
   // To get tpl_tables, https://github.com/malin1993ml/tpl_tables and "bash gen_tpch.sh 0.1".
-  const std::string tpch_table_root_ = "../../../tpl_tables/tables/";
+  const std::string tpch_table_root_ = "/Users/ejeppinger/Downloads/tpl_tables/tables-small/";
   const std::string ssb_dir_ = "../../../SSB_Table_Generator/ssb_tables/";
   const std::string tpch_database_name_ = "tpch_runner_db";
 
@@ -67,7 +67,7 @@ BENCHMARK_DEFINE_F(TPCHRunner, Runner)(benchmark::State &state) {
   }
   execution::exec::ExecutionSettings exec_settings{};
   workload_ = std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_,
-                                               table_root, type_, exec_settings);
+                                               table_root, type_, common::ManagedPointer<execution::exec::ExecutionSettings>(&exec_settings));
 
   int8_t num_thread_start;
   uint32_t query_num_start, repeat_num;
