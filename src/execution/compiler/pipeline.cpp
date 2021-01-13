@@ -307,15 +307,13 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
     auto state = codegen_->TLSAccessCurrentThreadState(tls, state_.GetTypeName());
     builder.Append(codegen_->DeclareVarWithInit(state_var_, state));
 
-    InjectStartResourceTracker(&builder, false);
-
     // Launch pipeline work.
     if (IsParallel()) {
       driver_->LaunchWork(&builder, GetWorkFunctionName());
     } else {
       // SerialWork(queryState, pipelineState)
-      // InjectStartResourceTracker(&builder, false);
-      // started_tracker = true;
+      InjectStartResourceTracker(&builder, false);
+      started_tracker = true;
 
       builder.Append(
           codegen_->Call(GetWorkFunctionName(), {builder.GetParameterByPosition(0), codegen_->MakeExpr(state_var_)}));
@@ -328,10 +326,9 @@ ast::FunctionDecl *Pipeline::GenerateRunPipelineFunction() const {
       (*iter)->FinishPipelineWork(*this, &builder);
     }
 
-    // if (started_tracker) {
-    //  InjectEndResourceTracker(&builder, false);
-    //}
-    InjectEndResourceTracker(&builder, false);
+    if (started_tracker) {
+      InjectEndResourceTracker(&builder, false);
+    }
   }
 
   return builder.Finish();
