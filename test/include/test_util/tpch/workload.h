@@ -39,7 +39,7 @@ class Workload {
   enum class BenchmarkType : uint32_t { TPCH, SSB };
 
   Workload(common::ManagedPointer<DBMain> db_main, const std::string &db_name, const std::string &table_root,
-           enum BenchmarkType type);
+           enum BenchmarkType type, common::ManagedPointer<execution::exec::ExecutionSettings> settings);
 
   /**
    * Function to invoke for a single worker thread to invoke the TPCH queries

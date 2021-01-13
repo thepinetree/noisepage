@@ -3,7 +3,6 @@
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/Path.h>
-#include <tbb/task_scheduler_init.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -57,8 +56,6 @@ llvm::cl::opt<std::string> DATA_DIR("data", llvm::cl::desc("Where to find data f
 llvm::cl::opt<std::string> INPUT_FILE(llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::init(""), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
 llvm::cl::opt<std::string> OUTPUT_NAME("output-name", llvm::cl::desc("Print the output name"), llvm::cl::init("schema10"), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
 // clang-format on
-
-//tbb::task_scheduler_init scheduler;
 
 namespace noisepage::execution {
 
