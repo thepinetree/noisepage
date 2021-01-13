@@ -26,6 +26,8 @@ class SSBBenchmark : public benchmark::Fixture {
     noisepage::execution::ExecutionUtil::InitTPL();
 
     // Set up database
+    std::unordered_map<settings::Param, settings::ParamInfo> param_map;
+    settings::SettingsManager::ConstructParamMap(param_map);
     auto db_main_builder = noisepage::DBMain::Builder()
         .SetUseGC(true)
         .SetUseCatalog(true)
@@ -35,20 +37,20 @@ class SSBBenchmark : public benchmark::Fixture {
         .SetBlockStoreSize(1000000)
         .SetBlockStoreReuse(1000000)
         .SetRecordBufferSegmentSize(1000000)
-        .SetRecordBufferSegmentReuse(1000000);
+        .SetRecordBufferSegmentReuse(1000000)
+        .SetUseSettingsManager(true)
+        .SetSettingsParameterMap(std::move(param_map));
     db_main_ = db_main_builder.Build();
 
     // Set up metrics manager
     auto metrics_manager = db_main_->GetMetricsManager();
     metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE);
     metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
-
-
-    auto settings_manager = settings::SettingsManager(common::ManagedPointer<DBMain>(db_main_), {});
+    
     auto cve = parser::ConstantValueExpression(type::TypeId::INTEGER, execution::sql::Integer(threads));
-    settings_manager.SetParameter("num_parallel_execution_threads", {common::ManagedPointer<parser::AbstractExpression>(&cve)});
+    db_main_->GetSettingsManager()->SetParameter("num_parallel_execution_threads", {common::ManagedPointer<parser::AbstractExpression>(&cve)});
     execution::exec::ExecutionSettings exec_settings{};
-    exec_settings.UpdateFromSettingsManager(common::ManagedPointer<settings::SettingsManager>(&settings_manager));
+    exec_settings.UpdateFromSettingsManager(db_main_->GetSettingsManager());
 
     // Load the TPCH tables and compile the queries
     ssb_workload_ =
