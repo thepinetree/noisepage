@@ -45,7 +45,7 @@ class SSBBenchmark : public benchmark::Fixture {
 
 
     auto settings_manager = settings::SettingsManager(common::ManagedPointer<DBMain>(db_main_), {});
-    auto cve = parser::ConstantValueExpression(type::TypeId::INTEGER, threads);
+    auto cve = parser::ConstantValueExpression(type::TypeId::INTEGER, execution::sql::Integer(threads));
     settings_manager.SetParameter("num_parallel_execution_threads", {common::ManagedPointer<parser::AbstractExpression>(&cve)});
     execution::exec::ExecutionSettings exec_settings{};
     exec_settings.UpdateFromSettingsManager(common::ManagedPointer<settings::SettingsManager>(&settings_manager));
