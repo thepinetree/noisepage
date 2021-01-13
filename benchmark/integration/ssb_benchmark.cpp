@@ -16,19 +16,19 @@ class SSBBenchmark : public benchmark::Fixture {
   const double threshold_ = 0.1;
   const uint64_t min_iterations_per_query_ = 10;
   const uint64_t max_iterations_per_query_ = 10;
-  const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
+  const noisepage::execution::vm::ExecutionMode mode_ = noisepage::execution::vm::ExecutionMode::Interpret;
 
-  std::unique_ptr<DBMain> db_main_;
-  std::unique_ptr<tpch::Workload> ssb_workload_;
+  std::unique_ptr<noisepage::DBMain> db_main_;
+  std::unique_ptr<noisepage::tpch::Workload> ssb_workload_;
 
   const std::string ssb_table_root_ = "../../../../Data/NP-SSB/SF1/";
   const std::string ssb_database_name_ = "ssb_db";
 
   void SetUp(const benchmark::State &state) final {
-    terrier::execution::ExecutionUtil::InitTPL();
+    noisepage::execution::ExecutionUtil::InitTPL();
 
     // Set up database
-    auto db_main_builder = DBMain::Builder()
+    auto db_main_builder = noisepage::DBMain::Builder()
         .SetUseGC(true)
         .SetUseCatalog(true)
         .SetUseGCThread(true)
@@ -42,17 +42,17 @@ class SSBBenchmark : public benchmark::Fixture {
 
     // Set up metrics manager
     auto metrics_manager = db_main_->GetMetricsManager();
-    metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
-    metrics_manager->EnableMetric(metrics::MetricsComponent::GARBAGECOLLECTION, 0);
-    metrics_manager->EnableMetric(metrics::MetricsComponent::LOGGING, 0);
+    metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
+    metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::GARBAGECOLLECTION, 0);
+    metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::LOGGING, 0);
 
     // Load the TPCH tables and compile the queries
     ssb_workload_ =
-        std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), ssb_database_name_, ssb_table_root_, Workload::BenchmarkType::SSB);
+        std::make_unique<noisepage::tpch::Workload>(noisepage::common::ManagedPointer<noisepage::DBMain>(db_main_), ssb_database_name_, ssb_table_root_, noisepage::tpch::Workload::BenchmarkType::SSB);
   }
 
   void TearDown(const benchmark::State &state) final {
-    terrier::execution::ExecutionUtil::ShutdownTPL();
+    noisepage::execution::ExecutionUtil::ShutdownTPL();
     // free db main here so we don't need to use the loggers anymore
     db_main_.reset();
   }
