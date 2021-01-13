@@ -45,10 +45,8 @@ class TPCHBenchmark : public benchmark::Fixture {
 
     // Set up metrics manager
     auto metrics_manager = db_main_->GetMetricsManager();
+    metrics_manager->SetMetricSampleInterval(metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
     metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE);
-    metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION);
-    metrics_manager->EnableMetric(metrics::MetricsComponent::GARBAGECOLLECTION);
-    metrics_manager->EnableMetric(metrics::MetricsComponent::LOGGING);
 
     // Load the TPCH tables and compile the queries
     tpch_workload_ = std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_,
