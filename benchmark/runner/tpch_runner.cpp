@@ -19,7 +19,7 @@ class TPCHRunner : public benchmark::Fixture {
   std::unique_ptr<tpch::Workload> workload_;
 
   // To get tpl_tables, https://github.com/malin1993ml/tpl_tables and "bash gen_tpch.sh 0.1".
-  const std::string tpch_table_root_ = "/Users/ejeppinger/Downloads/tpl_tables/tables-small/";
+  const std::string tpch_table_root_ = "/Users/dpatra/Research/NoisePage-Support/TPCH/SF0.1/";
   const std::string ssb_dir_ = "../../../SSB_Table_Generator/ssb_tables/";
   const std::string tpch_database_name_ = "tpch_runner_db";
 

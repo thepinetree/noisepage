@@ -40,6 +40,7 @@ Workload::Workload(common::ManagedPointer<DBMain> db_main, const std::string &db
   // Enable counters and disable the parallel execution for this workload
   settings->is_parallel_execution_enabled_ = true;
   settings->is_counters_enabled_ = true;
+  exec_settings_ = *settings.Get();
 
   // Make the execution context
   auto exec_ctx = execution::exec::ExecutionContext(
