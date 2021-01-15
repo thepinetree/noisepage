@@ -93,31 +93,31 @@ void Workload::LoadQueries(const std::unique_ptr<catalog::CatalogAccessor> &acce
   switch (type) {
     case tpch::Workload::BenchmarkType::TPCH:
       query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ1(accessor, exec_settings_));
-      query_names_.emplace_back("Q1");
-//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ4(accessor, exec_settings_));
-//      query_names_.emplace_back("Q4");
-//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ5(accessor, exec_settings_));
-//      query_names_.emplace_back("Q5");
-//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ6(accessor, exec_settings_));
-//      query_names_.emplace_back("Q6");
-//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ7(accessor, exec_settings_));
-//      query_names_.emplace_back("Q7");
-//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ11(accessor, exec_settings_));
-//      query_names_.emplace_back("Q11");
-//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ18(accessor, exec_settings_));
-//      query_names_.emplace_back("Q18");
-//      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ19(accessor, exec_settings_));
-//      query_names_.emplace_back("Q19");
+      query_names_.emplace_back("1");
+      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ4(accessor, exec_settings_));
+      query_names_.emplace_back("4");
+      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ5(accessor, exec_settings_));
+      query_names_.emplace_back("5");
+      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ6(accessor, exec_settings_));
+      query_names_.emplace_back("6");
+      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ7(accessor, exec_settings_));
+      query_names_.emplace_back("7");
+      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ11(accessor, exec_settings_));
+      query_names_.emplace_back("11");
+      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ18(accessor, exec_settings_));
+      query_names_.emplace_back("18");
+      query_and_plan_.emplace_back(TPCHQuery::MakeExecutableQ19(accessor, exec_settings_));
+      query_names_.emplace_back("19");
       break;
     case tpch::Workload::BenchmarkType::SSB:
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part1(accessor, exec_settings_));
-      query_names_.emplace_back("Q1.1");
+      query_names_.emplace_back("1.1");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part2(accessor, exec_settings_));
-      query_names_.emplace_back("Q1.2");
+      query_names_.emplace_back("1.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part3(accessor, exec_settings_));
-      query_names_.emplace_back("Q1.3");
+      query_names_.emplace_back("1.3");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part1(accessor, exec_settings_));
-      query_names_.emplace_back("Q2.1");
+      query_names_.emplace_back("2.1");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part2(accessor, exec_settings_));
       query_names_.emplace_back("2.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part3(accessor, exec_settings_));
@@ -216,7 +216,7 @@ uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mod
     std::get<0>(query_and_plan_[query_ind])
         ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
   }
-  if (print_output) std::cout << query_names_[query_ind] << "," << elapsed_ms << std::endl;
+  if (print_output) std::cout << query_names_[query_ind] << "," << exec_ctx.GetExecutionSettings().GetNumberOfParallelExecutionThreads() << "," << elapsed_ms << std::endl;
 
   // Commit transaction
   txn_manager_->Commit(txn, transaction::TransactionUtil::EmptyCallback, nullptr);
