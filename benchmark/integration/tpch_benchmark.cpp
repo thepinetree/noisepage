@@ -36,12 +36,6 @@ class TPCHBenchmark : public benchmark::Fixture {
                                .SetUseGC(true)
                                .SetUseCatalog(true)
                                .SetUseGCThread(true)
-                               .SetUseMetrics(true)
-                               .SetUseMetricsThread(true)
-                               .SetBlockStoreSize(1000000)
-                               .SetBlockStoreReuse(1000000)
-                               .SetRecordBufferSegmentSize(1000000)
-                               .SetRecordBufferSegmentReuse(1000000)
                                .SetUseSettingsManager(true)
                                .SetSettingsParameterMap(std::move(param_map));
     db_main_ = db_main_builder.Build();
