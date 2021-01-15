@@ -21,7 +21,7 @@
 namespace noisepage::tpch {
 
 Workload::Workload(common::ManagedPointer<DBMain> db_main, const std::string &db_name, const std::string &table_root,
-                   enum BenchmarkType type, common::ManagedPointer<execution::exec::ExecutionSettings> settings) {
+                   enum BenchmarkType type, int64_t threads) {
   // cache db main and members
   db_main_ = db_main;
   txn_manager_ = db_main_->GetTransactionLayer()->GetTransactionManager();
@@ -38,13 +38,16 @@ Workload::Workload(common::ManagedPointer<DBMain> db_main, const std::string &db
   ns_oid_ = accessor->GetDefaultNamespace();
 
   // Enable counters and disable the parallel execution for this workload
-  settings->is_parallel_execution_enabled_ = true;
-  settings->is_counters_enabled_ = true;
+  exec_settings_.is_pipeline_metrics_enabled_ = true;
+  exec_settings_.is_parallel_execution_enabled_ = (threads != 0);
+  exec_settings_.number_of_parallel_execution_threads_ = threads;
+  exec_settings_.is_counters_enabled_ = true;
+  exec_settings_.is_static_partitioner_enabled_ = true;
 
   // Make the execution context
   auto exec_ctx = execution::exec::ExecutionContext(
       db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), nullptr, nullptr,
-      common::ManagedPointer<catalog::CatalogAccessor>(accessor), *settings.Get(), db_main->GetMetricsManager());
+      common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_, db_main->GetMetricsManager());
 
   // create the TPCH database and compile the queries
   GenerateTables(&exec_ctx, table_root, type);
@@ -166,9 +169,10 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
     auto output_schema = std::get<1>(query_and_plan_[index[counter]])->GetOutputSchema().Get();
     // Uncomment this line and change output.cpp:90 to EXECUTION_LOG_INFO to print output
     // execution::exec::OutputPrinter printer(output_schema);
-    execution::exec::NoOpResultConsumer printer;
+    execution::exec::NoOpResultConsumer consumer;
+    execution::exec::OutputCallback callback = consumer;
     auto exec_ctx = execution::exec::ExecutionContext(
-        db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), printer, output_schema,
+        db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), callback, output_schema,
         common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_, db_main_->GetMetricsManager());
 
     std::get<0>(query_and_plan_[index[counter]])
@@ -200,9 +204,10 @@ uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mod
 
   // Uncomment this line and change output.cpp:90 to EXECUTION_LOG_INFO to print output
   // execution::exec::OutputPrinter printer(output_schema);
-  execution::exec::NoOpResultConsumer printer;
+  execution::exec::NoOpResultConsumer consumer;
+  execution::exec::OutputCallback callback = consumer;
   auto exec_ctx = execution::exec::ExecutionContext(
-      db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), printer, output_schema,
+      db_oid_, common::ManagedPointer<transaction::TransactionContext>(txn), callback, output_schema,
       common::ManagedPointer<catalog::CatalogAccessor>(accessor), exec_settings_, db_main_->GetMetricsManager());
 
   uint64_t elapsed_ms = 0;

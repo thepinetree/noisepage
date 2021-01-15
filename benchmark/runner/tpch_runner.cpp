@@ -19,7 +19,7 @@ class TPCHRunner : public benchmark::Fixture {
   std::unique_ptr<tpch::Workload> workload_;
 
   // To get tpl_tables, https://github.com/malin1993ml/tpl_tables and "bash gen_tpch.sh 0.1".
-  const std::string tpch_table_root_ = "/Users/ejeppinger/Downloads/tpl_tables/tables-small/";
+  const std::string tpch_table_root_ = "/Users/dpatra/Research/NoisePage-Support/TPCH/SF0.01/";
   const std::string ssb_dir_ = "../../../SSB_Table_Generator/ssb_tables/";
   const std::string tpch_database_name_ = "tpch_runner_db";
 
@@ -65,9 +65,8 @@ BENCHMARK_DEFINE_F(TPCHRunner, Runner)(benchmark::State &state) {
     default:
       UNREACHABLE("Unimplemented Benchmark Type");
   }
-  execution::exec::ExecutionSettings exec_settings{};
   workload_ = std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_,
-                                               table_root, type_, common::ManagedPointer<execution::exec::ExecutionSettings>(&exec_settings));
+                                               table_root, type_, total_num_threads_);
 
   int8_t num_thread_start;
   uint32_t query_num_start, repeat_num;
