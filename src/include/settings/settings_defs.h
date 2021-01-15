@@ -38,7 +38,7 @@ SETTING_string(
 SETTING_int(
     record_buffer_segment_size,
     "The maximum number of record buffer segments in the system. (default: 100000)",
-    100000,
+    10000000,
     1,
     1000000000,
     true,
@@ -49,7 +49,7 @@ SETTING_int(
 SETTING_int(
     record_buffer_segment_reuse,
     "The minimum number of record buffer segments to keep allocated in the system (default: 10000)",
-    10000,
+    1000000,
     1,
     1000000000,
     true,
@@ -60,7 +60,7 @@ SETTING_int(
 SETTING_int(
     block_store_size,
     "The maximum number of storage blocks for the catalog. (default: 100000)",
-    100000,
+    10000000,
     1,
     1000000000,
     true,
@@ -71,7 +71,7 @@ SETTING_int(
 SETTING_int(
     block_store_reuse,
     "The minimum number of storage blocks for the catalog to keep allocated (default: 1000)",
-    1000,
+    100000,
     1,
     1000000000,
     true,
