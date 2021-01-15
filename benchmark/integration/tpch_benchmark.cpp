@@ -1,14 +1,10 @@
-#include <thread>
-
 #include "benchmark/benchmark.h"
 #include "common/scoped_timer.h"
-#include "common/worker_pool.h"
 #include "execution/execution_util.h"
 #include "execution/vm/module.h"
 #include "main/db_main.h"
 #include "settings/settings_manager.h"
 #include "test_util/tpch/workload.h"
-
 
 namespace noisepage::tpch {
 class TPCHBenchmark : public benchmark::Fixture {
@@ -27,17 +23,16 @@ class TPCHBenchmark : public benchmark::Fixture {
   const std::string tpch_database_name_ = "tpch_db";
 
   void SetUp(const benchmark::State &state) final {
-    noisepage::execution::ExecutionUtil::InitTPL();
+    execution::ExecutionUtil::InitTPL();
 
     // Set up database
     std::unordered_map<settings::Param, settings::ParamInfo> param_map;
     settings::SettingsManager::ConstructParamMap(param_map);
-    auto db_main_builder = DBMain::Builder()
-                               .SetUseGC(true)
-                               .SetUseCatalog(true)
-                               .SetUseGCThread(true)
-                               .SetUseSettingsManager(true)
-                               .SetSettingsParameterMap(std::move(param_map));
+    auto db_main_builder = DBMain::Builder().SetUseGC(true)
+                                            .SetUseCatalog(true)
+                                            .SetUseGCThread(true)
+                                            .SetUseSettingsManager(true)
+                                            .SetSettingsParameterMap(std::move(param_map));
     db_main_ = db_main_builder.Build();
 
     // Set up metrics manager
@@ -51,7 +46,7 @@ class TPCHBenchmark : public benchmark::Fixture {
   }
 
   void TearDown(const benchmark::State &state) final {
-    noisepage::execution::ExecutionUtil::ShutdownTPL();
+    execution::ExecutionUtil::ShutdownTPL();
     // free db main here so we don't need to use the loggers anymore
     db_main_.reset();
   }
@@ -96,5 +91,29 @@ BENCHMARK_DEFINE_F(TPCHBenchmark, StabilizeBenchmark)(benchmark::State &state) {
   tpch_workload_.reset();
 }
 
-BENCHMARK_REGISTER_F(TPCHBenchmark, StabilizeBenchmark)->Unit(benchmark::kMillisecond)->UseManualTime()->Iterations(1);
-}  // namespace noisepage::tpch
+// NOLINTNEXTLINE
+BENCHMARK_DEFINE_F(TPCHBenchmark, RuntimeBenchmark)(benchmark::State &state) {
+  // Run benchmark for each query independently
+  auto num_queries = tpch_workload_->GetQueryNum();
+
+  for (auto _ : state) {
+    // Overall totals
+    uint64_t queries_run = 0, total_time = 0;
+    for (uint64_t iterations = 0; iterations < min_iterations_per_query_; iterations++) {
+      // Iterate to min_iterations_per_query
+      for (uint32_t i = 0; i < num_queries; i++) {
+        total_time += tpch_workload_->TimeQuery(i, mode_, print_exec_info_);
+        queries_run++;
+      }
+    }
+    state.SetIterationTime(total_time);
+    state.SetItemsProcessed(queries_run);
+  }
+
+  // Free the workload here so we don't need to use the loggers anymore
+  tpch_workload_.reset();
+}
+
+//BENCHMARK_REGISTER_F(TPCHBenchmark, StabilizeBenchmark)->Unit(benchmark::kMillisecond)->UseManualTime()->Iterations(1);
+BENCHMARK_REGISTER_F(TPCHBenchmark, RuntimeBenchmark)->Unit(benchmark::kMillisecond)->UseManualTime()->Iterations(1);
+}  // namespace tpch

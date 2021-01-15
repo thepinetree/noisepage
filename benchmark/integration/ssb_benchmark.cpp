@@ -1,6 +1,5 @@
 #include "benchmark/benchmark.h"
 #include "common/scoped_timer.h"
-#include "common/worker_pool.h"
 #include "execution/execution_util.h"
 #include "execution/vm/module.h"
 #include "main/db_main.h"
@@ -14,52 +13,40 @@ class SSBBenchmark : public benchmark::Fixture {
   const double threshold_ = 0.1;
   const uint64_t min_iterations_per_query_ = 10;
   const uint64_t max_iterations_per_query_ = 10;
-  const int32_t threads = 40;
+  const int32_t threads_ = 40;
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
-  std::unique_ptr<noisepage::DBMain> db_main_;
-  std::unique_ptr<noisepage::tpch::Workload> ssb_workload_;
+  std::unique_ptr<DBMain> db_main_;
+  std::unique_ptr<tpch::Workload> ssb_workload_;
 
-  const std::string ssb_table_root_ = "../../../../Data/NP-SSB/SF1/";
+  const std::string ssb_table_root_ = "/home/dpatra/Data/NP-SSB/SF1/";
   const std::string ssb_database_name_ = "ssb_db";
 
   void SetUp(const benchmark::State &state) final {
-    noisepage::execution::ExecutionUtil::InitTPL();
+    execution::ExecutionUtil::InitTPL();
 
     // Set up database
     std::unordered_map<settings::Param, settings::ParamInfo> param_map;
     settings::SettingsManager::ConstructParamMap(param_map);
-    auto db_main_builder = noisepage::DBMain::Builder()
-        .SetUseGC(true)
-        .SetUseCatalog(true)
-        .SetUseGCThread(true)
-        .SetUseMetrics(true)
-        .SetUseMetricsThread(true)
-        .SetBlockStoreSize(1000000)
-        .SetBlockStoreReuse(1000000)
-        .SetRecordBufferSegmentSize(1000000)
-        .SetRecordBufferSegmentReuse(1000000)
-        .SetUseSettingsManager(true)
-        .SetSettingsParameterMap(std::move(param_map));
+    auto db_main_builder = DBMain::Builder().SetUseGC(true)
+                                            .SetUseCatalog(true)
+                                            .SetUseGCThread(true)
+                                            .SetUseSettingsManager(true)
+                                            .SetSettingsParameterMap(std::move(param_map));
     db_main_ = db_main_builder.Build();
 
     // Set up metrics manager
     auto metrics_manager = db_main_->GetMetricsManager();
     metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE);
-    metrics_manager->SetMetricSampleInterval(noisepage::metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
-
-    auto cve = parser::ConstantValueExpression(type::TypeId::INTEGER, execution::sql::Integer(threads));
-    db_main_->GetSettingsManager()->SetParameter("num_parallel_execution_threads", {common::ManagedPointer<parser::AbstractExpression>(&cve)});
-    execution::exec::ExecutionSettings exec_settings{};
-    exec_settings.UpdateFromSettingsManager(db_main_->GetSettingsManager());
+    metrics_manager->SetMetricSampleInterval(metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
 
     // Load the TPCH tables and compile the queries
     ssb_workload_ =
-        std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), ssb_database_name_, ssb_table_root_, Workload::BenchmarkType::SSB,
-        common::ManagedPointer<execution::exec::ExecutionSettings>(&exec_settings));
+        std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), ssb_database_name_,
+                                         ssb_table_root_, Workload::BenchmarkType::SSB, threads_);
   }
 
   void TearDown(const benchmark::State &state) final {
-    noisepage::execution::ExecutionUtil::ShutdownTPL();
+    execution::ExecutionUtil::ShutdownTPL();
     // free db main here so we don't need to use the loggers anymore
     db_main_.reset();
   }
@@ -104,5 +91,29 @@ BENCHMARK_DEFINE_F(SSBBenchmark, StabilizeBenchmark)(benchmark::State &state) {
   ssb_workload_.reset();
 }
 
+// NOLINTNEXTLINE
+BENCHMARK_DEFINE_F(SSBBenchmark, RuntimeBenchmark)(benchmark::State &state) {
+  // Run benchmark for each query independently
+  auto num_queries = ssb_workload_->GetQueryNum();
+
+  for (auto _ : state) {
+    // Overall totals
+    uint64_t queries_run = 0, total_time = 0;
+    for (uint64_t iterations = 0; iterations < min_iterations_per_query_; iterations++) {
+      // Iterate to min_iterations_per_query
+      for (uint32_t i = 0; i < num_queries; i++) {
+        total_time += ssb_workload_->TimeQuery(i, mode_, print_exec_info_);
+        queries_run++;
+      }
+    }
+    state.SetIterationTime(total_time);
+    state.SetItemsProcessed(queries_run);
+  }
+
+  // Free the workload here so we don't need to use the loggers anymore
+  ssb_workload_.reset();
+}
+
 BENCHMARK_REGISTER_F(SSBBenchmark, StabilizeBenchmark)->Unit(benchmark::kMillisecond)->UseManualTime()->Iterations(1);
+BENCHMARK_REGISTER_F(SSBBenchmark, RuntimeBenchmark)->Unit(benchmark::kMillisecond)->UseManualTime()->Iterations(1);
 }  // namespace terrier::runner
