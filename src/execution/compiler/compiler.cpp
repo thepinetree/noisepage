@@ -99,7 +99,7 @@ void Compiler::Run(Compiler::Callbacks *callbacks) {
   }
 
   callbacks->EndPhase(Phase::BytecodeGeneration, this);
-  //  ast::AstPrettyPrint::Dump(std::cerr, root_);
+  // ast::AstPrettyPrint::Dump(std::cerr, root_);
 
   // -------------------------------------------------------
   // Phase 4 : Module Generation

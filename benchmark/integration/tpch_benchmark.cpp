@@ -15,15 +15,15 @@ class TPCHBenchmark : public benchmark::Fixture {
  public:
   const bool print_exec_info_ = true;
   const double threshold_ = 0.1;
-  const uint64_t min_iterations_per_query_ = 1;
-  const uint64_t max_iterations_per_query_ = 1;
-  const int32_t threads = 40;
+  const uint64_t min_iterations_per_query_ = 10;
+  const uint64_t max_iterations_per_query_ = 10;
+  const int32_t threads_ = 40;
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
 
   std::unique_ptr<DBMain> db_main_;
   std::unique_ptr<tpch::Workload> tpch_workload_;
 
-  const std::string tpch_table_root_ = "/Users/dpatra/Research/NoisePage-Support/TPCH/SF0.1/";
+  const std::string tpch_table_root_ = "/Users/dpatra/Research/NoisePage-Support/TPCH/SF0.01/";
   const std::string tpch_database_name_ = "tpch_db";
 
   void SetUp(const benchmark::State &state) final {
@@ -51,15 +51,9 @@ class TPCHBenchmark : public benchmark::Fixture {
     metrics_manager->EnableMetric(metrics::MetricsComponent::EXECUTION_PIPELINE);
     metrics_manager->SetMetricSampleInterval(metrics::MetricsComponent::EXECUTION_PIPELINE, 0);
 
-    auto cve = parser::ConstantValueExpression(type::TypeId::INTEGER, execution::sql::Integer(threads));
-    db_main_->GetSettingsManager()->SetParameter("num_parallel_execution_threads", {common::ManagedPointer<parser::AbstractExpression>(&cve)});
-    execution::exec::ExecutionSettings exec_settings{};
-    exec_settings.UpdateFromSettingsManager(db_main_->GetSettingsManager());
-
     // Load the TPCH tables and compile the queries
     tpch_workload_ = std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_,
-                                                      tpch_table_root_, tpch::Workload::BenchmarkType::TPCH,
-                                                      common::ManagedPointer<execution::exec::ExecutionSettings>(&exec_settings));
+                                                      tpch_table_root_, tpch::Workload::BenchmarkType::TPCH, threads_);
   }
 
   void TearDown(const benchmark::State &state) final {
