@@ -2,7 +2,6 @@
 
 #include <llvm/ADT/STLExtras.h>
 #include <tbb/parallel_for_each.h>
-#include <tbb/task_scheduler_init.h>
 
 #include <algorithm>
 #include <limits>
@@ -593,7 +592,7 @@ void JoinHashTable::MergeParallel(ThreadStateContainer *thread_state_container, 
     EXECUTION_LOG_TRACE("JHT: Estimated {} elements >= {} element parallel threshold. Using parallel merge.",
                         num_elem_estimate, DEFAULT_MIN_SIZE_FOR_PARALLEL_MERGE);
 
-    size_t num_threads = tbb::task_scheduler_init::default_num_threads();
+    size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
     size_t num_tasks = tl_join_tables.size();
     auto estimate = std::min(num_threads, num_tasks);
     exec_ctx_->SetNumConcurrentEstimate(estimate);

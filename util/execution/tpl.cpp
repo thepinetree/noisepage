@@ -58,8 +58,6 @@ llvm::cl::opt<std::string> INPUT_FILE(llvm::cl::Positional, llvm::cl::desc("<inp
 llvm::cl::opt<std::string> OUTPUT_NAME("output-name", llvm::cl::desc("Print the output name"), llvm::cl::init("schema10"), llvm::cl::cat(TPL_OPTIONS_CATEGORY));  // NOLINT
 // clang-format on
 
-tbb::task_scheduler_init scheduler;
-
 namespace noisepage::execution {
 
 static constexpr const char *K_EXIT_KEYWORD = ".exit";
@@ -340,8 +338,6 @@ void InitTPL() {
  */
 void ShutdownTPL() {
   noisepage::execution::vm::LLVMEngine::Shutdown();
-
-  scheduler.terminate();
 
   EXECUTION_LOG_INFO("TPL cleanly shutdown ...");
 }

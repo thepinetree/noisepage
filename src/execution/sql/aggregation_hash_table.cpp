@@ -1,7 +1,6 @@
 #include "execution/sql/aggregation_hash_table.h"
 
 #include <tbb/parallel_for_each.h>
-#include <tbb/task_scheduler_init.h>
 
 #include <algorithm>
 #include <memory>
@@ -670,7 +669,7 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(void *query_state, Thr
   util::Timer<std::milli> timer;
   timer.Start();
 
-  size_t num_threads = tbb::task_scheduler_init::default_num_threads();
+  size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
   size_t num_tasks = nonempty_parts.size();
   size_t concurrent_estimate = std::min(num_threads, num_tasks);
   exec_ctx_->SetNumConcurrentEstimate(concurrent_estimate);

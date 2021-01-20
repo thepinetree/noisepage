@@ -2,7 +2,6 @@
 
 #include <llvm/ADT/STLExtras.h>
 #include <tbb/parallel_for_each.h>
-#include <tbb/task_scheduler_init.h>
 
 #include <algorithm>
 #include <queue>
@@ -234,9 +233,8 @@ void Sorter::SortParallel(ThreadStateContainer *thread_state_container, std::siz
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Parallel Sort Thread-Local Instances");
 
-  tbb::task_scheduler_init sched;
   {
-    size_t num_threads = tbb::task_scheduler_init::default_num_threads();
+    size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
     size_t num_tasks = tl_sorters.size();
     size_t num_concurrent = std::min(num_threads, num_tasks);
     exec_ctx_->SetNumConcurrentEstimate(num_concurrent);
@@ -360,7 +358,7 @@ void Sorter::SortParallel(ThreadStateContainer *thread_state_container, std::siz
   };
 
   {
-    size_t num_threads = tbb::task_scheduler_init::default_num_threads();
+    size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
     size_t num_tasks = merge_work.size();
     size_t concurrent = std::min(num_threads, num_tasks);
     exec_ctx_->SetNumConcurrentEstimate(concurrent);

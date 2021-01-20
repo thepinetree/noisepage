@@ -123,7 +123,8 @@ class SchemaReader {
     schema_file.open(filename);
     // Read Table name and num_cols
     uint32_t num_cols;
-    schema_file >> table_info->table_name_ >> num_cols;
+    bool UNUSED_ATTRIBUTE result = (schema_file >> table_info->table_name_ >> num_cols).operator bool();
+    NOISEPAGE_ASSERT(result, "file must have size and name");
     EXECUTION_LOG_TRACE("Reading table {} with {} columns", table_info->table_name_, num_cols);
     // Read columns & create table schema
     table_info->cols_ = ReadColumns(&schema_file, num_cols);
