@@ -293,6 +293,15 @@ class EXPORT ExecutionContext {
   void SetNumConcurrentEstimate(uint32_t estimate) { num_concurrent_estimate_ = estimate; }
 
   /**
+   * Sets the number of threads available for a parallel operation.
+   * This value is used when initializing an ExecOUFeatureVector
+   *
+   * @note this value is reset by setting it to 0.
+   * @param threads_available Available number of threads
+   */
+    void SetThreadsAvailable(uint32_t threads_available) { threads_available_ = threads_available; }
+
+  /**
    * Invoke a hook function if a hook function is available
    * @param hook_index Index of hook function to invoke
    * @param tls TLS argument
@@ -344,6 +353,7 @@ class EXPORT ExecutionContext {
   bool memory_use_override_ = false;
   uint32_t memory_use_override_value_ = 0;
   uint32_t num_concurrent_estimate_ = 0;
+  uint32_t threads_available_ = 0;
   std::vector<HookFn> hooks_{};
   void *query_state_;
 };

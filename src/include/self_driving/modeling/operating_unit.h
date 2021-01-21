@@ -102,7 +102,7 @@ class ExecutionOperatingUnitFeature {
    */
   ExecutionOperatingUnitFeature(execution::translator_id_t translator_id, ExecutionOperatingUnitType feature,
                                 size_t num_rows, size_t key_size, size_t num_keys, size_t cardinality,
-                                double mem_factor, size_t num_loops, size_t num_concurrent)
+                                double mem_factor, size_t num_loops, size_t num_concurrent, size_t threads_available)
       : translator_id_(translator_id),
         feature_id_(feature_id_counter++),
         feature_(feature),
@@ -112,7 +112,8 @@ class ExecutionOperatingUnitFeature {
         cardinality_(cardinality),
         mem_factors_({mem_factor}),
         num_loops_(num_loops),
-        num_concurrent_(num_concurrent) {}
+        num_concurrent_(num_concurrent),
+        threads_available_(threads_available) {}
 
   /**
    * Constructor for ExecutionOperatingUnitFeature from an existing feature
@@ -131,7 +132,8 @@ class ExecutionOperatingUnitFeature {
         cardinality_(0),
         mem_factors_(other.mem_factors_),
         num_loops_(other.num_loops_),
-        num_concurrent_(other.num_concurrent_) {}
+        num_concurrent_(other.num_concurrent_),
+        threads_available_(other.threads_available_) {}
 
   /** @return The ID of the translator for this ExecutionOperatingUnitFeature. */
   execution::translator_id_t GetTranslatorId() const { return translator_id_; }
@@ -210,6 +212,11 @@ class ExecutionOperatingUnitFeature {
   size_t GetNumConcurrent() const { return num_concurrent_; }
 
   /**
+   * @return num concurrent
+   */
+  size_t GetThreadsAvailable() const { return threads_available_; }
+
+  /**
    * @return memory adjustment factor
    */
   double GetMemFactor() const {
@@ -261,6 +268,12 @@ class ExecutionOperatingUnitFeature {
    */
   void SetNumLoops(size_t num_loops) { num_loops_ = num_loops; }
 
+  /*
+   * Set the number of threads available
+   * @param num_concurrent number of threads available
+   */
+  void SetThreadsAvailable(size_t threads_available) { threads_available_ = threads_available; }
+
   /**
    * Set the mem factor
    * @note only should be invoked by OperatingUnitRecorder
@@ -280,6 +293,7 @@ class ExecutionOperatingUnitFeature {
   std::vector<double> mem_factors_;
   size_t num_loops_;
   size_t num_concurrent_;
+  size_t threads_available_;
 };
 
 /**

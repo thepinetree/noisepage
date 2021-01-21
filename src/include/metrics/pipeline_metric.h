@@ -50,6 +50,7 @@ class PipelineMetricRawData : public AbstractRawData {
 
     for (auto &data : pipeline_data_) {
       outfile << data.query_id_.UnderlyingValue() << ", ";
+      outfile << data.GetThreadsAvailable() << ", ";
       outfile << data.GetThreadsUsed() << ", ";
       outfile << data.pipeline_id_.UnderlyingValue() << ", ";
       outfile << data.features_.size() << ", ";
@@ -79,7 +80,7 @@ class PipelineMetricRawData : public AbstractRawData {
    * Note: This includes the columns for the input feature, but not the output (resource counters)
    */
   static constexpr std::array<std::string_view, 1> FEATURE_COLUMNS = {
-      "query_id, threads_used, pipeline_id, num_features, features, exec_mode, num_rows, key_sizes, num_keys, "
+      "query_id, threads_available, threads_used, pipeline_id, num_features, features, exec_mode, num_rows, key_sizes, num_keys, "
       "est_cardinalities, mem_factor, num_loops, num_concurrent"};
 
  private:
@@ -180,8 +181,12 @@ class PipelineMetricRawData : public AbstractRawData {
       return ConcatVectorToString<size_t>(num_concurrent);
     }
 
-    uint32_t GetThreadsUsed() {
+    size_t GetThreadsUsed() {
       return features_[0].GetNumConcurrent();
+    }
+
+    size_t GetThreadsAvailable() {
+      return features_[0].GetThreadsAvailable();
     }
 
     const execution::query_id_t query_id_;

@@ -171,6 +171,7 @@ void OperatingUnitRecorder::AggregateFeatures(selfdriving::ExecutionOperatingUni
   size_t cardinality = 1;
   size_t num_loops = 0;
   size_t num_concurrent = 0;  // the number of concurrently executing threads (issue #1241)
+  size_t threads_available = 0;
   if (type == ExecutionOperatingUnitType::OUTPUT) {
     if (accessor_->GetDatabaseOid("tpch_runner_db") != catalog::INVALID_DATABASE_OID) {
       // Unfortunately we don't know what kind of output callback that we're going to call at runtime, so we just
@@ -260,7 +261,7 @@ void OperatingUnitRecorder::AggregateFeatures(selfdriving::ExecutionOperatingUni
   }
 
   auto feature = ExecutionOperatingUnitFeature(translator->GetTranslatorId(), type, num_rows, key_size, num_keys,
-                                               cardinality, mem_factor, num_loops, num_concurrent);
+                                               cardinality, mem_factor, num_loops, num_concurrent, threads_available);
   pipeline_features_.emplace(type, std::move(feature));
 }
 

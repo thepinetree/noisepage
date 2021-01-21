@@ -135,6 +135,7 @@ void ExecutionContext::InitializeOUFeatureVector(selfdriving::ExecOUFeatureVecto
   // Update num_concurrent
   for (auto &feature : *vec->pipeline_features_) {
     feature.SetNumConcurrent(num_concurrent_estimate_);
+    feature.SetThreadsAvailable(this->GetExecutionSettings().GetNumberOfParallelExecutionThreads());
   }
 }
 
@@ -187,6 +188,7 @@ void ExecutionContext::InitializeParallelOUFeatureVector(selfdriving::ExecOUFeat
   // Update num_concurrent
   for (auto &feature : *vec->pipeline_features_) {
     feature.SetNumConcurrent(num_concurrent_estimate_);
+    feature.SetThreadsAvailable(this->GetExecutionSettings().GetNumberOfParallelExecutionThreads());
   }
 }
 
