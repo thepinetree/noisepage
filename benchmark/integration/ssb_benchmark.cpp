@@ -11,8 +11,8 @@ class SSBBenchmark : public benchmark::Fixture {
  public:
   const bool print_exec_info_ = true;
   const double threshold_ = 0.1;
-  const uint64_t min_iterations_per_query_ = 200;
-  const uint64_t max_iterations_per_query_ = 200;
+  const uint64_t min_iterations_per_query_ = 25;
+  const uint64_t max_iterations_per_query_ = 25;
   const int32_t threads_ = 40;
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
   std::unique_ptr<DBMain> db_main_;
@@ -99,9 +99,9 @@ BENCHMARK_DEFINE_F(SSBBenchmark, RuntimeBenchmark)(benchmark::State &state) {
   for (auto _ : state) {
     // Overall totals
     uint64_t queries_run = 0, total_time = 0;
-    for (uint64_t iterations = 0; iterations < min_iterations_per_query_; iterations++) {
-      // Iterate to min_iterations_per_query
-      for (uint32_t i = 0; i < num_queries; i++) {
+    // Iterate to min_iterations_per_query
+    for (uint32_t i = 0; i < num_queries; i++) {
+      for (uint64_t iterations = 0; iterations < min_iterations_per_query_; iterations++) {
         total_time += ssb_workload_->TimeQuery(i, mode_, print_exec_info_);
         queries_run++;
       }
