@@ -11,14 +11,14 @@ class SSBBenchmark : public benchmark::Fixture {
  public:
   const bool print_exec_info_ = true;
   const double threshold_ = 0.1;
-  const uint64_t min_iterations_per_query_ = 10;
-  const uint64_t max_iterations_per_query_ = 10;
+  const uint64_t min_iterations_per_query_ = 200;
+  const uint64_t max_iterations_per_query_ = 200;
   const int32_t threads_ = 40;
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
   std::unique_ptr<DBMain> db_main_;
   std::unique_ptr<tpch::Workload> ssb_workload_;
 
-  const std::string ssb_table_root_ = "/home/dpatra/Data/NP-SSB/SF10/";
+  const std::string ssb_table_root_ = "/home/dpatra/Data/NP-SSB/SF100/";
   const std::string ssb_database_name_ = "ssb_db";
 
   void SetUp(const benchmark::State &state) final {

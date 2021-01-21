@@ -168,9 +168,6 @@ void ExecutableQuery::Run(common::ManagedPointer<exec::ExecutionContext> exec_ct
       fragment->Run(query_state.get(), mode);
     }
   }
-  if (this->GetPlan().GetPlanNodeType() != planner::PlanNodeType::INSERT) {
-    std::cout << "Query took " << elapsed_ms << " ms to run\n";
-  }
 
   // We do not currently re-use ExecutionContexts. However, this is unset to help ensure
   // we don't *intentionally* retain any dangling pointers.

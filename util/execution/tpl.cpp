@@ -338,8 +338,6 @@ void InitTPL() {
 void ShutdownTPL() {
   noisepage::execution::vm::LLVMEngine::Shutdown();
 
-  scheduler.terminate();
-
   EXECUTION_LOG_INFO("TPL cleanly shutdown ...");
 }
 
