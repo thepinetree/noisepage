@@ -21,7 +21,7 @@
 namespace noisepage::tpch {
 
 Workload::Workload(common::ManagedPointer<DBMain> db_main, const std::string &db_name, const std::string &table_root,
-                   enum BenchmarkType type, int64_t threads) {
+                   enum BenchmarkType type) {
   // cache db main and members
   db_main_ = db_main;
   txn_manager_ = db_main_->GetTransactionLayer()->GetTransactionManager();
@@ -39,8 +39,6 @@ Workload::Workload(common::ManagedPointer<DBMain> db_main, const std::string &db
 
   // Enable counters and disable the parallel execution for this workload
   exec_settings_.is_pipeline_metrics_enabled_ = true;
-  exec_settings_.is_parallel_execution_enabled_ = (threads != 0);
-  exec_settings_.number_of_parallel_execution_threads_ = threads;
   exec_settings_.is_counters_enabled_ = true;
   exec_settings_.is_static_partitioner_enabled_ = true;
 
@@ -191,9 +189,12 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
   db_main_->GetMetricsManager()->UnregisterThread();
 }
 
-uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, bool print_output) {
+uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, uint8_t thread_ct, bool print_output) {
   NOISEPAGE_ASSERT(static_cast<uint32_t>(query_ind) < this->GetQueryNum() && 0 <= query_ind,
                    "query plans index out of range");
+  exec_settings_.is_parallel_execution_enabled_ = (thread_ct != 0);
+  exec_settings_.number_of_parallel_execution_threads_ = thread_ct;
+
   // Register to the metrics manager
   db_main_->GetMetricsManager()->RegisterThread();
   auto txn = txn_manager_->BeginTransaction();

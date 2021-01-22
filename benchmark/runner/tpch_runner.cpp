@@ -13,7 +13,7 @@ class TPCHRunner : public benchmark::Fixture {
   const uint64_t execution_us_per_worker_ = 20000000;  // Time (us) to run per terminal (worker thread)
   std::vector<uint64_t> avg_interval_us_ = {10, 20, 50, 100, 200, 500, 1000};
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
-  const bool single_test_run_ = true;
+  const bool single_test_run_ = false;
 
   std::unique_ptr<DBMain> db_main_;
   std::unique_ptr<tpch::Workload> workload_;
@@ -66,7 +66,7 @@ BENCHMARK_DEFINE_F(TPCHRunner, Runner)(benchmark::State &state) {
       UNREACHABLE("Unimplemented Benchmark Type");
   }
   workload_ = std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_,
-                                               table_root, type_, total_num_threads_);
+                                               table_root, type_);
 
   int8_t num_thread_start;
   uint32_t query_num_start, repeat_num;

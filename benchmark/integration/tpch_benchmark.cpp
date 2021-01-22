@@ -11,9 +11,9 @@ class TPCHBenchmark : public benchmark::Fixture {
  public:
   const bool print_exec_info_ = true;
   const double threshold_ = 0.1;
-  const uint64_t min_iterations_per_query_ = 10;
-  const uint64_t max_iterations_per_query_ = 10;
-  const int32_t threads_ = 40;
+  const uint64_t min_iterations_per_query_ = 25;
+  const uint64_t max_iterations_per_query_ = 25;
+  const std::vector<uint8_t> threads_{1,2,4,8,16,32,40};
   const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
 
   std::unique_ptr<DBMain> db_main_;
@@ -42,7 +42,7 @@ class TPCHBenchmark : public benchmark::Fixture {
 
     // Load the TPCH tables and compile the queries
     tpch_workload_ = std::make_unique<tpch::Workload>(common::ManagedPointer<DBMain>(db_main_), tpch_database_name_,
-                                                      tpch_table_root_, tpch::Workload::BenchmarkType::TPCH, threads_);
+                                                      tpch_table_root_, tpch::Workload::BenchmarkType::TPCH);
   }
 
   void TearDown(const benchmark::State &state) final {
@@ -60,31 +60,33 @@ BENCHMARK_DEFINE_F(TPCHBenchmark, StabilizeBenchmark)(benchmark::State &state) {
   for (auto _ : state) {
     // Overall totals
     uint64_t queries_run = 0, total_time = 0;
-    for (uint32_t i = 0; i < num_queries; i++) {
-      // Single query running totals
-      double old_avg = 0, avg = 0;
-      double total = 0;
-      uint64_t iterations = 0;
-      // Iterate at least until min_iterations_per_query and at most until max_iterations_per_query and until average
-      // stabilizes
-      while ((iterations < min_iterations_per_query_) ||
-             ((abs(avg - old_avg) > threshold_) && (iterations < max_iterations_per_query_))) {
-        old_avg = avg;
-        total += tpch_workload_->TimeQuery(i, mode_, print_exec_info_);
-        iterations++;
-        avg = total / iterations;
-      }
+    for (auto thread_ct : threads_) {
+      for (uint32_t i = 0; i < num_queries; i++) {
+        // Single query running totals
+        double old_avg = 0, avg = 0;
+        double total = 0;
+        uint64_t iterations = 0;
+        // Iterate at least until min_iterations_per_query and at most until max_iterations_per_query and until average
+        // stabilizes
+        while ((iterations < min_iterations_per_query_) ||
+               ((abs(avg - old_avg) > threshold_) && (iterations < max_iterations_per_query_))) {
+          old_avg = avg;
+          total += tpch_workload_->TimeQuery(i, mode_, thread_ct, print_exec_info_);
+          iterations++;
+          avg = total / iterations;
+        }
 
-      if (print_exec_info_) {
-        std::cout << tpch_workload_->GetQueryName(i) << " took " << iterations
-                  << " iterations with an average execution time of " << avg << std::endl;
-      }
+        if (print_exec_info_) {
+          std::cout << tpch_workload_->GetQueryName(i) << " took " << iterations
+                    << " iterations with an average execution time of " << avg << std::endl;
+        }
 
-      queries_run += iterations;
-      total_time += total;
+        queries_run += iterations;
+        total_time += total;
+      }
+      state.SetIterationTime(total_time);
+      state.SetItemsProcessed(queries_run);
     }
-    state.SetIterationTime(total_time);
-    state.SetItemsProcessed(queries_run);
   }
 
   // Free the workload here so we don't need to use the loggers anymore
@@ -99,11 +101,13 @@ BENCHMARK_DEFINE_F(TPCHBenchmark, RuntimeBenchmark)(benchmark::State &state) {
   for (auto _ : state) {
     // Overall totals
     uint64_t queries_run = 0, total_time = 0;
-    for (uint64_t iterations = 0; iterations < min_iterations_per_query_; iterations++) {
+    for (auto thread_ct : threads_) {
       // Iterate to min_iterations_per_query
       for (uint32_t i = 0; i < num_queries; i++) {
-        total_time += tpch_workload_->TimeQuery(i, mode_, print_exec_info_);
-        queries_run++;
+        for (uint64_t iterations = 0; iterations < min_iterations_per_query_; iterations++) {
+          total_time += tpch_workload_->TimeQuery(i, mode_, thread_ct, print_exec_info_);
+          queries_run++;
+        }
       }
     }
     state.SetIterationTime(total_time);

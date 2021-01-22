@@ -39,7 +39,7 @@ class Workload {
   enum class BenchmarkType : uint32_t { TPCH, SSB };
 
   Workload(common::ManagedPointer<DBMain> db_main, const std::string &db_name, const std::string &table_root,
-           enum BenchmarkType type, int64_t threads);
+           enum BenchmarkType type);
 
   /**
    * Function to invoke for a single worker thread to invoke the TPCH queries
@@ -60,7 +60,7 @@ class Workload {
    * @param print_output boolean flag to determine whether timing output should be printed
    * @return time taken to run query
    */
-  uint64_t TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, bool print_output = false);
+  uint64_t TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, uint8_t thread_ct, bool print_output = false);
 
   /**
    * Function to get number of queries in plan
