@@ -728,6 +728,8 @@ void AggregationHashTable::BuildAllPartitions(void *query_state) {
     tbb::parallel_for_each(nonempty_parts,
                            [&](const uint32_t part_idx) { GetOrBuildTableOverPartition(query_state, part_idx); });
   });
+
+  exec_ctx_->SetNumConcurrentEstimate(0);
 }
 
 void AggregationHashTable::Repartition() {
@@ -750,6 +752,8 @@ void AggregationHashTable::Repartition() {
     // First, flush all hash table partitions to their own overflow buckets.
     tbb::parallel_for_each(nonempty_tables, [&](auto table) { table->FlushToOverflowPartitions(); });
   });
+
+  exec_ctx_->SetNumConcurrentEstimate(0);
 
   // Now, transfer each hash table partition's overflow buckets to us.
   for (auto *table : nonempty_tables) {
@@ -800,6 +804,8 @@ void AggregationHashTable::MergePartitions(AggregationHashTable *target, void *q
       merge_func(query_state, agg_table_partition, &iter);
     });
   });
+
+  exec_ctx_->SetNumConcurrentEstimate(0);
 
   // Move our memory to the target.
   target->owned_entries_.emplace_back(std::move(entries_));
