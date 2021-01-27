@@ -299,7 +299,7 @@ class EXPORT ExecutionContext {
    * @note this value is reset by setting it to 0.
    * @param threads_available Available number of threads
    */
-    void SetThreadsAvailable(uint32_t threads_available) { threads_available_ = threads_available; }
+  void SetThreadsAvailable(uint32_t threads_available) { threads_available_ = threads_available; }
 
   /**
    * Invoke a hook function if a hook function is available

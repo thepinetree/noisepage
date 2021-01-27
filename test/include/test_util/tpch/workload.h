@@ -60,7 +60,8 @@ class Workload {
    * @param print_output boolean flag to determine whether timing output should be printed
    * @return time taken to run query
    */
-  uint64_t TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, uint8_t thread_ct, bool print_output = false);
+  uint64_t TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, uint8_t thread_ct,
+                     bool print_output = false);
 
   /**
    * Function to get number of queries in plan

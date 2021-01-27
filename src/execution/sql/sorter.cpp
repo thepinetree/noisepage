@@ -233,23 +233,24 @@ void Sorter::SortParallel(ThreadStateContainer *thread_state_container, std::siz
   util::StageTimer<std::milli> timer;
   timer.EnterStage("Parallel Sort Thread-Local Instances");
 
-  {
-    size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
-    size_t num_tasks = tl_sorters.size();
-    size_t num_concurrent = std::min(num_threads, num_tasks);
-    exec_ctx_->SetNumConcurrentEstimate(num_concurrent);
-  }
+  size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
+  size_t num_tasks = tl_sorters.size();
+  size_t num_concurrent = std::min(num_threads, num_tasks);
+  exec_ctx_->SetNumConcurrentEstimate(num_concurrent);
 
-  tbb::parallel_for_each(tl_sorters, [thread_state_container, this](Sorter *sorter) {
-    auto pre_hook = static_cast<uint32_t>(HookOffsets::StartTLSortHook);
-    auto post_hook = static_cast<uint32_t>(HookOffsets::EndTLSortHook);
-    auto *tls = thread_state_container->AccessCurrentThreadState();
-    auto *exec_ctx = this->exec_ctx_;
-    exec_ctx->InvokeHook(pre_hook, tls, nullptr);
+  tbb::task_arena sort_arena(num_threads);
+  sort_arena.execute([&] {
+    tbb::parallel_for_each(tl_sorters, [thread_state_container, this](Sorter *sorter) {
+      auto pre_hook = static_cast<uint32_t>(HookOffsets::StartTLSortHook);
+      auto post_hook = static_cast<uint32_t>(HookOffsets::EndTLSortHook);
+      auto *tls = thread_state_container->AccessCurrentThreadState();
+      auto *exec_ctx = this->exec_ctx_;
+      exec_ctx->InvokeHook(pre_hook, tls, nullptr);
 
-    sorter->Sort();
+      sorter->Sort();
 
-    exec_ctx->InvokeHook(post_hook, tls, nullptr);
+      exec_ctx->InvokeHook(post_hook, tls, nullptr);
+    });
   });
 
   exec_ctx_->SetNumConcurrentEstimate(0);
@@ -357,36 +358,37 @@ void Sorter::SortParallel(ThreadStateContainer *thread_state_container, std::siz
     return cmp_fn_(*l.first, *r.first) >= 0;
   };
 
-  {
-    size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
-    size_t num_tasks = merge_work.size();
-    size_t concurrent = std::min(num_threads, num_tasks);
-    exec_ctx_->SetNumConcurrentEstimate(concurrent);
-  }
+  num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
+  num_tasks = merge_work.size();
+  num_concurrent = std::min(num_threads, num_tasks);
+  exec_ctx_->SetNumConcurrentEstimate(num_concurrent);
 
-  tbb::parallel_for_each(merge_work, [&heap_cmp, thread_state_container, this](const MergeWork<SeqTypeIter> &work) {
-    auto pre_hook = static_cast<uint32_t>(HookOffsets::StartTLMergeHook);
-    auto post_hook = static_cast<uint32_t>(HookOffsets::EndTLMergeHook);
-    auto *tls = thread_state_container->AccessCurrentThreadState();
-    auto *exec_ctx = this->exec_ctx_;
-    exec_ctx->InvokeHook(pre_hook, tls, nullptr);
+  tbb::task_arena merge_arena(num_threads);
+  merge_arena.execute([&] {
+    tbb::parallel_for_each(merge_work, [&heap_cmp, thread_state_container, this](const MergeWork<SeqTypeIter> &work) {
+      auto pre_hook = static_cast<uint32_t>(HookOffsets::StartTLMergeHook);
+      auto post_hook = static_cast<uint32_t>(HookOffsets::EndTLMergeHook);
+      auto *tls = thread_state_container->AccessCurrentThreadState();
+      auto *exec_ctx = this->exec_ctx_;
+      exec_ctx->InvokeHook(pre_hook, tls, nullptr);
 
-    std::priority_queue<MergeWorkType::Range, std::vector<MergeWorkType::Range>, decltype(heap_cmp)> heap(
-        heap_cmp, work.input_ranges_);
-    SeqTypeIter dest = work.destination_;
-    size_t num_iters = 0;
-    while (!heap.empty()) {
-      num_iters++;
+      std::priority_queue<MergeWorkType::Range, std::vector<MergeWorkType::Range>, decltype(heap_cmp)> heap(
+          heap_cmp, work.input_ranges_);
+      SeqTypeIter dest = work.destination_;
+      size_t num_iters = 0;
+      while (!heap.empty()) {
+        num_iters++;
 
-      auto top = heap.top();
-      heap.pop();
-      *dest++ = *top.first;
-      if (top.first + 1 != top.second) {
-        heap.emplace(top.first + 1, top.second);
+        auto top = heap.top();
+        heap.pop();
+        *dest++ = *top.first;
+        if (top.first + 1 != top.second) {
+          heap.emplace(top.first + 1, top.second);
+        }
       }
-    }
 
-    exec_ctx->InvokeHook(post_hook, tls, reinterpret_cast<void *>(num_iters));
+      exec_ctx->InvokeHook(post_hook, tls, reinterpret_cast<void *>(num_iters));
+    });
   });
 
   exec_ctx_->SetNumConcurrentEstimate(0);

@@ -674,19 +674,22 @@ void AggregationHashTable::ExecuteParallelPartitionedScan(void *query_state, Thr
   size_t concurrent_estimate = std::min(num_threads, num_tasks);
   exec_ctx_->SetNumConcurrentEstimate(concurrent_estimate);
 
-  tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
-    // TODO(wz2): Resource trackers are started and stopped within scan_fn. It might be more correct
-    // to start the trackers here manually -- or have TransferMemoryAndPartitions build all the tables
-    // over each partition (but that would require storing the agg table pointers).
+  tbb::task_arena limited_arena(num_threads);
+  limited_arena.execute([&] {
+    tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
+      // TODO(wz2): Resource trackers are started and stopped within scan_fn. It might be more correct
+      // to start the trackers here manually -- or have TransferMemoryAndPartitions build all the tables
+      // over each partition (but that would require storing the agg table pointers).
 
-    // Build a hash table over the given partition
-    auto agg_table_partition = GetOrBuildTableOverPartition(query_state, part_idx);
+      // Build a hash table over the given partition
+      auto agg_table_partition = GetOrBuildTableOverPartition(query_state, part_idx);
 
-    // Get a handle to the thread-local state of the executing thread
-    auto thread_state = thread_states->AccessCurrentThreadState();
+      // Get a handle to the thread-local state of the executing thread
+      auto thread_state = thread_states->AccessCurrentThreadState();
 
-    // Scan the partition
-    scan_fn(query_state, thread_state, agg_table_partition);
+      // Scan the partition
+      scan_fn(query_state, thread_state, agg_table_partition);
+    });
   });
 
   exec_ctx_->SetNumConcurrentEstimate(0);
@@ -714,9 +717,17 @@ void AggregationHashTable::BuildAllPartitions(void *query_state) {
     }
   }
 
-  // For each valid partition, build a hash table over its contents.
-  tbb::parallel_for_each(nonempty_parts,
-                         [&](const uint32_t part_idx) { GetOrBuildTableOverPartition(query_state, part_idx); });
+  size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
+  size_t num_tasks = nonempty_parts.size();
+  size_t concurrent_estimate = std::min(num_threads, num_tasks);
+  exec_ctx_->SetNumConcurrentEstimate(concurrent_estimate);
+
+  tbb::task_arena limited_arena(num_threads);
+  limited_arena.execute([&] {
+    // For each valid partition, build a hash table over its contents.
+    tbb::parallel_for_each(nonempty_parts,
+                           [&](const uint32_t part_idx) { GetOrBuildTableOverPartition(query_state, part_idx); });
+  });
 }
 
 void AggregationHashTable::Repartition() {
@@ -729,8 +740,16 @@ void AggregationHashTable::Repartition() {
     }
   }
 
-  // First, flush all hash table partitions to their own overflow buckets.
-  tbb::parallel_for_each(nonempty_tables, [&](auto table) { table->FlushToOverflowPartitions(); });
+  size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
+  size_t num_tasks = nonempty_tables.size();
+  size_t concurrent_estimate = std::min(num_threads, num_tasks);
+  exec_ctx_->SetNumConcurrentEstimate(concurrent_estimate);
+
+  tbb::task_arena limited_arena(num_threads);
+  limited_arena.execute([&] {
+    // First, flush all hash table partitions to their own overflow buckets.
+    tbb::parallel_for_each(nonempty_tables, [&](auto table) { table->FlushToOverflowPartitions(); });
+  });
 
   // Now, transfer each hash table partition's overflow buckets to us.
   for (auto *table : nonempty_tables) {
@@ -764,14 +783,22 @@ void AggregationHashTable::MergePartitions(AggregationHashTable *target, void *q
     }
   }
 
-  // Merge overflow data into the appropriate partitioned table in the target.
-  tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
-    // Get the partitioned hash table from the target.
-    auto agg_table_partition = target->GetOrBuildTableOverPartition(query_state, part_idx);
+  size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
+  size_t num_tasks = nonempty_parts.size();
+  size_t concurrent_estimate = std::min(num_threads, num_tasks);
+  exec_ctx_->SetNumConcurrentEstimate(concurrent_estimate);
 
-    // Merge our overflow partition into target table.
-    AHTOverflowPartitionIterator iter(partition_heads_ + part_idx, partition_heads_ + part_idx + 1);
-    merge_func(query_state, agg_table_partition, &iter);
+  tbb::task_arena limited_arena(num_threads);
+  // Merge overflow data into the appropriate partitioned table in the target.
+  limited_arena.execute([&] {
+    tbb::parallel_for_each(nonempty_parts, [&](const uint32_t part_idx) {
+      // Get the partitioned hash table from the target.
+      auto agg_table_partition = target->GetOrBuildTableOverPartition(query_state, part_idx);
+
+      // Merge our overflow partition into target table.
+      AHTOverflowPartitionIterator iter(partition_heads_ + part_idx, partition_heads_ + part_idx + 1);
+      merge_func(query_state, agg_table_partition, &iter);
+    });
   });
 
   // Move our memory to the target.

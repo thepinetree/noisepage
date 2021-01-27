@@ -592,19 +592,23 @@ void JoinHashTable::MergeParallel(ThreadStateContainer *thread_state_container, 
     EXECUTION_LOG_TRACE("JHT: Estimated {} elements >= {} element parallel threshold. Using parallel merge.",
                         num_elem_estimate, DEFAULT_MIN_SIZE_FOR_PARALLEL_MERGE);
 
-    size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();;
+    size_t num_threads = exec_ctx_->GetExecutionSettings().GetNumberOfParallelExecutionThreads();
     size_t num_tasks = tl_join_tables.size();
     auto estimate = std::min(num_threads, num_tasks);
     exec_ctx_->SetNumConcurrentEstimate(estimate);
-    tbb::parallel_for_each(tl_join_tables, [this, thread_state_container](auto source) {
-      auto pre_hook = static_cast<uint32_t>(HookOffsets::StartHook);
-      auto post_hook = static_cast<uint32_t>(HookOffsets::EndHook);
-      auto *tls = thread_state_container->AccessCurrentThreadState();
-      exec_ctx_->InvokeHook(pre_hook, tls, nullptr);
 
-      size_t size = source->entries_.size();
-      MergeIncomplete<true>(source);
-      exec_ctx_->InvokeHook(post_hook, tls, reinterpret_cast<void *>(size));
+    tbb::task_arena limited_arena(num_threads);
+    limited_arena.execute([&] {
+      tbb::parallel_for_each(tl_join_tables, [this, thread_state_container](auto source) {
+        auto pre_hook = static_cast<uint32_t>(HookOffsets::StartHook);
+        auto post_hook = static_cast<uint32_t>(HookOffsets::EndHook);
+        auto *tls = thread_state_container->AccessCurrentThreadState();
+        exec_ctx_->InvokeHook(pre_hook, tls, nullptr);
+
+        size_t size = source->entries_.size();
+        MergeIncomplete<true>(source);
+        exec_ctx_->InvokeHook(post_hook, tls, reinterpret_cast<void *>(size));
+      });
     });
     exec_ctx_->SetNumConcurrentEstimate(0);
   }

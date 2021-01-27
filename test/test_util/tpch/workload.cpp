@@ -108,30 +108,30 @@ void Workload::LoadQueries(const std::unique_ptr<catalog::CatalogAccessor> &acce
       query_names_.emplace_back("19");
       break;
     case tpch::Workload::BenchmarkType::SSB:
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part1(accessor, exec_settings_));
-      //query_names_.emplace_back("1.1");
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part2(accessor, exec_settings_));
-      //query_names_.emplace_back("1.2");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part1(accessor, exec_settings_));
+      // query_names_.emplace_back("1.1");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part2(accessor, exec_settings_));
+      // query_names_.emplace_back("1.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ1Part3(accessor, exec_settings_));
       query_names_.emplace_back("1.3");
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part1(accessor, exec_settings_));
-      //query_names_.emplace_back("2.1");
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part2(accessor, exec_settings_));
-      //query_names_.emplace_back("2.2");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part1(accessor, exec_settings_));
+      // query_names_.emplace_back("2.1");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part2(accessor, exec_settings_));
+      // query_names_.emplace_back("2.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ2Part3(accessor, exec_settings_));
       query_names_.emplace_back("2.3");
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part1(accessor, exec_settings_));
-      //query_names_.emplace_back("3.1");
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part2(accessor, exec_settings_));
-      //query_names_.emplace_back("3.2");
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part3(accessor, exec_settings_));
-      //query_names_.emplace_back("3.3");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part1(accessor, exec_settings_));
+      // query_names_.emplace_back("3.1");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part2(accessor, exec_settings_));
+      // query_names_.emplace_back("3.2");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part3(accessor, exec_settings_));
+      // query_names_.emplace_back("3.3");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ3Part4(accessor, exec_settings_));
       query_names_.emplace_back("3.4");
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ4Part1(accessor, exec_settings_));
-      //query_names_.emplace_back("4.1");
-      //query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ4Part2(accessor, exec_settings_));
-      //query_names_.emplace_back("4.2");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ4Part1(accessor, exec_settings_));
+      // query_names_.emplace_back("4.1");
+      // query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ4Part2(accessor, exec_settings_));
+      // query_names_.emplace_back("4.2");
       query_and_plan_.emplace_back(ssb::SSBQuery::SSBMakeExecutableQ4Part3(accessor, exec_settings_));
       query_names_.emplace_back("4.3");
       break;
@@ -189,7 +189,8 @@ void Workload::Execute(int8_t worker_id, uint64_t execution_us_per_worker, uint6
   db_main_->GetMetricsManager()->UnregisterThread();
 }
 
-uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, uint8_t thread_ct, bool print_output) {
+uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mode, uint8_t thread_ct,
+                             bool print_output) {
   NOISEPAGE_ASSERT(static_cast<uint32_t>(query_ind) < this->GetQueryNum() && 0 <= query_ind,
                    "query plans index out of range");
   exec_settings_.is_parallel_execution_enabled_ = (thread_ct != 0);
@@ -217,7 +218,9 @@ uint64_t Workload::TimeQuery(int32_t query_ind, execution::vm::ExecutionMode mod
     std::get<0>(query_and_plan_[query_ind])
         ->Run(common::ManagedPointer<execution::exec::ExecutionContext>(&exec_ctx), mode);
   }
-  if (print_output) std::cout << query_names_[query_ind] << "," << exec_ctx.GetExecutionSettings().GetNumberOfParallelExecutionThreads() << "," << elapsed_ms << std::endl;
+  if (print_output)
+    std::cout << query_names_[query_ind] << "," << exec_ctx.GetExecutionSettings().GetNumberOfParallelExecutionThreads()
+              << "," << elapsed_ms << std::endl;
 
   // Commit transaction
   txn_manager_->Commit(txn, transaction::TransactionUtil::EmptyCallback, nullptr);
