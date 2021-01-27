@@ -19,7 +19,7 @@ class SSBBenchmark : public benchmark::Fixture {
   std::unique_ptr<DBMain> db_main_;
   std::unique_ptr<tpch::Workload> ssb_workload_;
 
-  const std::string ssb_table_root_ = "/home/dpatra/Data/NP-SSB/SF100/";
+  const std::string ssb_table_root_ = "/mount/Data/NP-SSB/SF100/";
   const std::string ssb_database_name_ = "ssb_db";
 
   void SetUp(const benchmark::State &state) final {
