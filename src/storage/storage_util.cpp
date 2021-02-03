@@ -20,7 +20,6 @@ void StorageUtil::CopyWithNullCheck(const byte *const from, RowType *const to, c
   else
     std::memcpy(to->AccessForceNotNull(projection_list_index), from, size);
 }
-
 template void StorageUtil::CopyWithNullCheck<ProjectedRow>(const byte *, ProjectedRow *, uint16_t, uint16_t);
 template void StorageUtil::CopyWithNullCheck<ProjectedColumns::RowView>(const byte *, ProjectedColumns::RowView *,
                                                                         uint16_t, uint16_t);
