@@ -15,7 +15,7 @@ class SSBBenchmark : public benchmark::Fixture {
   const uint64_t min_iterations_per_query_ = 33;
   const uint64_t max_iterations_per_query_ = 33;
   const std::vector<uint8_t> threads_{1, 2, 4, 8, 16, 32, 40};
-  const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Interpret;
+  const execution::vm::ExecutionMode mode_ = execution::vm::ExecutionMode::Compiled;
   std::unique_ptr<DBMain> db_main_;
   std::unique_ptr<tpch::Workload> ssb_workload_;
 
