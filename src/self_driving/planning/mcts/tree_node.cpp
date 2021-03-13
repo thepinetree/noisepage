@@ -116,6 +116,8 @@ void TreeNode::ChildrenRollout(common::ManagedPointer<Pilot> pilot,
                    "start segment index should be no greater than the end segment index");
 
   for (const auto &action_id : candidate_actions) {
+    // TODO(15884): Task 5: Environment-specific pruning. For example, don't do a CREATE INDEX followed by a DROP INDEX.
+
     // expand each action not yet applied
     if (!action_map.at(action_id)->IsValid() ||
         action_map.at(action_id)->GetSQLCommand() == "set compiled_query_execution = 'true';")

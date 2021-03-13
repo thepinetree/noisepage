@@ -33,6 +33,7 @@ MonteCarloTreeSearch::MonteCarloTreeSearch(common::ManagedPointer<Pilot> pilot,
 
   pilot->txn_manager_->Abort(txn);
 
+  // TODO(15884): Task 1: Replicate entire root_ structure, candidate_actions_ to other replicas.
   // create root_
   auto later_cost = PilotUtil::ComputeCost(pilot, forecast, 0, end_segment_index);
   // root correspond to no action applied to any segment
@@ -41,18 +42,23 @@ MonteCarloTreeSearch::MonteCarloTreeSearch(common::ManagedPointer<Pilot> pilot,
 
 void MonteCarloTreeSearch::BestAction(uint64_t simulation_number,
                                       std::vector<std::pair<const std::string, catalog::db_oid_t>> *best_action_seq) {
+  // TODO(15884): Task 2: Every replica does this loop themselves, sends back their best_action_seq to primary.
+  // TODO(15884): Task 6: Try different heuristics for how to pick actions, which requires passing in some kind of
+  //              selection function to TreeNode::Selection.
   for (uint64_t i = 0; i < simulation_number; i++) {
     std::unordered_set<action_id_t> candidate_actions;
     for (auto action_id : candidate_actions_) candidate_actions.insert(action_id);
     auto vertex =
         TreeNode::Selection(common::ManagedPointer(root_), pilot_, action_map_, &candidate_actions, end_segment_index_);
 
+    // TODO(15884): Task 3: Split up the rollout / backpropagate.
     vertex->ChildrenRollout(pilot_, forecast_, 0, end_segment_index_, action_map_, candidate_actions);
     vertex->BackPropogate(pilot_, action_map_, use_min_cost_);
   }
   // return the best action at root
   auto curr_node = common::ManagedPointer(root_);
   while (!curr_node->IsLeaf()) {
+    // TODO(15884): Task 4: Maybe possible to find best subtree independently.
     auto best_child = curr_node->BestSubtree();
     best_action_seq->emplace_back(action_map_.at(best_child->GetCurrentAction())->GetSQLCommand(),
                                   action_map_.at(best_child->GetCurrentAction())->GetDatabaseOid());
