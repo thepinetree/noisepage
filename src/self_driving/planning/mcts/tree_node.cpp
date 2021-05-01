@@ -122,6 +122,12 @@ void TreeNode::ChildrenRollout(common::ManagedPointer<Pilot> pilot,
     if (!action_map.at(action_id)->IsValid() ||
         action_map.at(action_id)->GetSQLCommand() == "set compiled_query_execution = 'true';")
       continue;
+
+    // skip expanding actions that are the reverse of the current action
+    auto invalid_actions = action_map.at(this->current_action_)->GetInvalidatedActions();
+    if (std::find(invalid_actions.begin(), invalid_actions.end(), action_id) != v.end())
+      continue;
+
     PilotUtil::ApplyAction(pilot, action_map.at(action_id)->GetSQLCommand(),
                            action_map.at(action_id)->GetDatabaseOid());
 
